@@ -8,6 +8,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
+# Updated import section to correctly import Pydantic v2 validators
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 Base = declarative_base()
@@ -231,7 +232,12 @@ class LessonBase(BaseModel):
         return v
 
 class LessonCreate(LessonBase):
-    pass
+    @field_validator('lesson_date')
+    @classmethod
+    def check_not_future_date(cls, v):
+        if v > date.today():
+            raise ValueError('La data della lezione non può essere nel futuro')
+        return v
 
 class LessonUpdate(BaseModel):
     professor_id: Optional[int] = None
@@ -257,8 +263,16 @@ class LessonUpdate(BaseModel):
             raise ValueError('hourly_rate must be non-negative')
         return v
 
-class LessonResponse(LessonBase):
+class LessonResponse(BaseModel):
     id: int
+    professor_id: int
+    student_id: int
+    lesson_date: date
+    duration: Decimal
+    is_package: bool
+    package_id: Optional[int] = None
+    hourly_rate: Decimal
+    total_payment: Decimal
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
