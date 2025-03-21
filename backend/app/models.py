@@ -150,6 +150,13 @@ class PackageBase(BaseModel):
         if v < 0:
             raise ValueError('package_cost must be non-negative')
         return v
+    
+    @field_validator('start_date')
+    @classmethod
+    def check_not_future_date(cls, v):
+        if v > date.today():
+            raise ValueError('La data di inizio non può essere nel futuro')
+        return v
 
 class PackageCreate(PackageBase):
     pass
@@ -215,6 +222,13 @@ class LessonBase(BaseModel):
         if duration is not None and hourly_rate is not None:
             self.total_payment = duration * hourly_rate
         return self
+    
+    @field_validator('lesson_date')
+    @classmethod
+    def check_not_future_date(cls, v):
+        if v > date.today():
+            raise ValueError('La data della lezione non può essere nel futuro')
+        return v
 
 class LessonCreate(LessonBase):
     pass

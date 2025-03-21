@@ -1,9 +1,11 @@
 // src/services/api.js
+
 import axios from 'axios';
 
+// Configurazione base di axios
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-// Istanza axios con configurazione di base
+// Crea un'istanza di axios
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -11,7 +13,7 @@ const api = axios.create({
   },
 });
 
-// Interceptor per aggiungere il token di autenticazione ad ogni richiesta
+// Interceptor per l'aggiunta del token alle richieste
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -23,96 +25,159 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor per gestire errori di autenticazione
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      // Se la sessione è scaduta, reindirizza alla pagina di login
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Servizi API per ciascuna entità
-const authService = {
+// Auth service
+export const authService = {
   login: async (username, password) => {
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('password', password);
-    
-    const response = await axios.post(`${API_URL}/token`, formData, {
+    const response = await api.post('/token', new URLSearchParams({
+      username,
+      password,
+    }), {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
     });
     
-    if (response.data.access_token) {
-      localStorage.setItem('token', response.data.access_token);
-    }
+    // Salva il token nel localStorage
+    localStorage.setItem('token', response.data.access_token);
     
     return response.data;
-  },
-  
-  logout: () => {
-    localStorage.removeItem('token');
   },
   
   getCurrentUser: async () => {
     return api.get('/users/me');
   },
+  
+  logout: () => {
+    localStorage.removeItem('token');
+  },
 };
 
-const professorService = {
-  getAll: () => api.get('/professors'),
-  getById: (id) => api.get(`/professors/${id}`),
-  create: (data) => api.post('/professors', data),
-  update: (id, data) => api.put(`/professors/${id}`, data),
-  delete: (id) => api.delete(`/professors/${id}`),
+// Professor service
+export const professorService = {
+  getAll: async () => {
+    return api.get('/professors');
+  },
+  
+  getById: async (id) => {
+    return api.get(`/professors/${id}`);
+  },
+  
+  create: async (data) => {
+    return api.post('/professors', data);
+  },
+  
+  update: async (id, data) => {
+    return api.put(`/professors/${id}`, data);
+  },
+  
+  delete: async (id) => {
+    return api.delete(`/professors/${id}`);
+  },
 };
 
-const studentService = {
-  getAll: () => api.get('/students'),
-  getById: (id) => api.get(`/students/${id}`),
-  create: (data) => api.post('/students', data),
-  update: (id, data) => api.put(`/students/${id}`, data),
-  delete: (id) => api.delete(`/students/${id}`),
+// Student service
+export const studentService = {
+  getAll: async () => {
+    return api.get('/students');
+  },
+  
+  getById: async (id) => {
+    return api.get(`/students/${id}`);
+  },
+  
+  create: async (data) => {
+    return api.post('/students', data);
+  },
+  
+  update: async (id, data) => {
+    return api.put(`/students/${id}`, data);
+  },
+  
+  delete: async (id) => {
+    return api.delete(`/students/${id}`);
+  },
 };
 
-const packageService = {
-  getAll: () => api.get('/packages'),
-  getById: (id) => api.get(`/packages/${id}`),
-  getByStudent: (studentId) => api.get(`/packages/student/${studentId}`),
-  getActiveByStudent: (studentId) => api.get(`/packages/student/${studentId}/active`),
-  create: (data) => api.post('/packages', data),
-  update: (id, data) => api.put(`/packages/${id}`, data),
-  delete: (id) => api.delete(`/packages/${id}`),
+// Package service
+export const packageService = {
+  getAll: async () => {
+    return api.get('/packages');
+  },
+  
+  getById: async (id) => {
+    return api.get(`/packages/${id}`);
+  },
+  
+  getByStudent: async (studentId) => {
+    return api.get(`/packages/student/${studentId}`);
+  },
+  
+  getActiveByStudent: async (studentId) => {
+    return api.get(`/packages/student/${studentId}/active`);
+  },
+  
+  create: async (data) => {
+    return api.post('/packages', data);
+  },
+  
+  update: async (id, data) => {
+    return api.put(`/packages/${id}`, data);
+  },
+  
+  delete: async (id) => {
+    return api.delete(`/packages/${id}`);
+  },
 };
 
-const lessonService = {
-  getAll: () => api.get('/lessons'),
-  getById: (id) => api.get(`/lessons/${id}`),
-  getByProfessor: (professorId) => api.get(`/lessons/professor/${professorId}`),
-  getByStudent: (studentId) => api.get(`/lessons/student/${studentId}`),
-  create: (data) => api.post('/lessons', data),
-  update: (id, data) => api.put(`/lessons/${id}`, data),
-  delete: (id) => api.delete(`/lessons/${id}`),
+// Lesson service
+export const lessonService = {
+  getAll: async () => {
+    return api.get('/lessons');
+  },
+  
+  getById: async (id) => {
+    return api.get(`/lessons/${id}`);
+  },
+  
+  getByProfessor: async (professorId) => {
+    return api.get(`/lessons/professor/${professorId}`);
+  },
+  
+  getByStudent: async (studentId) => {
+    return api.get(`/lessons/student/${studentId}`);
+  },
+  
+  create: async (data) => {
+    return api.post('/lessons', data);
+  },
+  
+  update: async (id, data) => {
+    return api.put(`/lessons/${id}`, data);
+  },
+  
+  delete: async (id) => {
+    return api.delete(`/lessons/${id}`);
+  },
+  
+  // Nuovo metodo per gestire l'overflow delle ore
+  handleOverflow: async (data) => {
+    return api.post('/lessons/handle-overflow', data);
+  },
 };
 
-const statsService = {
-  getFinanceStats: () => api.get('/stats/finance'),
-  getStudentStats: () => api.get('/stats/students'),
-  getProfessorStats: () => api.get('/stats/professors'),
+// Statistics service
+export const statsService = {
+  getFinanceStats: async () => {
+    return api.get('/stats/finance');
+  },
+  
+  getStudentStats: async () => {
+    return api.get('/stats/students');
+  },
+  
+  getProfessorStats: async () => {
+    return api.get('/stats/professors');
+  },
 };
 
-export {
-  api,
-  authService,
-  professorService,
-  studentService,
-  packageService,
-  lessonService,
-  statsService,
-};
+export default api;

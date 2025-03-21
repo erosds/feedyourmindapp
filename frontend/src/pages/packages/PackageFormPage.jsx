@@ -29,6 +29,10 @@ import { format, parseISO } from 'date-fns';
 // Schema di validazione
 const PackageSchema = Yup.object().shape({
   student_id: Yup.number().required('Studente obbligatorio'),
+  start_date: Yup.date()
+    .required('Data inizio obbligatoria')
+    .max(new Date(), 'La data di inizio non può essere nel futuro'),
+  student_id: Yup.number().required('Studente obbligatorio'),
   start_date: Yup.date().required('Data inizio obbligatoria'),
   total_hours: Yup.number()
     .positive('Il numero di ore deve essere positivo')
@@ -51,7 +55,7 @@ function PackageFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditMode = !!id;
-  
+
   const [loading, setLoading] = useState(isEditMode);
   const [error, setError] = useState(null);
   const [students, setStudents] = useState([]);
@@ -69,16 +73,16 @@ function PackageFormPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
+
         // Carica tutti gli studenti
         const studentsResponse = await studentService.getAll();
         setStudents(studentsResponse.data);
-        
+
         // Se in modalità modifica, carica i dati del pacchetto
         if (isEditMode) {
           const packageResponse = await packageService.getById(id);
           const packageData = packageResponse.data;
-          
+
           setInitialValues({
             student_id: packageData.student_id,
             start_date: parseISO(packageData.start_date),
@@ -103,24 +107,24 @@ function PackageFormPage() {
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
       setError(null);
-      
+
       // Formatta la data per l'API
       const formattedValues = {
         ...values,
         start_date: format(values.start_date, 'yyyy-MM-dd'),
       };
-      
+
       // Se nuovo pacchetto, imposta ore rimanenti uguali a ore totali
       if (!isEditMode) {
         formattedValues.remaining_hours = formattedValues.total_hours;
       }
-      
+
       if (isEditMode) {
         await packageService.update(id, formattedValues);
       } else {
         await packageService.create(formattedValues);
       }
-      
+
       navigate('/packages');
     } catch (err) {
       console.error('Error saving package:', err);
@@ -191,12 +195,13 @@ function PackageFormPage() {
                     )}
                   </FormControl>
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
                   <DatePicker
                     label="Data inizio"
                     value={values.start_date}
                     onChange={(date) => setFieldValue('start_date', date)}
+                    maxDate={new Date()} // Aggiunge questa riga
                     slotProps={{
                       textField: {
                         fullWidth: true,
@@ -207,7 +212,7 @@ function PackageFormPage() {
                     }}
                   />
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
@@ -218,7 +223,7 @@ function PackageFormPage() {
                     onChange={(e) => {
                       const value = parseFloat(e.target.value);
                       handleChange(e);
-                      
+
                       // Se è un nuovo pacchetto, aggiorna automaticamente le ore rimanenti
                       if (!isEditMode) {
                         setFieldValue('remaining_hours', value);
@@ -234,7 +239,7 @@ function PackageFormPage() {
                     required
                   />
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
@@ -252,14 +257,14 @@ function PackageFormPage() {
                     required
                   />
                 </Grid>
-                
+
                 <Grid item xs={12}>
                   <Divider sx={{ my: 2 }} />
                   <Typography variant="h6" gutterBottom>
                     Stato del pacchetto
                   </Typography>
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth error={touched.status && Boolean(errors.status)}>
                     <InputLabel id="status-label">Stato</InputLabel>
@@ -279,7 +284,7 @@ function PackageFormPage() {
                     )}
                   </FormControl>
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
                   <FormControlLabel
                     control={
@@ -292,7 +297,7 @@ function PackageFormPage() {
                     label="Pacchetto pagato"
                   />
                 </Grid>
-                
+
                 {values.status === 'in_progress' && (
                   <Grid item xs={12} md={6}>
                     <TextField

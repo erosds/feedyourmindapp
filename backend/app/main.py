@@ -1,4 +1,10 @@
 # main.py
+import os
+from dotenv import load_dotenv
+
+# Carica le variabili d'ambiente dal file .env
+load_dotenv()
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -15,6 +21,7 @@ from app.auth import (
     get_current_professor
 )
 
+# Resto del codice rimane invariato
 # Creazione dell'istanza dell'applicazione FastAPI
 app = FastAPI(
     title="School Management API",

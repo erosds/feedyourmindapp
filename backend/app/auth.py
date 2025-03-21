@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 import os
+import secrets
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -12,9 +13,36 @@ from . import models
 from .database import get_db
 from .utils import verify_password
 
+# Genera una chiave segreta sicura se non definita
+def generate_secret_key():
+    """
+    Genera una chiave segreta cryptograficamente sicura.
+    Salvata in un file per mantenere la persistenza tra i riavvii.
+    """
+    secret_key_path = os.path.join(os.path.dirname(__file__), '.jwt_secret_key')
+    
+    # Prova a leggere una chiave esistente
+    if os.path.exists(secret_key_path):
+        with open(secret_key_path, 'r') as f:
+            return f.read().strip()
+    
+    # Genera una nuova chiave segreta
+    new_secret_key = secrets.token_hex(32)  # 256 bit
+    
+    # Salva la chiave in modo che sia persistente
+    try:
+        with open(secret_key_path, 'w') as f:
+            f.write(new_secret_key)
+        
+        # Imposta permessi ristretti per il file
+        os.chmod(secret_key_path, 0o600)  # Solo il proprietario può leggere/scrivere
+    except Exception as e:
+        print(f"Errore durante il salvataggio della chiave segreta: {e}")
+    
+    return new_secret_key
+
 # Configurazione JWT
-# In produzione, usa variabili d'ambiente
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-secret-key-should-be-kept-secret")
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", generate_secret_key())
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
