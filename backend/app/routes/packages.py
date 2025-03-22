@@ -92,14 +92,51 @@ def read_student_active_package(student_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{package_id}", response_model=models.PackageResponse)
 def update_package(package_id: int, package: models.PackageUpdate, db: Session = Depends(get_db)):
+    # Importa func da sqlalchemy all'inizio della funzione
+    from sqlalchemy import func
+    
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
+    
+    # Se stiamo aggiornando le ore totali, dobbiamo verificare che non siano inferiori 
+    # alle ore già utilizzate
+    if package.total_hours is not None:
+        # Calcola le ore già utilizzate in questo pacchetto
+        hours_used = db.query(func.sum(models.Lesson.duration)).filter(
+            models.Lesson.package_id == package_id,
+            models.Lesson.is_package == True
+        ).scalar() or Decimal('0')
+        
+        # Controlla che le nuove ore totali non siano inferiori alle ore già utilizzate
+        if package.total_hours < hours_used:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Le ore totali non possono essere inferiori alle ore già utilizzate ({hours_used})"
+            )
     
     # Aggiorna i campi se presenti
     update_data = package.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_package, key, value)
+    
+    # Ricalcola sempre le ore rimanenti (non modificabili direttamente)
+    if package.total_hours is not None or package.status is not None:
+        # Calcola le ore già utilizzate
+        hours_used = db.query(func.sum(models.Lesson.duration)).filter(
+            models.Lesson.package_id == package_id,
+            models.Lesson.is_package == True
+        ).scalar() or Decimal('0')
+        
+        # Ore rimanenti = ore totali - ore utilizzate
+        db_package.remaining_hours = db_package.total_hours - hours_used
+        
+        # Se non ci sono più ore rimanenti, imposta lo stato a "completed"
+        if db_package.remaining_hours <= 0 and db_package.status != "completed":
+            db_package.status = "completed"
+        # Se ci sono ore rimanenti e lo stato era "completed", riattivalo
+        elif db_package.remaining_hours > 0 and db_package.status == "completed":
+            db_package.status = "in_progress"
     
     db.commit()
     db.refresh(db_package)

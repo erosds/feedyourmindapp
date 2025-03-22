@@ -21,7 +21,7 @@ import {
   Typography,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers';
-import { studentService, packageService } from '../../services/api';
+import { studentService, packageService, lessonService } from '../../services/api';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { format, parseISO } from 'date-fns';
@@ -32,8 +32,6 @@ const PackageSchema = Yup.object().shape({
   start_date: Yup.date()
     .required('Data inizio obbligatoria')
     .max(new Date(), 'La data di inizio non può essere nel futuro'),
-  student_id: Yup.number().required('Studente obbligatorio'),
-  start_date: Yup.date().required('Data inizio obbligatoria'),
   total_hours: Yup.number()
     .positive('Il numero di ore deve essere positivo')
     .required('Numero di ore obbligatorio'),
@@ -59,6 +57,8 @@ function PackageFormPage() {
   const [loading, setLoading] = useState(isEditMode);
   const [error, setError] = useState(null);
   const [students, setStudents] = useState([]);
+  const [hoursUsed, setHoursUsed] = useState(0);
+  const [calculatedRemainingHours, setCalculatedRemainingHours] = useState(0);
   const [initialValues, setInitialValues] = useState({
     student_id: '',
     start_date: new Date(),
@@ -78,10 +78,24 @@ function PackageFormPage() {
         const studentsResponse = await studentService.getAll();
         setStudents(studentsResponse.data);
 
-        // Se in modalità modifica, carica i dati del pacchetto
+        // Se in modalità modifica, carica i dati del pacchetto e le lezioni associate
         if (isEditMode) {
           const packageResponse = await packageService.getById(id);
           const packageData = packageResponse.data;
+          
+          // Carica le lezioni associate a questo pacchetto
+          const lessonsResponse = await lessonService.getAll();
+          const packageLessons = lessonsResponse.data.filter(
+            lesson => lesson.package_id === parseInt(id) && lesson.is_package
+          );
+          
+          // Calcola le ore utilizzate
+          const usedHours = packageLessons.reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
+          setHoursUsed(usedHours);
+          
+          // Calcola ore rimanenti (totale - utilizzate)
+          const remainingHours = parseFloat(packageData.total_hours) - usedHours;
+          setCalculatedRemainingHours(remainingHours);
 
           setInitialValues({
             student_id: packageData.student_id,
@@ -104,9 +118,41 @@ function PackageFormPage() {
     fetchData();
   }, [id, isEditMode]);
 
-  const handleSubmit = async (values, { setSubmitting }) => {
+  // Funzione per gestire il cambiamento delle ore totali
+  const handleTotalHoursChange = (e, setFieldValue, setFieldError) => {
+    const newTotalHours = parseFloat(e.target.value);
+    
+    // Aggiorna il valore nel form
+    setFieldValue('total_hours', e.target.value);
+    
+    if (isEditMode) {
+      // Calcola le nuove ore rimanenti
+      const newRemainingHours = Math.max(0, newTotalHours - hoursUsed);
+      setCalculatedRemainingHours(newRemainingHours);
+      setFieldValue('remaining_hours', newRemainingHours);
+      
+      // Controlla se le ore totali sono inferiori alle ore utilizzate
+      if (newTotalHours < hoursUsed) {
+        setFieldError('total_hours', `Non puoi impostare meno di ${hoursUsed} ore (ore già utilizzate)`);
+      } else {
+        setFieldError('total_hours', undefined);
+      }
+    } else {
+      // In modalità creazione, le ore rimanenti sono semplicemente uguali alle ore totali
+      setFieldValue('remaining_hours', e.target.value);
+    }
+  };
+
+  const handleSubmit = async (values, { setSubmitting, setFieldError }) => {
     try {
       setError(null);
+
+      // Controlla se le ore totali sono inferiori alle ore utilizzate
+      if (isEditMode && parseFloat(values.total_hours) < hoursUsed) {
+        setFieldError('total_hours', `Non puoi impostare meno di ${hoursUsed} ore (ore già utilizzate)`);
+        setSubmitting(false);
+        return; // Interrompi il salvataggio
+      }
 
       // Formatta la data per l'API
       const formattedValues = {
@@ -168,6 +214,7 @@ function PackageFormPage() {
             handleChange,
             handleBlur,
             setFieldValue,
+            setFieldError,
             isSubmitting,
           }) => (
             <Form>
@@ -220,20 +267,15 @@ function PackageFormPage() {
                     label="Totale ore"
                     type="number"
                     value={values.total_hours}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value);
-                      handleChange(e);
-
-                      // Se è un nuovo pacchetto, aggiorna automaticamente le ore rimanenti
-                      if (!isEditMode) {
-                        setFieldValue('remaining_hours', value);
-                      }
-                    }}
+                    onChange={(e) => handleTotalHoursChange(e, setFieldValue, setFieldError)}
                     onBlur={handleBlur}
                     error={touched.total_hours && Boolean(errors.total_hours)}
-                    helperText={touched.total_hours && errors.total_hours}
+                    helperText={
+                      (touched.total_hours && errors.total_hours) || 
+                      (isEditMode ? `Ore già utilizzate: ${hoursUsed}` : '')
+                    }
                     inputProps={{
-                      min: 0.5,
+                      min: isEditMode ? hoursUsed : 0.5,
                       step: 0.5,
                     }}
                     required
@@ -303,19 +345,28 @@ function PackageFormPage() {
                     <TextField
                       fullWidth
                       name="remaining_hours"
-                      label="Ore rimanenti"
-                      type="number"
-                      value={values.remaining_hours}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.remaining_hours && Boolean(errors.remaining_hours)}
-                      helperText={touched.remaining_hours && errors.remaining_hours}
-                      inputProps={{
-                        min: 0,
-                        step: 0.5,
-                        max: values.total_hours,
+                      label="Ore rimanenti (calcolate automaticamente)"
+                      value={isEditMode ? calculatedRemainingHours : values.remaining_hours}
+                      InputProps={{
+                        readOnly: true,
+                        inputProps: { 
+                          style: { 
+                            MozAppearance: 'textfield', 
+                            WebkitAppearance: 'none',
+                            margin: 0
+                          } 
+                        }
                       }}
-                      required
+                      sx={{
+                        '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                          '-webkit-appearance': 'none',
+                          margin: 0,
+                        },
+                        '& input[type=number]': {
+                          '-moz-appearance': 'textfield',
+                        },
+                      }}
+                      helperText="Le ore rimanenti sono calcolate automaticamente come differenza tra ore totali e ore utilizzate"
                     />
                   </Grid>
                 )}

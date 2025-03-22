@@ -37,8 +37,7 @@ const LessonSchema = Yup.object().shape({
   professor_id: Yup.number().required('Professore obbligatorio'),
   student_id: Yup.number().required('Studente obbligatorio'),
   lesson_date: Yup.date()
-    .required('Data obbligatoria')
-    .max(new Date(), 'La data della lezione non può essere nel futuro'),
+    .required('Data obbligatoria'),
   professor_id: Yup.number().required('Professore obbligatorio'),
   student_id: Yup.number().required('Studente obbligatorio'),
   lesson_date: Yup.date().required('Data obbligatoria'),
@@ -371,7 +370,6 @@ function LessonFormPage() {
                     label="Data lezione"
                     value={values.lesson_date}
                     onChange={(date) => setFieldValue('lesson_date', date)}
-                    maxDate={new Date()} // Aggiunge questa riga
                     slotProps={{
                       textField: {
                         fullWidth: true,

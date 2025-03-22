@@ -122,6 +122,21 @@ function StudentDetailPage() {
     }
   };
 
+  // Funzione per formattare la data di nascita, gestendo il caso null
+  const formatBirthDate = (birthDate) => {
+    if (!birthDate) return 'Non specificata';
+    
+    try {
+      // Verifica se la data è una stringa "1970-01-01" (timestamp Unix 0)
+      if (birthDate === '1970-01-01') return 'Non specificata';
+      
+      return format(parseISO(birthDate), 'dd/MM/yyyy', { locale: it });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Data non valida';
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
@@ -221,7 +236,7 @@ function StudentDetailPage() {
                   {student.first_name} {student.last_name}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Data di nascita: {format(parseISO(student.birth_date), 'dd/MM/yyyy', { locale: it })}
+                  Data di nascita: {formatBirthDate(student.birth_date)}
                 </Typography>
                 {student.email && (
                   <Typography variant="body2" color="text.secondary" gutterBottom>

@@ -27,7 +27,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { studentService } from '../../services/api';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 
 function StudentListPage() {
@@ -112,6 +112,21 @@ function StudentListPage() {
     }
   };
 
+  // Funzione per formattare la data di nascita, gestendo il caso null
+  const formatBirthDate = (birthDate) => {
+    if (!birthDate) return '-';
+    
+    try {
+      // Verifica se la data è una stringa "1970-01-01" (timestamp Unix 0)
+      if (birthDate === '1970-01-01') return '-';
+      
+      return format(parseISO(birthDate), 'dd/MM/yyyy', { locale: it });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '-';
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
@@ -182,7 +197,7 @@ function StudentListPage() {
                     <TableCell>{student.first_name}</TableCell>
                     <TableCell>{student.last_name}</TableCell>
                     <TableCell>
-                      {format(new Date(student.birth_date), 'dd/MM/yyyy', { locale: it })}
+                      {formatBirthDate(student.birth_date)}
                     </TableCell>
                     <TableCell>{student.email || '-'}</TableCell>
                     <TableCell>{student.phone || '-'}</TableCell>

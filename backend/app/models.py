@@ -33,7 +33,7 @@ class Student(Base):
     id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
-    birth_date = Column(Date, nullable=False)
+    birth_date = Column(Date, nullable=True)  # Cambiato da nullable=False a nullable=True
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
@@ -108,12 +108,19 @@ class ProfessorResponse(ProfessorBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+# Modifica agli schemi Pydantic
 class StudentBase(BaseModel):
     first_name: str
     last_name: str
-    birth_date: date
+    birth_date: Optional[date] = None  # Cambiato da date a Optional[date] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+
+    class Config:
+        # Questa configurazione aiuta a gestire correttamente i valori null
+        json_encoders = {
+            date: lambda v: v.isoformat() if v else None
+        }
 
 class StudentCreate(StudentBase):
     pass
@@ -168,7 +175,6 @@ class PackageUpdate(BaseModel):
     package_cost: Optional[Decimal] = None
     status: Optional[str] = None
     is_paid: Optional[bool] = None
-    remaining_hours: Optional[Decimal] = None
     
     @field_validator('total_hours')
     @classmethod
@@ -223,21 +229,9 @@ class LessonBase(BaseModel):
         if duration is not None and hourly_rate is not None:
             self.total_payment = duration * hourly_rate
         return self
-    
-    @field_validator('lesson_date')
-    @classmethod
-    def check_not_future_date(cls, v):
-        if v > date.today():
-            raise ValueError('La data della lezione non può essere nel futuro')
-        return v
 
 class LessonCreate(LessonBase):
-    @field_validator('lesson_date')
-    @classmethod
-    def check_not_future_date(cls, v):
-        if v > date.today():
-            raise ValueError('La data della lezione non può essere nel futuro')
-        return v
+    pass
 
 class LessonUpdate(BaseModel):
     professor_id: Optional[int] = None

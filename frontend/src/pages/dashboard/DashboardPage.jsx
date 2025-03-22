@@ -8,62 +8,178 @@ import {
   Grid,
   Typography,
   Paper,
-  Stack,
+  ButtonGroup,
+  Button,
   Divider,
+  List,
+  ListItem,
+  ListItemText,
+  Chip,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Tab,
+  Tabs,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-import { statsService } from '../../services/api';
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  format,
+  addWeeks,
+  subWeeks,
+  parseISO,
+  isEqual,
+  getDay,
+  isToday,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  isWithinInterval,
+} from 'date-fns';
+import { it } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
+import { lessonService, studentService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 function DashboardPage() {
-  const { isAdmin } = useAuth();
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [financeStats, setFinanceStats] = useState(null);
-  const [studentStats, setStudentStats] = useState(null);
-  const [professorStats, setProfessorStats] = useState(null);
+  const [lessons, setLessons] = useState([]);
+  const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [currentTab, setCurrentTab] = useState(0);
+  const [periodFilter, setPeriodFilter] = useState('week');
+  const [selectedLesson, setSelectedLesson] = useState(null);
+  const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
+  const [students, setStudents] = useState({});
+
+  // Genera i giorni della settimana a partire dal lunedì
+  const daysOfWeek = eachDayOfInterval({
+    start: currentWeekStart,
+    end: endOfWeek(currentWeekStart, { weekStartsOn: 1 }),
+  });
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        
-        // Fetch student stats
-        const studentResponse = await statsService.getStudentStats();
-        setStudentStats(studentResponse.data);
-        
-        // Fetch professor stats if admin
-        if (isAdmin()) {
-          const professorResponse = await statsService.getProfessorStats();
-          setProfessorStats(professorResponse.data);
-          
-          const financeResponse = await statsService.getFinanceStats();
-          setFinanceStats(financeResponse.data);
-        }
+
+        // Recupera le lezioni del professore corrente
+        const response = await lessonService.getByProfessor(currentUser.id);
+        setLessons(response.data);
+
+        // Recupera i dati degli studenti
+        const studentsResponse = await studentService.getAll();
+        const studentsMap = {};
+        studentsResponse.data.forEach(student => {
+          studentsMap[student.id] = `${student.first_name} ${student.last_name}`;
+        });
+        setStudents(studentsMap);
       } catch (err) {
-        console.error('Error fetching dashboard stats:', err);
-        setError('Impossibile caricare le statistiche. Riprova più tardi.');
+        console.error('Error fetching data:', err);
+        setError('Impossibile caricare i dati. Riprova più tardi.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
-  }, [isAdmin]);
+    fetchData();
+  }, [currentUser.id]);
+
+  // Funzione per cambiare settimana
+  const handleChangeWeek = (direction) => {
+    if (direction === 'next') {
+      setCurrentWeekStart(addWeeks(currentWeekStart, 1));
+    } else {
+      setCurrentWeekStart(subWeeks(currentWeekStart, 1));
+    }
+  };
+
+  // Funzione per ottenere le lezioni di un giorno specifico
+  const getLessonsForDay = (day) => {
+    return lessons.filter(lesson => {
+      const lessonDate = parseISO(lesson.lesson_date);
+      return isEqual(
+        new Date(lessonDate.getFullYear(), lessonDate.getMonth(), lessonDate.getDate()),
+        new Date(day.getFullYear(), day.getMonth(), day.getDate())
+      );
+    });
+  };
+
+  // Funzione per ottenere le lezioni nel periodo selezionato
+  const getLessonsForPeriod = () => {
+    let startDate, endDate;
+
+    switch (periodFilter) {
+      case 'week':
+        startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
+        endDate = endOfWeek(new Date(), { weekStartsOn: 1 });
+        break;
+      case 'month':
+        startDate = startOfMonth(new Date());
+        endDate = endOfMonth(new Date());
+        break;
+      case 'year':
+        startDate = startOfYear(new Date());
+        endDate = endOfYear(new Date());
+        break;
+      default:
+        startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
+        endDate = endOfWeek(new Date(), { weekStartsOn: 1 });
+    }
+
+    return lessons.filter(lesson => {
+      const lessonDate = parseISO(lesson.lesson_date);
+      return isWithinInterval(lessonDate, { start: startDate, end: endDate });
+    });
+  };
+
+  // Calcola il totale guadagnato per un periodo
+  const calculateEarnings = (lessonsArray) => {
+    return lessonsArray.reduce((total, lesson) => total + parseFloat(lesson.total_payment), 0);
+  };
+
+  // Funzione per gestire il click su una lezione
+  const handleLessonClick = (lesson) => {
+    setSelectedLesson(lesson);
+    setLessonDialogOpen(true);
+  };
+
+  // Funzione per chiudere il dialog
+  const handleCloseDialog = () => {
+    setLessonDialogOpen(false);
+  };
+
+  // Funzione per navigare alla pagina di dettaglio della lezione
+  const handleViewLessonDetails = () => {
+    setLessonDialogOpen(false);
+    navigate(`/lessons/${selectedLesson.id}`);
+  };
+
+  // Calcola le lezioni della settimana corrente
+  const currentWeekLessons = lessons.filter(lesson => {
+    const lessonDate = parseISO(lesson.lesson_date);
+    return isWithinInterval(lessonDate, {
+      start: currentWeekStart,
+      end: endOfWeek(currentWeekStart, { weekStartsOn: 1 }),
+    });
+  });
+
+  // Calcola i guadagni della settimana corrente
+  const currentWeekEarnings = calculateEarnings(currentWeekLessons);
+
+  // Calcola i guadagni nel periodo selezionato
+  const periodLessons = getLessonsForPeriod();
+  const periodEarnings = calculateEarnings(periodLessons);
 
   if (loading) {
     return (
@@ -81,12 +197,6 @@ function DashboardPage() {
     );
   }
 
-  // Prepara i dati per i grafici
-  const studentPieData = [
-    { name: 'Studenti Attivi', value: studentStats?.active_students || 0 },
-    { name: 'Studenti Inattivi', value: (studentStats?.total_students || 0) - (studentStats?.active_students || 0) },
-  ];
-
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
@@ -94,232 +204,272 @@ function DashboardPage() {
       </Typography>
 
       <Grid container spacing={3}>
-        {/* Cards di riepilogo */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Studenti
+        {/* Calendario Settimanale */}
+        <Grid item xs={12} md={9}>
+          <Paper sx={{ p: 2 }}>
+            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+              <Typography variant="h6">
+                Calendario Settimanale
               </Typography>
-              <Typography variant="h3" color="primary">
-                {studentStats?.total_students || 0}
+              <ButtonGroup size="small">
+                <Button onClick={() => handleChangeWeek('prev')}>Settimana Precedente</Button>
+                <Button onClick={() => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
+                  Oggi
+                </Button>
+                <Button onClick={() => handleChangeWeek('next')}>Settimana Successiva</Button>
+              </ButtonGroup>
+            </Box>
+
+            <Box display="flex" flexDirection="column" my={2}>
+              <Typography variant="subtitle1" align="center" gutterBottom>
+                {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Studenti totali registrati
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
 
-        {isAdmin() && (
-          <>
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Entrate Totali
-                  </Typography>
-                  <Typography variant="h3" color="primary">
-                    €{financeStats?.total_income?.toFixed(2) || '0.00'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Entrate totali (pacchetti + lezioni singole)
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
+              <Grid container spacing={1}>
+                {daysOfWeek.map(day => {
+                  const dayLessons = getLessonsForDay(day);
+                  const isCurrentDay = isToday(day);
+                  return (
+                    <Grid item xs sx={{ width: 'calc(100% / 7)' }} key={day.toString()}>
+                      <Paper
+                        elevation={isCurrentDay ? 3 : 1}
+                        sx={{
+                          p: 1,
+                          height: '100%',
+                          bgcolor: isCurrentDay ? 'primary.light' : 'background.paper',
+                          color: isCurrentDay ? 'primary.contrastText' : 'text.primary',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle2"
+                          align="center"
+                          sx={{
+                            fontWeight: isCurrentDay ? 'bold' : 'normal',
+                            mb: 1,
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                            pb: 0.5
+                          }}
+                        >
+                          {format(day, "EEEE d", { locale: it })}
+                        </Typography>
 
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Guadagno Netto
-                  </Typography>
-                  <Typography variant="h3" color="primary">
-                    €{financeStats?.net_profit?.toFixed(2) || '0.00'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Entrate - Pagamenti ai professori
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </>
-        )}
-
-        {/* Grafico studenti */}
-        <Grid item xs={12} md={6}>
-          <Paper
-            sx={{
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 300,
-            }}
-          >
-            <Typography variant="h6" gutterBottom>
-              Distribuzione Studenti
-            </Typography>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={studentPieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {studentPieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+                        {dayLessons.length === 0 ? (
+                          <Box textAlign="center" py={2}>
+                            <Typography variant="body2" color={isCurrentDay ? 'primary.contrastText' : 'text.secondary'}>
+                              Nessuna lezione
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <List dense disablePadding>
+                            {dayLessons.map(lesson => (
+                              <ListItem
+                                key={lesson.id}
+                                button
+                                onClick={() => handleLessonClick(lesson)}
+                                sx={{
+                                  mb: 0.5,
+                                  bgcolor: 'background.paper',
+                                  borderRadius: 1,
+                                  color: 'text.primary', // Assicura che il testo sia sempre scuro
+                                  '&:hover': {
+                                    bgcolor: 'action.hover',
+                                  },
+                                }}
+                              >
+                                <ListItemText
+                                  primary={students[lesson.student_id] || `Studente #${lesson.student_id}`}
+                                  secondary={`${lesson.duration} ore - €${parseFloat(lesson.total_payment).toFixed(2)}`}
+                                  primaryTypographyProps={{ variant: 'body2', noWrap: true, color: 'text.primary' }}
+                                  secondaryTypographyProps={{ variant: 'caption', noWrap: true, color: 'text.secondary' }}
+                                />
+                                {lesson.is_package && (
+                                  <Chip
+                                    label="P"
+                                    size="small"
+                                    color="primary"
+                                    sx={{ width: 24, height: 24, fontSize: '0.625rem' }}
+                                  />
+                                )}
+                              </ListItem>
+                            ))}
+                          </List>
+                        )}
+                      </Paper>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </Box>
           </Paper>
         </Grid>
 
-        {/* Top studenti */}
-        <Grid item xs={12} md={6}>
-          <Paper
-            sx={{
-              p: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              height: 300,
-            }}
-          >
-            <Typography variant="h6" gutterBottom>
-              Top Studenti
-            </Typography>
-            {studentStats?.top_students?.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={studentStats.top_students}
-                  margin={{
-                    top: 5,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="lesson_count" name="Numero Lezioni" fill="#8884d8" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+        {/* Pannello laterale con riepilogo guadagni */}
+        <Grid item xs={12} md={3}>
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Riepilogo Settimana
+              </Typography>
+              <Box mt={2}>
                 <Typography variant="body2" color="text.secondary">
-                  Nessuna lezione registrata
+                  Lezioni questa settimana
                 </Typography>
+                <Typography variant="h4" color="primary">
+                  {currentWeekLessons.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" mt={2}>
+                  Guadagni settimana
+                </Typography>
+                <Typography variant="h4" color="primary">
+                  €{currentWeekEarnings.toFixed(2)}
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+
+          <Paper sx={{ p: 2 }}>
+            <Tabs
+              value={currentTab}
+              onChange={(event, newValue) => setCurrentTab(newValue)}
+              indicatorColor="primary"
+              textColor="primary"
+              variant="fullWidth"
+              sx={{ mb: 2 }}
+            >
+              <Tab label="Riepilogo" />
+              <Tab label="Dettaglio" />
+            </Tabs>
+
+            {currentTab === 0 ? (
+              <Box>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel id="period-filter-label">Periodo</InputLabel>
+                  <Select
+                    labelId="period-filter-label"
+                    value={periodFilter}
+                    label="Periodo"
+                    onChange={(e) => setPeriodFilter(e.target.value)}
+                  >
+                    <MenuItem value="week">Questa Settimana</MenuItem>
+                    <MenuItem value="month">Questo Mese</MenuItem>
+                    <MenuItem value="year">Questo Anno</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <Box mt={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    Lezioni nel periodo
+                  </Typography>
+                  <Typography variant="h5">
+                    {periodLessons.length}
+                  </Typography>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography variant="body2" color="text.secondary">
+                    Guadagni nel periodo
+                  </Typography>
+                  <Typography variant="h5" color="primary">
+                    €{periodEarnings.toFixed(2)}
+                  </Typography>
+                </Box>
+              </Box>
+            ) : (
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  Lezioni per tipo
+                </Typography>
+
+                <List dense>
+                  <ListItem>
+                    <ListItemText
+                      primary="Lezioni singole"
+                      secondary={`${periodLessons.filter(l => !l.is_package).length} lezioni`}
+                    />
+                    <Typography>
+                      €{calculateEarnings(periodLessons.filter(l => !l.is_package)).toFixed(2)}
+                    </Typography>
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText
+                      primary="Lezioni da pacchetti"
+                      secondary={`${periodLessons.filter(l => l.is_package).length} lezioni`}
+                    />
+                    <Typography>
+                      €{calculateEarnings(periodLessons.filter(l => l.is_package)).toFixed(2)}
+                    </Typography>
+                  </ListItem>
+                </List>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Typography variant="subtitle1" gutterBottom>
+                  Media per lezione
+                </Typography>
+                <Typography variant="h6">
+                  €{periodLessons.length > 0 ? (periodEarnings / periodLessons.length).toFixed(2) : '0.00'}
+                </Typography>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Box display="flex" justifyContent="space-between">
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => navigate('/lessons')}
+                    fullWidth
+                  >
+                    Visualizza tutte le lezioni
+                  </Button>
+                </Box>
               </Box>
             )}
           </Paper>
         </Grid>
-
-        {/* Top professori (solo admin) */}
-        {isAdmin() && professorStats?.top_professors?.length > 0 && (
-          <Grid item xs={12}>
-            <Paper
-              sx={{
-                p: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                height: 300,
-              }}
-            >
-              <Typography variant="h6" gutterBottom>
-                Top Professori
-              </Typography>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={professorStats.top_professors}
-                  margin={{
-                    top: 5,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="lesson_count" name="Numero Lezioni" fill="#8884d8" />
-                  <Bar yAxisId="right" dataKey="total_earnings" name="Guadagni (€)" fill="#82ca9d" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Paper>
-          </Grid>
-        )}
-
-        {/* Dettaglio finanziario (solo admin) */}
-        {isAdmin() && financeStats && (
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Dettaglio Finanziario
-                </Typography>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={2}
-                  divider={<Divider orientation="vertical" flexItem />}
-                  justifyContent="space-around"
-                  alignItems="center"
-                  sx={{ mt: 2 }}
-                >
-                  <Box textAlign="center">
-                    <Typography variant="body2" color="text.secondary">
-                      Entrate da Pacchetti
-                    </Typography>
-                    <Typography variant="h6" color="primary">
-                      €{financeStats.packages_income?.toFixed(2) || '0.00'}
-                    </Typography>
-                  </Box>
-                  
-                  <Box textAlign="center">
-                    <Typography variant="body2" color="text.secondary">
-                      Entrate da Lezioni Singole
-                    </Typography>
-                    <Typography variant="h6" color="primary">
-                      €{financeStats.single_lessons_income?.toFixed(2) || '0.00'}
-                    </Typography>
-                  </Box>
-                  
-                  <Box textAlign="center">
-                    <Typography variant="body2" color="text.secondary">
-                      Uscite (Pagamenti Professori)
-                    </Typography>
-                    <Typography variant="h6" color="error">
-                      €{financeStats.expenses?.toFixed(2) || '0.00'}
-                    </Typography>
-                  </Box>
-                  
-                  <Box textAlign="center">
-                    <Typography variant="body2" color="text.secondary">
-                      Profitto Netto
-                    </Typography>
-                    <Typography variant="h6" color="success.main">
-                      €{financeStats.net_profit?.toFixed(2) || '0.00'}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        )}
       </Grid>
+
+      {/* Dialog con dettagli lezione */}
+      <Dialog open={lessonDialogOpen} onClose={handleCloseDialog}>
+        {selectedLesson && (
+          <>
+            <DialogTitle>
+              Dettagli Lezione #{selectedLesson.id}
+            </DialogTitle>
+            <DialogContent>
+              <List dense>
+                <ListItem>
+                  <ListItemText primary="Data" secondary={format(parseISO(selectedLesson.lesson_date), "EEEE d MMMM yyyy", { locale: it })} />
+                </ListItem>
+                <ListItem>
+                  <ListItemText primary="Studente" secondary={students[selectedLesson.student_id] || `Studente #${selectedLesson.student_id}`} />
+                </ListItem>
+                <ListItem>
+                  <ListItemText primary="Durata" secondary={`${selectedLesson.duration} ore`} />
+                </ListItem>
+                <ListItem>
+                  <ListItemText primary="Tipo" secondary={selectedLesson.is_package ? `Pacchetto #${selectedLesson.package_id}` : 'Lezione singola'} />
+                </ListItem>
+                <ListItem>
+                  <ListItemText primary="Tariffa oraria" secondary={`€${parseFloat(selectedLesson.hourly_rate).toFixed(2)}`} />
+                </ListItem>
+                <ListItem>
+                  <ListItemText primary="Totale" secondary={`€${parseFloat(selectedLesson.total_payment).toFixed(2)}`} />
+                </ListItem>
+              </List>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseDialog}>Chiudi</Button>
+              <Button onClick={handleViewLessonDetails} color="primary">
+                Vedi tutti i dettagli
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
     </Box>
   );
 }
