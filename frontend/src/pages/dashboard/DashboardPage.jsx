@@ -206,8 +206,8 @@ function DashboardPage() {
       <Grid container spacing={3}>
         {/* Calendario Settimanale */}
         <Grid item xs={12} md={9}>
-          <Paper sx={{ p: 2 }}>
-            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+            <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
               <Typography variant="h6">
                 Calendario Settimanale
               </Typography>
@@ -220,90 +220,91 @@ function DashboardPage() {
               </ButtonGroup>
             </Box>
 
-            <Box display="flex" flexDirection="column" my={2}>
-              <Typography variant="subtitle1" align="center" gutterBottom>
-                {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
-              </Typography>
+            <Typography variant="subtitle1" align="center" gutterBottom
+              sx={{ fontWeight: 'bold', fontSize: '1.2rem', my: 2 }}>
+              {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
+            </Typography>
 
-              <Grid container spacing={1}>
-                {daysOfWeek.map(day => {
-                  const dayLessons = getLessonsForDay(day);
-                  const isCurrentDay = isToday(day);
-                  return (
-                    <Grid item xs sx={{ width: 'calc(100% / 7)' }} key={day.toString()}>
-                      <Paper
-                        elevation={isCurrentDay ? 3 : 1}
+            <Grid container spacing={1} sx={{ flexGrow: 1, mt: 0 }}>
+              {daysOfWeek.map(day => {
+                const dayLessons = getLessonsForDay(day);
+                const isCurrentDay = isToday(day);
+                return (
+                  <Grid item xs sx={{ width: 'calc(100% / 7)' }} key={day.toString()}>
+                    <Paper
+                      elevation={isCurrentDay ? 3 : 1}
+                      sx={{
+                        p: 1,
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        bgcolor: isCurrentDay ? 'primary.light' : 'background.paper',
+                        color: isCurrentDay ? 'primary.contrastText' : 'text.primary',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        align="center"
                         sx={{
-                          p: 1,
-                          height: '100%',
-                          bgcolor: isCurrentDay ? 'primary.light' : 'background.paper',
-                          color: isCurrentDay ? 'primary.contrastText' : 'text.primary',
-                          border: '1px solid',
+                          fontWeight: isCurrentDay ? 'bold' : 'normal',
+                          mb: 1,
+                          borderBottom: '1px solid',
                           borderColor: 'divider',
-                          boxSizing: 'border-box'
+                          pb: 0.5
                         }}
                       >
-                        <Typography
-                          variant="subtitle2"
-                          align="center"
-                          sx={{
-                            fontWeight: isCurrentDay ? 'bold' : 'normal',
-                            mb: 1,
-                            borderBottom: '1px solid',
-                            borderColor: 'divider',
-                            pb: 0.5
-                          }}
-                        >
-                          {format(day, "EEEE d", { locale: it })}
-                        </Typography>
+                        {format(day, "EEEE d", { locale: it })}
+                      </Typography>
 
-                        {dayLessons.length === 0 ? (
-                          <Box textAlign="center" py={2}>
-                            <Typography variant="body2" color={isCurrentDay ? 'primary.contrastText' : 'text.secondary'}>
-                              Nessuna lezione
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <List dense disablePadding>
-                            {dayLessons.map(lesson => (
-                              <ListItem
-                                key={lesson.id}
-                                button
-                                onClick={() => handleLessonClick(lesson)}
-                                sx={{
-                                  mb: 0.5,
-                                  bgcolor: 'background.paper',
-                                  borderRadius: 1,
-                                  color: 'text.primary', // Assicura che il testo sia sempre scuro
-                                  '&:hover': {
-                                    bgcolor: 'action.hover',
-                                  },
-                                }}
-                              >
-                                <ListItemText
-                                  primary={students[lesson.student_id] || `Studente #${lesson.student_id}`}
-                                  secondary={`${lesson.duration} ore - €${parseFloat(lesson.total_payment).toFixed(2)}`}
-                                  primaryTypographyProps={{ variant: 'body2', noWrap: true, color: 'text.primary' }}
-                                  secondaryTypographyProps={{ variant: 'caption', noWrap: true, color: 'text.secondary' }}
+                      {dayLessons.length === 0 ? (
+                        <Box textAlign="center" py={2} sx={{ flexGrow: 1 }}>
+                          <Typography variant="body2" color={isCurrentDay ? 'primary.contrastText' : 'text.secondary'}>
+                            Nessuna lezione
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <List dense disablePadding sx={{ flexGrow: 1 }}>
+                          {dayLessons.map(lesson => (
+                            <ListItem
+                              key={lesson.id}
+                              button
+                              onClick={() => handleLessonClick(lesson)}
+                              sx={{
+                                mb: 0.5,
+                                bgcolor: 'background.paper',
+                                borderRadius: 1,
+                                color: 'text.primary', // Assicura che il testo sia sempre scuro
+                                '&:hover': {
+                                  bgcolor: 'action.hover',
+                                },
+                              }}
+                            >
+                              <ListItemText
+                                primary={students[lesson.student_id] || `Studente #${lesson.student_id}`}
+                                secondary={`${lesson.duration} ore - €${parseFloat(lesson.total_payment).toFixed(2)}`}
+                                primaryTypographyProps={{ variant: 'body2', noWrap: true, color: 'text.primary' }}
+                                secondaryTypographyProps={{ variant: 'caption', noWrap: true, color: 'text.secondary' }}
+                              />
+                              {lesson.is_package && (
+                                <Chip
+                                  label="P"
+                                  size="small"
+                                  color="primary"
+                                  sx={{ width: 24, height: 24, fontSize: '0.625rem' }}
                                 />
-                                {lesson.is_package && (
-                                  <Chip
-                                    label="P"
-                                    size="small"
-                                    color="primary"
-                                    sx={{ width: 24, height: 24, fontSize: '0.625rem' }}
-                                  />
-                                )}
-                              </ListItem>
-                            ))}
-                          </List>
-                        )}
-                      </Paper>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </Box>
+                              )}
+                            </ListItem>
+                          ))}
+                        </List>
+                      )}
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
           </Paper>
         </Grid>
 

@@ -27,6 +27,7 @@ import {
   Book as BookIcon,
   MenuBook as MenuBookIcon,
   AccountCircle,
+  AdminPanelSettings as AdminDashboardIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
@@ -69,9 +70,12 @@ function MainLayout() {
     { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
   ];
 
-  // Solo gli admin possono vedere tutti i professori
+  // Solo gli admin possono vedere la dashboard amministrativa e tutti i professori
   if (isAdmin()) {
-    menuItems.splice(1, 0, { text: 'Professori', icon: <PeopleIcon />, path: '/professors' });
+    // Aggiungi la nuova dashboard amministrativa subito dopo la dashboard principale
+    menuItems.splice(1, 0, { text: 'Dashboard Admin', icon: <AdminDashboardIcon />, path: '/admin-dashboard' });
+    // Aggiungi la gestione professori dopo
+    menuItems.splice(2, 0, { text: 'Professori', icon: <PeopleIcon />, path: '/professors' });
   }
 
   const drawer = (
@@ -124,7 +128,8 @@ function MainLayout() {
           
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {/* Titolo dinamico basato sul percorso */}
-            {location.pathname.includes('/dashboard') && 'Dashboard'}
+            {location.pathname.includes('/dashboard') && !location.pathname.includes('/admin-dashboard') && 'Dashboard'}
+            {location.pathname.includes('/admin-dashboard') && 'Dashboard Amministrazione'}
             {location.pathname.includes('/professors') && 'Gestione Professori'}
             {location.pathname.includes('/students') && 'Gestione Studenti'}
             {location.pathname.includes('/packages') && 'Gestione Pacchetti'}

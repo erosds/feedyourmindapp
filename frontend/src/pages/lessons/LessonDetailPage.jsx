@@ -178,7 +178,7 @@ function LessonDetailPage() {
       <Grid container spacing={3}>
         {/* Informazioni lezione */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Informazioni Lezione
@@ -264,7 +264,7 @@ function LessonDetailPage() {
 
         {/* Informazioni sul pacchetto (se applicabile) */}
         <Grid item xs={12} md={6}>
-          <Card>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Tipo di Lezione

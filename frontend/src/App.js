@@ -19,6 +19,7 @@ import LoginPage from './pages/auth/LoginPage';
 
 // Dashboard Pages
 import DashboardPage from './pages/dashboard/DashboardPage';
+import AdminDashboardPage from './pages/dashboard/AdminDashboardPage'; // Importa la nuova dashboard amministrativa
 
 // Professor Pages
 import ProfessorListPage from './pages/professors/ProfessorListPage';
@@ -76,6 +77,12 @@ function App() {
               <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
+                
+                {/* Nuova rotta per la dashboard amministrativa - protetta da AdminRoute */}
+                <Route 
+                  path="/admin-dashboard" 
+                  element={<AdminRoute><AdminDashboardPage /></AdminRoute>} 
+                />
 
                 {/* Professor Routes */}
                 <Route path="/professors" element={<ProfessorListPage />} />

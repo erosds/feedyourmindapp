@@ -27,7 +27,7 @@ import {
   Edit as EditIcon,
   ArrowBack as ArrowBackIcon,
   Event as EventIcon,
-  Euro as EuroIcon,
+  AccessTime as AccessTimeIcon,
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
   AddTask as AddLessonIcon,
@@ -183,7 +183,7 @@ function PackageDetailPage() {
       <Grid container spacing={3}>
         {/* Informazioni pacchetto */}
         <Grid item xs={12} md={8}>
-          <Card>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Informazioni Pacchetto
@@ -266,7 +266,7 @@ function PackageDetailPage() {
 
         {/* Statistiche */}
         <Grid item xs={12} md={4}>
-          <Card>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Statistiche
@@ -283,7 +283,7 @@ function PackageDetailPage() {
                 </Grid>
                 <Grid item xs={6}>
                   <Box textAlign="center">
-                    <EuroIcon color="primary" fontSize="large" />
+                    <AccessTimeIcon color="primary" fontSize="large" />
                     <Typography variant="h6">{totalHoursDone.toFixed(1)}</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Ore effettuate

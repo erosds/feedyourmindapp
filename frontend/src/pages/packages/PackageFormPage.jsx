@@ -26,7 +26,7 @@ import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { format, parseISO } from 'date-fns';
 
-// Schema di validazione
+// Schema di validazione (modificato per rimuovere status)
 const PackageSchema = Yup.object().shape({
   student_id: Yup.number().required('Studente obbligatorio'),
   start_date: Yup.date()
@@ -39,14 +39,9 @@ const PackageSchema = Yup.object().shape({
     .min(0, 'Il costo non può essere negativo')
     .required('Costo pacchetto obbligatorio'),
   is_paid: Yup.boolean(),
-  status: Yup.string().oneOf(['in_progress', 'completed']),
-  remaining_hours: Yup.number().when('status', {
-    is: 'in_progress',
-    then: () => Yup.number()
-      .min(0, 'Le ore rimanenti non possono essere negative')
-      .required('Ore rimanenti obbligatorie'),
-    otherwise: () => Yup.number().notRequired(),
-  }),
+  remaining_hours: Yup.number()
+    .min(0, 'Le ore rimanenti non possono essere negative')
+    .required('Ore rimanenti obbligatorie'),
 });
 
 function PackageFormPage() {
@@ -59,13 +54,13 @@ function PackageFormPage() {
   const [students, setStudents] = useState([]);
   const [hoursUsed, setHoursUsed] = useState(0);
   const [calculatedRemainingHours, setCalculatedRemainingHours] = useState(0);
+  const [packageStatus, setPackageStatus] = useState('in_progress');
   const [initialValues, setInitialValues] = useState({
     student_id: '',
     start_date: new Date(),
     total_hours: '',
     package_cost: '',
     is_paid: false,
-    status: 'in_progress',
     remaining_hours: '',
   });
 
@@ -96,6 +91,9 @@ function PackageFormPage() {
           // Calcola ore rimanenti (totale - utilizzate)
           const remainingHours = parseFloat(packageData.total_hours) - usedHours;
           setCalculatedRemainingHours(remainingHours);
+          
+          // Imposta lo stato del pacchetto in base alle ore rimanenti
+          setPackageStatus(remainingHours > 0 ? 'in_progress' : 'completed');
 
           setInitialValues({
             student_id: packageData.student_id,
@@ -103,7 +101,6 @@ function PackageFormPage() {
             total_hours: packageData.total_hours,
             package_cost: packageData.package_cost,
             is_paid: packageData.is_paid,
-            status: packageData.status,
             remaining_hours: packageData.remaining_hours,
           });
         }
@@ -126,20 +123,24 @@ function PackageFormPage() {
     setFieldValue('total_hours', e.target.value);
     
     if (isEditMode) {
+      // Verifica che le ore totali non siano inferiori alle ore già utilizzate
+      if (newTotalHours < hoursUsed) {
+        setFieldError('total_hours', `Non puoi impostare meno di ${hoursUsed} ore (ore già utilizzate)`);
+        return;
+      }
+      
       // Calcola le nuove ore rimanenti
       const newRemainingHours = Math.max(0, newTotalHours - hoursUsed);
       setCalculatedRemainingHours(newRemainingHours);
       setFieldValue('remaining_hours', newRemainingHours);
       
-      // Controlla se le ore totali sono inferiori alle ore utilizzate
-      if (newTotalHours < hoursUsed) {
-        setFieldError('total_hours', `Non puoi impostare meno di ${hoursUsed} ore (ore già utilizzate)`);
-      } else {
-        setFieldError('total_hours', undefined);
-      }
+      // Determina automaticamente lo stato del pacchetto in base alle ore rimanenti
+      setPackageStatus(newRemainingHours > 0 ? 'in_progress' : 'completed');
     } else {
       // In modalità creazione, le ore rimanenti sono semplicemente uguali alle ore totali
       setFieldValue('remaining_hours', e.target.value);
+      // Un nuovo pacchetto è sempre in corso
+      setPackageStatus('in_progress');
     }
   };
 
@@ -158,6 +159,8 @@ function PackageFormPage() {
       const formattedValues = {
         ...values,
         start_date: format(values.start_date, 'yyyy-MM-dd'),
+        // Aggiungi lo stato determinato automaticamente
+        status: packageStatus
       };
 
       // Se nuovo pacchetto, imposta ore rimanenti uguali a ore totali
@@ -248,7 +251,7 @@ function PackageFormPage() {
                     label="Data inizio"
                     value={values.start_date}
                     onChange={(date) => setFieldValue('start_date', date)}
-                    maxDate={new Date()} // Aggiunge questa riga
+                    maxDate={new Date()}
                     slotProps={{
                       textField: {
                         fullWidth: true,
@@ -307,24 +310,17 @@ function PackageFormPage() {
                   </Typography>
                 </Grid>
 
+                {/* Mostra lo stato come campo di sola lettura */}
                 <Grid item xs={12} md={6}>
-                  <FormControl fullWidth error={touched.status && Boolean(errors.status)}>
-                    <InputLabel id="status-label">Stato</InputLabel>
-                    <Select
-                      labelId="status-label"
-                      name="status"
-                      value={values.status}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      label="Stato"
-                    >
-                      <MenuItem value="in_progress">In corso</MenuItem>
-                      <MenuItem value="completed">Terminato</MenuItem>
-                    </Select>
-                    {touched.status && errors.status && (
-                      <FormHelperText>{errors.status}</FormHelperText>
-                    )}
-                  </FormControl>
+                  <TextField
+                    fullWidth
+                    label="Stato"
+                    value={packageStatus === 'in_progress' ? 'In corso' : 'Terminato'}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    helperText="Lo stato è determinato automaticamente in base alle ore rimanenti"
+                  />
                 </Grid>
 
                 <Grid item xs={12} md={6}>
@@ -340,36 +336,34 @@ function PackageFormPage() {
                   />
                 </Grid>
 
-                {values.status === 'in_progress' && (
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      name="remaining_hours"
-                      label="Ore rimanenti (calcolate automaticamente)"
-                      value={isEditMode ? calculatedRemainingHours : values.remaining_hours}
-                      InputProps={{
-                        readOnly: true,
-                        inputProps: { 
-                          style: { 
-                            MozAppearance: 'textfield', 
-                            WebkitAppearance: 'none',
-                            margin: 0
-                          } 
-                        }
-                      }}
-                      sx={{
-                        '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
-                          '-webkit-appearance': 'none',
-                          margin: 0,
-                        },
-                        '& input[type=number]': {
-                          '-moz-appearance': 'textfield',
-                        },
-                      }}
-                      helperText="Le ore rimanenti sono calcolate automaticamente come differenza tra ore totali e ore utilizzate"
-                    />
-                  </Grid>
-                )}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    name="remaining_hours"
+                    label="Ore rimanenti"
+                    value={isEditMode ? calculatedRemainingHours : values.remaining_hours}
+                    InputProps={{
+                      readOnly: true,
+                      inputProps: { 
+                        style: { 
+                          MozAppearance: 'textfield', 
+                          WebkitAppearance: 'none',
+                          margin: 0
+                        } 
+                      }
+                    }}
+                    sx={{
+                      '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                        '-webkit-appearance': 'none',
+                        margin: 0,
+                      },
+                      '& input[type=number]': {
+                        '-moz-appearance': 'textfield',
+                      },
+                    }}
+                    helperText="Le ore rimanenti sono calcolate automaticamente come differenza tra ore totali e ore utilizzate"
+                  />
+                </Grid>
 
                 <Grid item xs={12}>
                   <Box display="flex" justifyContent="flex-end" gap={2}>

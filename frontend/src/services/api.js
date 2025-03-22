@@ -75,20 +75,32 @@ export const professorService = {
   },
 };
 
-// Student service
-
-// Definizione dei servizi API per studenti
-const studentService = {
-  getAll: () => axios.get('/students/'),
-  getById: (id) => axios.get(`/students/${id}`),
-  create: (data) => axios.post('/students/', data),
-  update: (id, data) => axios.put(`/students/${id}`, data),
-  delete: (id) => axios.delete(`/students/${id}`),
-  checkHomonyms: (firstName, lastName) => 
-    axios.get(`/students/check-homonyms/?first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}`)
+// Student service - Usa l'istanza api comune
+export const studentService = {
+  getAll: async () => {
+    return api.get('/students');
+  },
+  
+  getById: async (id) => {
+    return api.get(`/students/${id}`);
+  },
+  
+  create: async (data) => {
+    return api.post('/students', data);
+  },
+  
+  update: async (id, data) => {
+    return api.put(`/students/${id}`, data);
+  },
+  
+  delete: async (id) => {
+    return api.delete(`/students/${id}`);
+  },
+  
+  checkHomonyms: async (firstName, lastName) => {
+    return api.get(`/students/check-homonyms/?first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}`);
+  },
 };
-
-export { studentService };
 
 // Package service
 export const packageService = {
