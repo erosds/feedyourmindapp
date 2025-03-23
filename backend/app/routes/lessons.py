@@ -91,7 +91,8 @@ def create_lesson(
             is_package=True,
             package_id=package_id,
             hourly_rate=lesson.hourly_rate,
-            total_payment=lesson.duration * lesson.hourly_rate
+            total_payment=lesson.duration * lesson.hourly_rate,
+            is_paid=True  # Le lezioni da pacchetto sono considerate pagate
         )
         
         # Aggiorna le ore rimanenti del pacchetto
@@ -115,7 +116,9 @@ def create_lesson(
             duration=lesson.duration,
             is_package=False,
             hourly_rate=lesson.hourly_rate,
-            total_payment=lesson.duration * lesson.hourly_rate
+            total_payment=lesson.duration * lesson.hourly_rate,
+            is_paid=lesson.is_paid  # Usa il valore fornito dal frontend
+
         )
         
         db.add(db_lesson)

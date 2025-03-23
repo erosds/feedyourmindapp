@@ -151,18 +151,23 @@ function PackageDetailPage() {
     const emptyDays = Array(adjustedFirstDay).fill(null);
     days = [...emptyDays, ...days];
     
-    // Calcola le ore totali di lezione per ogni giorno
-    const lessonHoursByDay = {};
+    // Organizza le lezioni per giorno con dettagli per insegnante
+    const lessonsByDay = {};
     
     lessons.forEach(lesson => {
       const lessonDate = parseISO(lesson.lesson_date);
       const dateKey = format(lessonDate, 'yyyy-MM-dd');
       
-      if (!lessonHoursByDay[dateKey]) {
-        lessonHoursByDay[dateKey] = 0;
+      if (!lessonsByDay[dateKey]) {
+        lessonsByDay[dateKey] = [];
       }
       
-      lessonHoursByDay[dateKey] += parseFloat(lesson.duration);
+      // Aggiungi questa lezione all'array del giorno
+      lessonsByDay[dateKey].push({
+        professorId: lesson.professor_id,
+        professorName: professors[lesson.professor_id] || `Prof. #${lesson.professor_id}`,
+        duration: parseFloat(lesson.duration)
+      });
     });
     
     return (
@@ -205,8 +210,8 @@ function PackageDetailPage() {
             
             // Controlla se questo giorno ha lezioni
             const dateKey = format(new Date(year, month, day), 'yyyy-MM-dd');
-            const hasLesson = lessonHoursByDay[dateKey] > 0;
-            const totalHours = hasLesson ? lessonHoursByDay[dateKey] : 0;
+            const hasLesson = lessonsByDay[dateKey] && lessonsByDay[dateKey].length > 0;
+            const dayLessons = hasLesson ? lessonsByDay[dateKey] : [];
             
             return (
               <Grid item xs={12/7} key={`day-${index}`}>
@@ -230,14 +235,13 @@ function PackageDetailPage() {
                       bgcolor: hasLesson ? 'primary.main' : 'transparent',
                       color: hasLesson ? 'primary.contrastText' : 'text.primary',
                       fontWeight: hasLesson ? 'bold' : 'normal',
-                      cursor: hasLesson ? 'default' : 'default',
+                      cursor: 'default',
                       transition: 'all 0.3s ease',
                       '&:hover': hasLesson ? {
-                        height: 38,
-                        width: 38,
-                        '& .hour-info': {
+                        '& .lessons-tooltip': {
                           opacity: 1,
-                          top: -18,
+                          top: -5 - (dayLessons.length * 20),
+                          visibility: 'visible'
                         }
                       } : {},
                     }}
@@ -245,26 +249,43 @@ function PackageDetailPage() {
                     {day}
                     {hasLesson && (
                       <Box 
-                        className="hour-info"
+                        className="lessons-tooltip"
                         sx={{ 
-                          position: 'absolute', 
-                          top: -15, 
+                          position: 'absolute',
+                          top: -15,
                           left: '50%',
                           transform: 'translateX(-50%)',
-                          bgcolor: 'secondary.main',
-                          color: 'secondary.contrastText',
-                          borderRadius: 1,
-                          px: 1,
-                          py: 0.2,
-                          fontSize: '0.65rem',
-                          fontWeight: 'bold',
+                          bgcolor: 'primary.main',
+                          color: 'primary.contrastText',
+                          borderRadius: 1.5,
+                          px: 1.5,
+                          py: 0.8,
+                          fontSize: '0.75rem',
                           opacity: 0,
+                          visibility: 'hidden',
                           transition: 'all 0.3s ease',
                           whiteSpace: 'nowrap',
                           zIndex: 10,
+                          boxShadow: 2,
+                          minWidth: 130
                         }}
                       >
-                        {totalHours} {totalHours === 1 ? 'ora' : 'ore'}
+                        {dayLessons.map((lesson, i) => {
+                          // Prendiamo nome e iniziale del cognome
+                          const nameParts = lesson.professorName.split(' ');
+                          const name = nameParts[0];
+                          const surnameInitial = nameParts.length > 1 ? nameParts[1].charAt(0) + '.' : '';
+                          
+                          return (
+                            <Box key={i} sx={{ 
+                              textAlign: 'left', 
+                              py: 0.2,
+                              borderBottom: i < dayLessons.length - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none' 
+                            }}>
+                              {lesson.duration} {lesson.duration === 1 ? 'ora' : 'ore'} con {name} {surnameInitial}
+                            </Box>
+                          );
+                        })}
                       </Box>
                     )}
                   </Box>

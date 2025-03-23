@@ -25,6 +25,8 @@ import {
   Euro as EuroIcon,
   EventNote as PackageIcon,
   Delete as DeleteIcon,
+  CheckCircle as CheckIcon,  // Aggiungi per icona pagamento
+  Cancel as CancelIcon,      // Aggiungi per icona non pagamento
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -41,7 +43,7 @@ function LessonDetailPage() {
   const [packageData, setPackageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Verifica autorizzazioni: gli admin possono vedere tutte le lezioni,
   // i professori standard possono vedere solo le proprie
   const canViewLesson = (lessonData) => {
@@ -53,27 +55,27 @@ function LessonDetailPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
+
         // Carica i dati della lezione
         const lessonResponse = await lessonService.getById(id);
         const lessonData = lessonResponse.data;
-        
+
         // Verifica autorizzazioni
         if (!canViewLesson(lessonData)) {
           navigate('/dashboard');
           return;
         }
-        
+
         setLesson(lessonData);
-        
+
         // Carica i dati dello studente
         const studentResponse = await studentService.getById(lessonData.student_id);
         setStudent(studentResponse.data);
-        
+
         // Carica i dati del professore
         const professorResponse = await professorService.getById(lessonData.professor_id);
         setProfessor(professorResponse.data);
-        
+
         // Se la lezione fa parte di un pacchetto, carica i dati del pacchetto
         if (lessonData.is_package && lessonData.package_id) {
           const packageResponse = await packageService.getById(lessonData.package_id);
@@ -140,8 +142,8 @@ function LessonDetailPage() {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box display="flex" alignItems="center">
           <Tooltip title="Torna alla lista">
-            <IconButton 
-              color="primary" 
+            <IconButton
+              color="primary"
               onClick={handleBackToLessons}
               sx={{ mr: 2 }}
             >
@@ -152,7 +154,7 @@ function LessonDetailPage() {
             Dettagli Lezione #{lesson.id}
           </Typography>
         </Box>
-        
+
         <Box>
           <Button
             variant="outlined"
@@ -257,6 +259,25 @@ function LessonDetailPage() {
                     €{parseFloat(lesson.total_payment).toFixed(2)}
                   </Typography>
                 </Grid>
+
+                {/* Stato Pagamento (solo per lezioni singole) */}
+                {!lesson.is_package && (
+                  <Grid item xs={12} sm={6}>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <EuroIcon sx={{ mr: 1 }} color="primary" />
+                      <Typography variant="body2" color="text.secondary">
+                        Stato pagamento
+                      </Typography>
+                    </Box>
+                    <Chip
+                      icon={lesson.is_paid ? <CheckIcon /> : <CancelIcon />}
+                      label={lesson.is_paid ? 'Pagata' : 'Non pagata'}
+                      color={lesson.is_paid ? 'success' : 'error'}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                )}
               </Grid>
             </CardContent>
           </Card>

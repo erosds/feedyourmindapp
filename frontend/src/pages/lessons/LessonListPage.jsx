@@ -292,6 +292,7 @@ function LessonListPage() {
               <TableCell>Tipo</TableCell>
               <TableCell align="right">Tariffa Oraria</TableCell>
               <TableCell align="right">Totale</TableCell>
+              <TableCell>Pagamento</TableCell> {/* Nuova colonna */}
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
@@ -333,6 +334,26 @@ function LessonListPage() {
                     </TableCell>
                     <TableCell align="right">€{parseFloat(lesson.hourly_rate).toFixed(2)}</TableCell>
                     <TableCell align="right">€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>
+                    <TableCell>
+                      {lesson.is_package ? (
+                        <Tooltip title="Gestito nel pacchetto">
+                          <Chip
+                            label="Da pacchetto"
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        </Tooltip>
+                      ) : (
+                        <Chip
+                          label={lesson.is_paid ? "Pagata" : "Non pagata"}
+                          color={lesson.is_paid ? "success" : "error"}
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
+                    </TableCell>
+
                     <TableCell align="right">
                       <Tooltip title="Visualizza dettagli">
                         <IconButton

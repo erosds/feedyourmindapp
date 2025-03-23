@@ -251,8 +251,8 @@ function AdminDashboardPage() {
                         key={prof.id}
                         hover
                         onClick={() => navigate(`/professors/${prof.id}`)}
-                        sx={{cursor: 'pointer', height: 20}}
-                        
+                        sx={{ cursor: 'pointer', height: 20 }}
+
                       >
                         <TableCell>
                           <Box display="flex" alignItems="center">
@@ -365,28 +365,30 @@ function AdminDashboardPage() {
                               onClick={() => navigate(`/professors/${professor.id}`)}
                               sx={{
                                 mb: 0.5,
-                                bgcolor: 'background.paper',
+                                p: 0, // Rimuovi il padding predefinito
                                 borderRadius: 1,
-                                color: 'text.primary',
                                 '&:hover': {
-                                  bgcolor: 'action.hover',
-                                },
+                                  // Evita background hover duplicato
+                                  bgcolor: 'transparent',
+                                }
                               }}
                             >
-                              <ListItemAvatar>
-                                <Avatar sx={{ bgcolor: professor.is_admin ? 'secondary.main' : 'primary.main',width: 24,
-                                height: 24}}>
-                                  {professor.first_name.charAt(0)}
-                                </Avatar>
-                              </ListItemAvatar>
-                              <ListItemText
-                                primary={`${professor.first_name} ${professor.last_name}`}
-                                primaryTypographyProps={{
-                                  variant: 'body2',
-                                  noWrap: true,
-                                  color: 'text.primary'                            
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  bgcolor: 'primary.main',
+                                  color: 'white',
+                                  py: 0.5,
+                                  px: 1,
+                                  borderRadius: 1,
+                                  textAlign: 'center',
+                                  '&:hover': {
+                                    opacity: 0.9, // Effetto hover più sottile sul box colorato
+                                  }
                                 }}
-                              />
+                              >
+                                {professor.first_name} {professor.last_name ? professor.last_name.charAt(0) + '.' : ''}
+                              </Box>
                             </ListItem>
                           ))}
                         </List>

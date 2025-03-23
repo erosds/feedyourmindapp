@@ -274,28 +274,34 @@ function DashboardPage() {
                               onClick={() => handleLessonClick(lesson)}
                               sx={{
                                 mb: 0.5,
-                                bgcolor: 'background.paper',
+                                p: 0, // Rimuovi il padding predefinito
                                 borderRadius: 1,
-                                color: 'text.primary', // Assicura che il testo sia sempre scuro
                                 '&:hover': {
-                                  bgcolor: 'action.hover',
-                                },
+                                  bgcolor: 'transparent', // Evita background hover duplicato
+                                }
                               }}
                             >
-                              <ListItemText
-                                primary={students[lesson.student_id] || `Studente #${lesson.student_id}`}
-                                secondary={`${lesson.duration} ore - €${parseFloat(lesson.total_payment).toFixed(2)}`}
-                                primaryTypographyProps={{ variant: 'body2', noWrap: true, color: 'text.primary' }}
-                                secondaryTypographyProps={{ variant: 'caption', noWrap: true, color: 'text.secondary' }}
-                              />
-                              {lesson.is_package && (
-                                <Chip
-                                  label="P"
-                                  size="small"
-                                  color="primary"
-                                  sx={{ width: 24, height: 24, fontSize: '0.625rem' }}
-                                />
-                              )}
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  bgcolor: lesson.is_package ? 'primary.main' : 'secondary.main',
+                                  color: 'white',
+                                  py: 0.5,
+                                  px: 1.5,
+                                  borderRadius: 1,
+                                  '&:hover': {
+                                    opacity: 0.9, // Effetto hover più sottile sul box colorato
+                                  }
+                                }}
+                              >
+                                <Typography variant="body2" noWrap>
+                                  {students[lesson.student_id]?.split(' ')[0] || 'Studente'}
+                                  {students[lesson.student_id]?.split(' ')[1] ? ' ' + students[lesson.student_id].split(' ')[1].charAt(0) + '.' : ''}
+                                </Typography>
+                                <Typography variant="caption" display="block" noWrap>
+                                  {lesson.duration} ore 
+                                </Typography>
+                              </Box>
                             </ListItem>
                           ))}
                         </List>

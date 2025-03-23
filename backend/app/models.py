@@ -50,7 +50,7 @@ class Package(Base):
     total_hours = Column(DECIMAL(5, 2), nullable=False)
     package_cost = Column(DECIMAL(10, 2), nullable=False)
     status = Column(String, default="in_progress")
-    is_paid = Column(Boolean, default=False)
+    is_paid = Column(Boolean, default=True)
     remaining_hours = Column(DECIMAL(5, 2))
     created_at = Column(TIMESTAMP, server_default=func.now())
     
@@ -74,6 +74,8 @@ class Lesson(Base):
     package_id = Column(Integer, ForeignKey("packages.id", ondelete="SET NULL"), nullable=True)
     hourly_rate = Column(DECIMAL(10, 2), nullable=False)
     total_payment = Column(DECIMAL(10, 2), nullable=False)
+    is_paid = Column(Boolean, default=False)  # Aggiunto campo per indicare se la lezione è stata pagata
+
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     __table_args__ = (
@@ -230,8 +232,18 @@ class LessonBase(BaseModel):
             self.total_payment = duration * hourly_rate
         return self
 
-class LessonCreate(LessonBase):
-    pass
+class LessonCreate(BaseModel):
+    professor_id: int
+    student_id: int
+    lesson_date: date
+    duration: Decimal
+    is_package: bool = False
+    package_id: Optional[int] = None
+    hourly_rate: Decimal
+    is_paid: bool = True  # Campo aggiunto per il pagamento
+    
+    class Config:
+        orm_mode = True
 
 class LessonUpdate(BaseModel):
     professor_id: Optional[int] = None
@@ -242,6 +254,8 @@ class LessonUpdate(BaseModel):
     package_id: Optional[int] = None
     hourly_rate: Optional[Decimal] = None
     total_payment: Optional[Decimal] = None
+    is_paid: Optional[bool] = None  # Campo aggiunto per il pagamento
+
     
     @field_validator('duration')
     @classmethod
@@ -264,9 +278,10 @@ class LessonResponse(BaseModel):
     lesson_date: date
     duration: Decimal
     is_package: bool
-    package_id: Optional[int] = None
+    package_id: Optional[int]
     hourly_rate: Decimal
     total_payment: Decimal
-    created_at: datetime
+    is_paid: bool  # Campo aggiunto per il pagamento
     
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        orm_mode = True

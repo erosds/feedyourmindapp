@@ -23,6 +23,7 @@ import {
   Radio,
   RadioGroup,
   Select,
+  Switch,
   TextField,
   Typography,
 } from '@mui/material';
@@ -53,6 +54,8 @@ const LessonSchema = Yup.object().shape({
   hourly_rate: Yup.number()
     .positive('La tariffa oraria deve essere positiva')
     .required('Tariffa oraria obbligatoria'),
+  is_paid: Yup.boolean(),  // Aggiunta validazione per il campo is_paid
+
 });
 
 function LessonFormPage() {
@@ -88,6 +91,7 @@ function LessonFormPage() {
     is_package: location.state?.is_package || false,
     package_id: location.state?.package_id || null,
     hourly_rate: '',
+    is_paid: true,  // Aggiungi stato pagamento inizializzato a false
   });
 
   // Carica i dati necessari
@@ -148,6 +152,7 @@ function LessonFormPage() {
             is_package: lesson.is_package,
             package_id: lesson.package_id,
             hourly_rate: lesson.hourly_rate,
+            is_paid: lesson.is_paid
           });
         }
       } catch (err) {
@@ -462,7 +467,7 @@ function LessonFormPage() {
                     </FormControl>
                   </Grid>
                 )}
-
+                                
                 <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
@@ -480,7 +485,21 @@ function LessonFormPage() {
                     required
                   />
                 </Grid>
-
+                {/* Campo per indicare se la lezione è stata pagata (solo per lezioni singole) */}
+                {!values.is_package && (
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          name="is_paid"
+                          checked={values.is_paid}
+                          onChange={handleChange}
+                        />
+                      }
+                      label="Lezione pagata"
+                    />
+                  </Grid>
+                )}
                 {/* Totale calcolato automaticamente */}
                 <Grid item xs={12} md={6}>
                   <TextField
