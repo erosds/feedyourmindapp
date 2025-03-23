@@ -502,7 +502,7 @@ function DashboardPage() {
                   {currentWeekLessons.length}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" mt={2}>
-                  Guadagni settimana
+                  Guadagni settimana in corso
                 </Typography>
                 <Typography variant="h4" color="primary">
                   €{currentWeekEarnings.toFixed(2)}

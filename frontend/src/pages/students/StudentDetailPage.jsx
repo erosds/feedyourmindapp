@@ -125,11 +125,11 @@ function StudentDetailPage() {
   // Funzione per formattare la data di nascita, gestendo il caso null
   const formatBirthDate = (birthDate) => {
     if (!birthDate) return 'Non specificata';
-    
+
     try {
       // Verifica se la data è una stringa "1970-01-01" (timestamp Unix 0)
       if (birthDate === '1970-01-01') return 'Non specificata';
-      
+
       return format(parseISO(birthDate), 'dd/MM/yyyy', { locale: it });
     } catch (error) {
       console.error('Error formatting date:', error);
@@ -444,7 +444,7 @@ function StudentDetailPage() {
                           >
                             <TableCell>#{pkg.id}</TableCell>
                             <TableCell>
-                              {format(parseISO(pkg.start_date), 'dd/MM/yyyy', { locale: it })}
+                              {format(parseISO(pkg.start_date), 'EEEE dd/MM/yyyy', { locale: it })}
                             </TableCell>
                             <TableCell>{pkg.total_hours}</TableCell>
                             <TableCell>
@@ -521,7 +521,7 @@ function StudentDetailPage() {
                             }}
                           >
                             <TableCell>
-                              {format(parseISO(lesson.lesson_date), 'dd/MM/yyyy', { locale: it })}
+                              {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                             </TableCell>
                             <TableCell>
                               {/* Idealmente qui ci sarebbe il nome del professore */}

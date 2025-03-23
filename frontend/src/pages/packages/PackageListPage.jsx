@@ -254,7 +254,7 @@ function PackageListPage() {
                     <TableCell>#{pkg.id}</TableCell>
                     <TableCell>{students[pkg.student_id] || `Studente #${pkg.student_id}`}</TableCell>
                     <TableCell>
-                      {format(parseISO(pkg.start_date), 'dd/MM/yyyy', { locale: it })}
+                      {format(parseISO(pkg.start_date), 'EEEE dd/MM/yyyy', { locale: it })}
                     </TableCell>
                     <TableCell>{pkg.total_hours}</TableCell>
                     <TableCell>{pkg.remaining_hours}</TableCell>

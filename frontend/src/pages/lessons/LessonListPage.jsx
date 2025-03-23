@@ -310,7 +310,7 @@ function LessonListPage() {
                   <TableRow key={lesson.id}>
                     <TableCell>#{lesson.id}</TableCell>
                     <TableCell>
-                      {format(parseISO(lesson.lesson_date), 'dd/MM/yyyy', { locale: it })}
+                      {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                     </TableCell>
                     <TableCell>{professors[lesson.professor_id] || `Prof. #${lesson.professor_id}`}</TableCell>
                     <TableCell>{students[lesson.student_id] || `Studente #${lesson.student_id}`}</TableCell>
