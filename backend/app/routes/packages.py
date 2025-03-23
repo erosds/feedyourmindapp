@@ -142,12 +142,41 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
     db.refresh(db_package)
     return db_package
 
-@router.delete("/{package_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{package_id}", response_model=dict)
 def delete_package(package_id: int, db: Session = Depends(get_db)):
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
     
+    # Trova tutte le lezioni associate a questo pacchetto
+    related_lessons = db.query(models.Lesson).filter(
+        models.Lesson.package_id == package_id,
+        models.Lesson.is_package == True
+    ).all()
+    
+    # Salva le informazioni sulle lezioni da eliminare
+    lessons_info = [
+        {
+            "id": lesson.id, 
+            "date": lesson.lesson_date, 
+            "student_id": lesson.student_id,
+            "professor_id": lesson.professor_id,
+            "duration": float(lesson.duration)
+        } 
+        for lesson in related_lessons
+    ]
+    
+    # Elimina le lezioni associate
+    for lesson in related_lessons:
+        db.delete(lesson)
+    
+    # Elimina il pacchetto
     db.delete(db_package)
     db.commit()
-    return None
+    
+    # Restituisci informazioni su ciò che è stato eliminato
+    return {
+        "package_id": package_id,
+        "deleted_lessons_count": len(related_lessons),
+        "deleted_lessons": lessons_info
+    }

@@ -358,25 +358,18 @@ def read_student_lessons(student_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{lesson_id}", response_model=models.LessonResponse)
 def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Depends(get_db)):
+    """
+    Aggiorna una lezione esistente. Se la lezione fa parte di un pacchetto, aggiorna anche le ore rimanenti del pacchetto.
+    Gestisce correttamente la modifica della durata della lezione, anche per le lezioni di pacchetti.
+    """
     db_lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
     if db_lesson is None:
         raise HTTPException(status_code=404, detail="Lesson not found")
     
-    # Se la durata cambia e la lezione fa parte di un pacchetto, occorre aggiornare anche il pacchetto
-    if lesson.duration is not None and db_lesson.is_package and db_lesson.package_id:
-        old_duration = db_lesson.duration
-        duration_diff = lesson.duration - old_duration
-        
-        package = db.query(models.Package).filter(models.Package.id == db_lesson.package_id).first()
-        if package:
-            # Aggiorna le ore rimanenti
-            package.remaining_hours -= duration_diff
-            
-            # Se le ore rimanenti sono 0 o meno, imposta lo stato del pacchetto a "completed"
-            if package.remaining_hours <= 0:
-                package.status = "completed"
-            
-            db.commit()
+    # Salva la durata originale prima della modifica
+    old_duration = db_lesson.duration
+    old_is_package = db_lesson.is_package
+    old_package_id = db_lesson.package_id
     
     # Aggiorna i campi della lezione
     update_data = lesson.dict(exclude_unset=True)
@@ -387,8 +380,64 @@ def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Dep
         new_hourly_rate = update_data.get("hourly_rate", db_lesson.hourly_rate)
         update_data["total_payment"] = new_duration * new_hourly_rate
     
+    # Gestione del cambio di stato package (da lezione singola a lezione di pacchetto o viceversa)
+    is_becoming_package = "is_package" in update_data and update_data["is_package"] and not old_is_package
+    is_becoming_single = "is_package" in update_data and not update_data["is_package"] and old_is_package
+    
+    # Se la lezione diventa parte di un pacchetto, verifica che ci siano ore sufficienti nel pacchetto
+    if is_becoming_package and "package_id" in update_data:
+        package = db.query(models.Package).filter(models.Package.id == update_data["package_id"]).first()
+        if package and package.remaining_hours < update_data.get("duration", db_lesson.duration):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Ore rimanenti nel pacchetto ({package.remaining_hours}) insufficienti per la durata della lezione ({update_data.get('duration', db_lesson.duration)})"
+            )
+    
+    # Aggiorna i campi della lezione
     for key, value in update_data.items():
         setattr(db_lesson, key, value)
+    
+    # Gestisci le modifiche al pacchetto
+    
+    # Caso 1: La lezione era parte di un pacchetto e ora non lo è più
+    if is_becoming_single and old_package_id:
+        old_package = db.query(models.Package).filter(models.Package.id == old_package_id).first()
+        if old_package:
+            # Restituisci le ore al pacchetto
+            old_package.remaining_hours += old_duration
+            if old_package.remaining_hours > 0:
+                old_package.status = "in_progress"
+            db.commit()
+    
+    # Caso 2: La lezione ora fa parte di un pacchetto (sia che lo fosse già o che lo sia diventata)
+    elif db_lesson.is_package and db_lesson.package_id:
+        # Ottieni il package attuale
+        current_package = db.query(models.Package).filter(models.Package.id == db_lesson.package_id).first()
+        
+        if current_package:
+            # Se il package è cambiato, restituisci le ore al vecchio package
+            if old_is_package and old_package_id and old_package_id != db_lesson.package_id:
+                old_package = db.query(models.Package).filter(models.Package.id == old_package_id).first()
+                if old_package:
+                    old_package.remaining_hours += old_duration
+                    if old_package.remaining_hours > 0:
+                        old_package.status = "in_progress"
+                    db.commit()
+                
+                # Aggiorna le ore rimanenti del nuovo package
+                current_package.remaining_hours -= db_lesson.duration
+            else:
+                # Il package non è cambiato, aggiusta solo la differenza di durata
+                duration_diff = db_lesson.duration - old_duration
+                current_package.remaining_hours -= duration_diff
+            
+            # Aggiorna lo stato del pacchetto in base alle ore rimanenti
+            if current_package.remaining_hours <= 0:
+                current_package.status = "completed"
+            else:
+                current_package.status = "in_progress"
+            
+            db.commit()
     
     db.commit()
     db.refresh(db_lesson)

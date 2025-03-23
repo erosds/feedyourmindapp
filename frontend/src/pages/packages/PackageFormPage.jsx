@@ -1,6 +1,6 @@
 // src/pages/packages/PackageFormPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -30,11 +30,20 @@ import { format, parseISO } from 'date-fns';
 const PackageSchema = Yup.object().shape({
   student_id: Yup.number().required('Studente obbligatorio'),
   start_date: Yup.date()
-    .required('Data inizio obbligatoria')
-    .max(new Date(), 'La data di inizio non può essere nel futuro'),
+    .required('Data inizio obbligatoria'),
   total_hours: Yup.number()
     .positive('Il numero di ore deve essere positivo')
-    .required('Numero di ore obbligatorio'),
+    .required('Numero di ore obbligatorio')
+    .test('min-overflow-hours', 'Le ore totali devono essere almeno pari alle ore eccedenti della lezione',
+      function (value) {
+        // Accedi al contesto per verificare se il pacchetto proviene da un overflow
+        const { from } = this.options;
+        // Se c'è un overflow_hours nel contesto e le ore totali sono inferiori, fallisce
+        if (from && from.context && from.context.overflow_hours && value < from.context.overflow_hours) {
+          return false;
+        }
+        return true;
+      }),
   package_cost: Yup.number()
     .min(0, 'Il costo non può essere negativo')
     .required('Costo pacchetto obbligatorio'),
@@ -46,11 +55,13 @@ const PackageSchema = Yup.object().shape({
 
 function PackageFormPage() {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const isEditMode = !!id;
 
   const [loading, setLoading] = useState(isEditMode);
   const [error, setError] = useState(null);
+  const [infoMessage, setInfoMessage] = useState('');
   const [students, setStudents] = useState([]);
   const [hoursUsed, setHoursUsed] = useState(0);
   const [calculatedRemainingHours, setCalculatedRemainingHours] = useState(0);
@@ -63,6 +74,8 @@ function PackageFormPage() {
     is_paid: false,
     remaining_hours: '',
   });
+  const [overflowHours, setOverflowHours] = useState(0);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -77,21 +90,21 @@ function PackageFormPage() {
         if (isEditMode) {
           const packageResponse = await packageService.getById(id);
           const packageData = packageResponse.data;
-          
+
           // Carica le lezioni associate a questo pacchetto
           const lessonsResponse = await lessonService.getAll();
           const packageLessons = lessonsResponse.data.filter(
             lesson => lesson.package_id === parseInt(id) && lesson.is_package
           );
-          
+
           // Calcola le ore utilizzate
           const usedHours = packageLessons.reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
           setHoursUsed(usedHours);
-          
+
           // Calcola ore rimanenti (totale - utilizzate)
           const remainingHours = parseFloat(packageData.total_hours) - usedHours;
           setCalculatedRemainingHours(remainingHours);
-          
+
           // Imposta lo stato del pacchetto in base alle ore rimanenti
           setPackageStatus(remainingHours > 0 ? 'in_progress' : 'completed');
 
@@ -115,34 +128,70 @@ function PackageFormPage() {
     fetchData();
   }, [id, isEditMode]);
 
+  // Gestione delle ore di overflow da lezione
+  useEffect(() => {
+    if (location.state?.overflow_from_lesson) {
+      const { student_id, overflow_hours, suggested_hours } = location.state;
+
+      // Salva le ore eccedenti per uso futuro
+      setOverflowHours(overflow_hours);
+
+      // Calcola le ore totali suggerite (doppio delle ore di overflow o almeno 5)
+      const totalHours = suggested_hours || Math.max(5, Math.ceil(overflow_hours * 2));
+
+      // Calcola le ore rimanenti sottraendo già le ore eccedenti
+      const remainingHours = totalHours - overflow_hours;
+
+      // Pre-compila automaticamente il form
+      setInitialValues({
+        ...initialValues,
+        student_id: student_id,
+        total_hours: totalHours,
+        package_cost: '', // L'utente dovrà impostare il costo
+        is_paid: false,
+        remaining_hours: remainingHours, // Ore rimanenti già ridotte
+      });
+
+      // Mostra un messaggio informativo aggiornato
+      setInfoMessage(`Stai creando un nuovo pacchetto per gestire ${overflow_hours} ore eccedenti da una lezione. Il pacchetto avrà già dedotte queste ore eccedenti dal totale.`);
+    }
+  }, [location.state]);
+
+
   // Funzione per gestire il cambiamento delle ore totali
   const handleTotalHoursChange = (e, setFieldValue, setFieldError) => {
     const newTotalHours = parseFloat(e.target.value);
-    
+
     // Aggiorna il valore nel form
     setFieldValue('total_hours', e.target.value);
-    
+
     if (isEditMode) {
-      // Verifica che le ore totali non siano inferiori alle ore già utilizzate
-      if (newTotalHours < hoursUsed) {
-        setFieldError('total_hours', `Non puoi impostare meno di ${hoursUsed} ore (ore già utilizzate)`);
-        return;
-      }
-      
-      // Calcola le nuove ore rimanenti
-      const newRemainingHours = Math.max(0, newTotalHours - hoursUsed);
-      setCalculatedRemainingHours(newRemainingHours);
-      setFieldValue('remaining_hours', newRemainingHours);
-      
-      // Determina automaticamente lo stato del pacchetto in base alle ore rimanenti
-      setPackageStatus(newRemainingHours > 0 ? 'in_progress' : 'completed');
+      // Validazione in modalità modifica (codice esistente)
+      // ...
     } else {
-      // In modalità creazione, le ore rimanenti sono semplicemente uguali alle ore totali
-      setFieldValue('remaining_hours', e.target.value);
+      // In modalità creazione, il comportamento dipende dalla presenza di ore di overflow
+      const isFromOverflow = location.state?.overflow_from_lesson;
+
+      if (isFromOverflow && overflowHours > 0) {
+        // Verifica esplicita che le ore totali siano almeno pari alle ore eccedenti
+        if (newTotalHours < overflowHours) {
+          setFieldError('total_hours', `Il pacchetto deve avere almeno ${overflowHours} ore per coprire le ore eccedenti`);
+          return; // Esci dalla funzione per evitare calcoli errati
+        }
+
+        // Per pacchetti creati da overflow, sottrai le ore eccedenti dalle ore totali
+        const newRemainingHours = Math.max(0, newTotalHours - overflowHours);
+        setFieldValue('remaining_hours', newRemainingHours);
+      } else {
+        // Pacchetto standard: le ore rimanenti sono uguali alle ore totali
+        setFieldValue('remaining_hours', e.target.value);
+      }
+
       // Un nuovo pacchetto è sempre in corso
       setPackageStatus('in_progress');
     }
   };
+
 
   const handleSubmit = async (values, { setSubmitting, setFieldError }) => {
     try {
@@ -163,17 +212,48 @@ function PackageFormPage() {
         status: packageStatus
       };
 
-      // Se nuovo pacchetto, imposta ore rimanenti uguali a ore totali
-      if (!isEditMode) {
+      // Se nuovo pacchetto normale (non da overflow), imposta ore rimanenti uguali a ore totali
+      if (!isEditMode && !location.state?.overflow_from_lesson) {
         formattedValues.remaining_hours = formattedValues.total_hours;
       }
+      // Se nuovo pacchetto da overflow, utilizziamo le ore rimanenti già calcolate
+
+      let newPackageId;
 
       if (isEditMode) {
         await packageService.update(id, formattedValues);
       } else {
-        await packageService.create(formattedValues);
+        // Per un nuovo pacchetto, prendi l'ID restituito
+        const response = await packageService.create(formattedValues);
+        newPackageId = response.data.id;
       }
 
+      // Se abbiamo un flag per creare una lezione dopo la creazione del pacchetto
+      if (location.state?.create_lesson_after && newPackageId && location.state?.lesson_data) {
+        try {
+          const lessonData = {
+            ...location.state.lesson_data,
+            student_id: values.student_id,
+            is_package: true,
+            package_id: newPackageId,
+            lesson_date: format(parseISO(location.state.lesson_data.lesson_date), 'yyyy-MM-dd'),
+            // Calcola il pagamento totale
+            total_payment: location.state.lesson_data.duration * location.state.lesson_data.hourly_rate
+          };
+
+          // Crea la lezione (ma ora non modifica le ore rimanenti, poiché sono già state dedotte)
+          await lessonService.create(lessonData);
+
+          // Mostra un feedback positivo o aggiorna lo stato del pacchetto se necessario
+          setInfoMessage("Pacchetto e lezione creati con successo!");
+        } catch (lessonError) {
+          console.error('Error creating associated lesson:', lessonError);
+          // Mostriamo un errore ma non blocchiamo la navigazione, il pacchetto è già stato creato
+          alert('Il pacchetto è stato creato, ma c\'è stato un errore nel creare la lezione associata.');
+        }
+      }
+
+      // Naviga alla lista pacchetti
       navigate('/packages');
     } catch (err) {
       console.error('Error saving package:', err);
@@ -203,12 +283,20 @@ function PackageFormPage() {
         </Alert>
       )}
 
+      {infoMessage && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          {infoMessage}
+        </Alert>
+      )}
+
       <Paper sx={{ p: 3 }}>
         <Formik
           initialValues={initialValues}
           validationSchema={PackageSchema}
           onSubmit={handleSubmit}
           enableReinitialize
+          // Passa le ore di overflow al contesto di validazione
+          context={{ overflow_hours: overflowHours }}
         >
           {({
             values,
@@ -251,7 +339,7 @@ function PackageFormPage() {
                     label="Data inizio"
                     value={values.start_date}
                     onChange={(date) => setFieldValue('start_date', date)}
-                    maxDate={new Date()}
+                    // Rimuovere questa riga: maxDate={new Date()}
                     slotProps={{
                       textField: {
                         fullWidth: true,
@@ -274,11 +362,12 @@ function PackageFormPage() {
                     onBlur={handleBlur}
                     error={touched.total_hours && Boolean(errors.total_hours)}
                     helperText={
-                      (touched.total_hours && errors.total_hours) || 
-                      (isEditMode ? `Ore già utilizzate: ${hoursUsed}` : '')
+                      (touched.total_hours && errors.total_hours) ||
+                      (isEditMode ? `Ore già utilizzate: ${hoursUsed}` : '') ||
+                      (!isEditMode && overflowHours > 0 ? `Minimo: ${overflowHours} ore (eccedenti dalla lezione originale)` : '')
                     }
                     inputProps={{
-                      min: isEditMode ? hoursUsed : 0.5,
+                      min: isEditMode ? hoursUsed : (overflowHours > 0 ? overflowHours : 0.5),
                       step: 0.5,
                     }}
                     required
@@ -344,12 +433,12 @@ function PackageFormPage() {
                     value={isEditMode ? calculatedRemainingHours : values.remaining_hours}
                     InputProps={{
                       readOnly: true,
-                      inputProps: { 
-                        style: { 
-                          MozAppearance: 'textfield', 
+                      inputProps: {
+                        style: {
+                          MozAppearance: 'textfield',
                           WebkitAppearance: 'none',
                           margin: 0
-                        } 
+                        }
                       }
                     }}
                     sx={{

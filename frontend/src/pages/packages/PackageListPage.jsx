@@ -29,7 +29,7 @@ import {
   FilterList as FilterIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { packageService, studentService } from '../../services/api';
+import { packageService, studentService, lessonService } from '../../services/api';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 
@@ -124,17 +124,50 @@ function PackageListPage() {
   };
 
   const handleDeletePackage = async (id) => {
-    if (window.confirm(`Sei sicuro di voler eliminare il pacchetto #${id}? Questa azione non può essere annullata.`)) {
-      try {
-        await packageService.delete(id);
-        // Aggiorna la lista dopo l'eliminazione
-        const response = await packageService.getAll();
-        setPackages(response.data);
-        setFilteredPackages(response.data);
-      } catch (err) {
-        console.error('Error deleting package:', err);
-        alert('Errore durante l\'eliminazione del pacchetto. Riprova più tardi.');
+    try {
+      // Prima ottieni le lezioni per questo pacchetto per mostrare all'utente
+      const lessonsResponse = await lessonService.getAll();
+      const packageLessons = lessonsResponse.data.filter(lesson => 
+        lesson.package_id === id && lesson.is_package
+      );
+      
+      let confirmMessage = `Sei sicuro di voler eliminare il pacchetto #${id}?`;
+      
+      // Se ci sono lezioni associate, avvisa l'utente che verranno eliminate anche quelle
+      if (packageLessons.length > 0) {
+        confirmMessage += `\n\nATTENZIONE: Questo pacchetto contiene ${packageLessons.length} lezioni che verranno eliminate:`;
+        
+        // Aggiungi informazioni sulle prime 5 lezioni (per non rendere il messaggio troppo lungo)
+        const maxLessonsToShow = 5;
+        packageLessons.slice(0, maxLessonsToShow).forEach(lesson => {
+          const lessonDate = format(parseISO(lesson.lesson_date), 'dd/MM/yyyy', { locale: it });
+          confirmMessage += `\n- Lezione #${lesson.id} del ${lessonDate} (${lesson.duration} ore)`;
+        });
+        
+        // Se ci sono più di 5 lezioni, indica che ce ne sono altre
+        if (packageLessons.length > maxLessonsToShow) {
+          confirmMessage += `\n...e altre ${packageLessons.length - maxLessonsToShow} lezioni`;
+        }
       }
+      
+      confirmMessage += "\n\nQuesta azione non può essere annullata.";
+      
+      if (window.confirm(confirmMessage)) {
+        const response = await packageService.delete(id);
+        
+        // Mostra messaggio di conferma con dettagli sulle lezioni eliminate
+        if (response.data && response.data.deleted_lessons_count > 0) {
+          alert(`Pacchetto #${id} eliminato con successo insieme a ${response.data.deleted_lessons_count} lezioni associate.`);
+        }
+        
+        // Aggiorna la lista dopo l'eliminazione
+        const packagesResponse = await packageService.getAll();
+        setPackages(packagesResponse.data);
+        setFilteredPackages(packagesResponse.data);
+      }
+    } catch (err) {
+      console.error('Error deleting package:', err);
+      alert('Errore durante l\'eliminazione del pacchetto. Riprova più tardi.');
     }
   };
 

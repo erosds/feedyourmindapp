@@ -21,7 +21,6 @@ from app.auth import (
     get_current_professor
 )
 
-# Resto del codice rimane invariato
 # Creazione dell'istanza dell'applicazione FastAPI
 app = FastAPI(
     title="School Management API",
@@ -29,13 +28,14 @@ app = FastAPI(
     version="0.1.0"
 )
 
-# Configurazione CORS per consentire richieste dalla nostra applicazione frontend
+# Configurazione CORS aggiornata per risolvere problemi di accesso cross-origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React frontend
+    allow_origins=["*"],  # Consenti tutte le origini per il test
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Consenti tutti i metodi HTTP
+    allow_headers=["*"],  # Consenti tutte le intestazioni
+    expose_headers=["*"],  # Esponi tutte le intestazioni nella risposta
 )
 
 # Crea tutte le tabelle nel database
