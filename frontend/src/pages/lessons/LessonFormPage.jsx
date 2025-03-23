@@ -210,17 +210,32 @@ function LessonFormPage() {
 
   // Aggiorna il calcolo delle ore rimanenti disponibili quando cambia il pacchetto selezionato
   useEffect(() => {
-    if (selectedPackage) {
-      let calculatedRemaining = parseFloat(selectedPackage.remaining_hours);
-
-      // In modalità modifica, aggiungi la durata originale della lezione
-      if (isEditMode && initialValues.duration) {
-        calculatedRemaining += parseFloat(initialValues.duration);
+    const fetchPackageRemainingHours = async () => {
+      if (!selectedPackage) return;
+      
+      try {
+        // Aggiorna il pacchetto per ottenere sempre le ore rimanenti più aggiornate dal server
+        const packageResponse = await packageService.getById(selectedPackage.id);
+        const updatedPackage = packageResponse.data;
+        
+        // In modalità modifica, dobbiamo considerare le ore della lezione corrente
+        // che sono già state "sottratte" dal pacchetto ma che possiamo riutilizzare
+        if (isEditMode && initialValues.is_package && initialValues.package_id === updatedPackage.id) {
+          // Calcoliamo correttamente le ore disponibili per questa lezione:
+          // ore rimanenti nel pacchetto + ore della lezione corrente
+          const availableHours = parseFloat(updatedPackage.remaining_hours) + parseFloat(initialValues.duration);
+          setDynamicRemainingHours(availableHours);
+        } else {
+          // Se è una nuova lezione o un pacchetto diverso, usa semplicemente le ore rimanenti
+          setDynamicRemainingHours(parseFloat(updatedPackage.remaining_hours));
+        }
+      } catch (err) {
+        console.error('Error fetching updated package data:', err);
       }
+    };
 
-      setDynamicRemainingHours(calculatedRemaining);
-    }
-  }, [selectedPackage, isEditMode, initialValues.duration]);
+    fetchPackageRemainingHours();
+  }, [selectedPackage, isEditMode, initialValues.duration, initialValues.is_package, initialValues.package_id]);
 
   // Quando cambia lo studente, carica i suoi pacchetti
   const handleStudentChange = async (studentId, setFieldValue) => {
@@ -231,6 +246,19 @@ function LessonFormPage() {
       setFieldValue('package_id', null);
       setSelectedPackage(null);
 
+      const packagesResponse = await packageService.getByStudent(studentId);
+      const activePackages = packagesResponse.data.filter(pkg => pkg.status === 'in_progress');
+      setPackages(activePackages);
+    } catch (err) {
+      console.error('Error fetching student packages:', err);
+    }
+  };
+  
+  // Funzione per caricare i pacchetti di uno studente
+  const loadStudentPackages = async (studentId) => {
+    if (!studentId) return;
+    
+    try {
       const packagesResponse = await packageService.getByStudent(studentId);
       const activePackages = packagesResponse.data.filter(pkg => pkg.status === 'in_progress');
       setPackages(activePackages);
@@ -249,7 +277,18 @@ function LessonFormPage() {
     try {
       setFieldValue('package_id', packageId);
       const packageResponse = await packageService.getById(packageId);
-      setSelectedPackage(packageResponse.data);
+      const packageData = packageResponse.data;
+      setSelectedPackage(packageData);
+      
+      // Calcolo ore disponibili
+      // Se stiamo modificando una lezione su questo stesso pacchetto, dobbiamo considerare anche le ore
+      // della lezione attuale che possiamo riutilizzare
+      if (isEditMode && initialValues.is_package && initialValues.package_id === packageId) {
+        const availableHours = parseFloat(packageData.remaining_hours) + parseFloat(initialValues.duration);
+        setDynamicRemainingHours(availableHours);
+      } else {
+        setDynamicRemainingHours(parseFloat(packageData.remaining_hours));
+      }
     } catch (err) {
       console.error('Error fetching package details:', err);
     }
@@ -522,6 +561,9 @@ function LessonFormPage() {
                   {selectedPackage && values.is_package && (
                     <FormHelperText>
                       Ore disponibili per questa lezione: {dynamicRemainingHours.toFixed(1)}
+                      {isEditMode && initialValues.is_package && initialValues.package_id === values.package_id && (
+                        <> (incluse le {parseFloat(initialValues.duration).toFixed(1)} ore della lezione corrente)</>
+                      )}
                       {parseFloat(values.duration) > dynamicRemainingHours && (
                         <span style={{ color: 'red' }}>
                           {' '}(Attenzione: la durata supera le ore disponibili)
@@ -542,6 +584,10 @@ function LessonFormPage() {
                           if (!e.target.checked) {
                             setFieldValue('package_id', null);
                             setSelectedPackage(null);
+                          } else {
+                            // Quando si seleziona il checkbox per pacchetto,
+                            // carica i pacchetti disponibili per lo studente corrente
+                            loadStudentPackages(values.student_id);
                           }
                         }}
                       />

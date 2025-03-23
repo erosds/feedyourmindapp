@@ -3,6 +3,7 @@ import React from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { Box, Container, Paper, Typography } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
+import logo from '../assets/logo.jpg';
 
 function AuthLayout() {
   const { currentUser, loading } = useAuth();
@@ -33,9 +34,8 @@ function AuthLayout() {
             alignItems: 'center',
           }}
         >
-          <Typography component="h1" variant="h5" color="primary" gutterBottom>
-            Feed Your Mind
-          </Typography>
+          <img src={logo} alt="Feed Your Mind" style={{ width: 160, height: 160}} />
+
           <Outlet />
         </Paper>
       </Container>

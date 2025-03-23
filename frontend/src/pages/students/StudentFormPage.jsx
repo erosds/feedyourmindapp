@@ -29,7 +29,7 @@ const getValidationSchema = (hasHomonyms) => {
       .max(100, 'Cognome troppo lungo')
       .required('Cognome obbligatorio'),
     birth_date: hasHomonyms
-      ? Yup.date().nullable().required('Data di nascita obbligatoria per studenti omonimi')
+      ? Yup.date().nullable().required('Studente già esistente. Se si tratta di studenti omonimi, data di nascita obbligatoria.')
       : Yup.date().nullable(),
     email: Yup.string()
       .nullable()
@@ -106,7 +106,7 @@ function StudentFormPage() {
       // Se ci sono omonimi e non c'è data di nascita, mostra errore
       if (hasHomonymsNow && !values.birth_date) {
         setHasHomonyms(true);
-        setFieldError('birth_date', 'Data di nascita obbligatoria per studenti omonimi');
+        setFieldError('birth_date', 'Studente già esistente. Se si tratta di studenti omonimi, data di nascita obbligatoria.');
         setSubmitting(false);
         return;
       }
@@ -134,7 +134,7 @@ function StudentFormPage() {
 
           if (errorDetail.includes('Data di nascita obbligatoria')) {
             setHasHomonyms(true);
-            setFieldError('birth_date', 'Data di nascita obbligatoria per studenti omonimi');
+            setFieldError('birth_date', 'Studente già esistente. Se si tratta di studenti omonimi, data di nascita obbligatoria.');
           }
         } else {
           setError('Errore durante il salvataggio. Verifica i dati e riprova.');
@@ -161,7 +161,7 @@ function StudentFormPage() {
         setHasHomonyms(homonymsFound);
 
         if (homonymsFound) {
-          setFieldError('birth_date', 'Data di nascita obbligatoria per studenti omonimi');
+          setFieldError('birth_date', 'Studente già esistente. Se si tratta di studenti omonimi, data di nascita obbligatoria.');
         }
       }
     }

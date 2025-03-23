@@ -30,6 +30,7 @@ import {
   AdminPanelSettings as AdminDashboardIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import logo from '../assets/logo.jpg';
 
 const drawerWidth = 240;
 
@@ -88,8 +89,9 @@ function MainLayout() {
   const drawer = (
     <div>
       <Toolbar>
+        <img src={logo} alt="Logo" style={{ height: 46, marginRight: 12 }} />
         <Typography variant="h6" noWrap component="div">
-          FeedYourMind App
+          FeedYourMind
         </Typography>
       </Toolbar>
       <Divider />

@@ -117,7 +117,7 @@ function StudentDetailPage() {
         navigate('/students');
       } catch (err) {
         console.error('Error deleting student:', err);
-        alert('Errore durante l\'eliminazione dello studente. Riprova più tardi.');
+        alert('Errore durante l\'eliminazione dello studente. Ci sono delle lezioni associate a questo studente.');
       }
     }
   };

@@ -195,13 +195,13 @@ function AdminDashboardPage() {
               <Typography variant="h6">
                 Riepilogo Settimanale Professori
               </Typography>
-              <Box>
-                <ButtonGroup size="small" sx={{ mr: 2 }}>
-                  <Button onClick={() => handleChangeWeek('prev')}>Settimana Precedente</Button>
+              <Box display="flex" alignItems="center">
+                <ButtonGroup sx={{ mr: 2 }}>
+                  <Button onClick={() => handleChangeWeek('prev')}>Precedente</Button>
                   <Button onClick={() => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
-                    Settimana Corrente
+                    Corrente
                   </Button>
-                  <Button onClick={() => handleChangeWeek('next')}>Settimana Successiva</Button>
+                  <Button onClick={() => handleChangeWeek('next')}>Successiva</Button>
                 </ButtonGroup>
                 <Button
                   variant="contained"

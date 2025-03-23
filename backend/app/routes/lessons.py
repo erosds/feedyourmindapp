@@ -392,6 +392,12 @@ def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Dep
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Ore rimanenti nel pacchetto ({package.remaining_hours}) insufficienti per la durata della lezione ({update_data.get('duration', db_lesson.duration)})"
             )
+        # Dopo aver verificato che ci sono ore sufficienti, sottrai la durata dalle ore rimanenti
+        if package:
+            package.remaining_hours -= update_data.get("duration", db_lesson.duration)
+            if package.remaining_hours <= 0:
+                package.status = "completed"
+            db.commit()
     
     # Aggiorna i campi della lezione
     for key, value in update_data.items():
