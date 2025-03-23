@@ -26,7 +26,6 @@ import {
   Edit as EditIcon,
   Visibility as ViewIcon,
   Search as SearchIcon,
-  FilterList as FilterIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { packageService, studentService, lessonService } from '../../services/api';
@@ -44,6 +43,23 @@ function PackageListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPackages, setFilteredPackages] = useState([]);
   const [showActive, setShowActive] = useState(false);
+  const [lessonsPerPackage, setLessonsPerPackage] = useState({});
+
+  // Funzione per calcolare le ore utilizzate e rimanenti di ogni pacchetto
+  const calculatePackageStats = (packageId, lessons) => {
+    const packageLessons = lessons.filter(lesson => 
+      lesson.package_id === packageId && lesson.is_package
+    );
+    
+    const usedHours = packageLessons.reduce((total, lesson) => 
+      total + parseFloat(lesson.duration), 0
+    );
+    
+    return {
+      usedHours,
+      lessonsCount: packageLessons.length
+    };
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,7 +69,6 @@ function PackageListPage() {
         // Carica tutti i pacchetti
         const packagesResponse = await packageService.getAll();
         setPackages(packagesResponse.data);
-        setFilteredPackages(packagesResponse.data);
         
         // Carica tutti gli studenti per mostrare i loro nomi
         const studentsResponse = await studentService.getAll();
@@ -62,6 +77,22 @@ function PackageListPage() {
           studentsMap[student.id] = `${student.first_name} ${student.last_name}`;
         });
         setStudents(studentsMap);
+
+        // Carica tutte le lezioni per calcolare le ore utilizzate
+        const lessonsResponse = await lessonService.getAll();
+        
+        // Crea una mappa di lezioni per pacchetto
+        const lessonsMap = {};
+        packagesResponse.data.forEach(pkg => {
+          lessonsMap[pkg.id] = calculatePackageStats(
+            pkg.id, 
+            lessonsResponse.data
+          );
+        });
+        setLessonsPerPackage(lessonsMap);
+        
+        // Imposta i pacchetti filtrati
+        setFilteredPackages(packagesResponse.data);
       } catch (err) {
         console.error('Error fetching packages:', err);
         setError('Impossibile caricare la lista dei pacchetti. Riprova più tardi.');
@@ -163,12 +194,45 @@ function PackageListPage() {
         // Aggiorna la lista dopo l'eliminazione
         const packagesResponse = await packageService.getAll();
         setPackages(packagesResponse.data);
-        setFilteredPackages(packagesResponse.data);
+        
+        // Aggiorna le statistiche delle lezioni
+        const updatedLessonsResponse = await lessonService.getAll();
+        const lessonsMap = {};
+        packagesResponse.data.forEach(pkg => {
+          lessonsMap[pkg.id] = calculatePackageStats(
+            pkg.id, 
+            updatedLessonsResponse.data
+          );
+        });
+        setLessonsPerPackage(lessonsMap);
+        
+        // Applica i filtri
+        let filtered = [...packagesResponse.data];
+        if (searchTerm.trim() !== '') {
+          const lowercaseSearch = searchTerm.toLowerCase();
+          filtered = filtered.filter((pkg) => {
+            const studentName = students[pkg.student_id] || '';
+            return studentName.toLowerCase().includes(lowercaseSearch);
+          });
+        }
+        if (showActive) {
+          filtered = filtered.filter(pkg => pkg.status === 'in_progress');
+        }
+        setFilteredPackages(filtered);
       }
     } catch (err) {
       console.error('Error deleting package:', err);
       alert('Errore durante l\'eliminazione del pacchetto. Riprova più tardi.');
     }
+  };
+
+  // Calcola le ore rimanenti in tempo reale
+  const getRemainingHours = (pkg) => {
+    const stats = lessonsPerPackage[pkg.id];
+    if (!stats) return parseFloat(pkg.remaining_hours);
+    
+    // Calcola le ore rimanenti come differenza tra ore totali e ore utilizzate
+    return parseFloat(pkg.total_hours) - stats.usedHours;
   };
 
   if (loading) {
@@ -249,62 +313,67 @@ function PackageListPage() {
             ) : (
               filteredPackages
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((pkg) => (
-                  <TableRow key={pkg.id}>
-                    <TableCell>#{pkg.id}</TableCell>
-                    <TableCell>{students[pkg.student_id] || `Studente #${pkg.student_id}`}</TableCell>
-                    <TableCell>
-                      {format(parseISO(pkg.start_date), 'EEEE dd/MM/yyyy', { locale: it })}
-                    </TableCell>
-                    <TableCell>{pkg.total_hours}</TableCell>
-                    <TableCell>{pkg.remaining_hours}</TableCell>
-                    <TableCell>€{parseFloat(pkg.package_cost).toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={pkg.status === 'in_progress' ? 'In corso' : 'Terminato'}
-                        color={pkg.status === 'in_progress' ? 'primary' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={pkg.is_paid ? 'Pagato' : 'Non pagato'}
-                        color={pkg.is_paid ? 'success' : 'error'}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Visualizza dettagli">
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleViewPackage(pkg.id)}
-                        >
-                          <ViewIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Modifica">
-                        <IconButton
-                          color="secondary"
-                          onClick={() => handleEditPackage(pkg.id)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Elimina">
-                        <IconButton
-                          color="error"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeletePackage(pkg.id);
-                          }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))
+                .map((pkg) => {
+                  // Calcola le ore rimanenti in tempo reale
+                  const remainingHours = getRemainingHours(pkg);
+                  
+                  return (
+                    <TableRow key={pkg.id}>
+                      <TableCell>#{pkg.id}</TableCell>
+                      <TableCell>{students[pkg.student_id] || `Studente #${pkg.student_id}`}</TableCell>
+                      <TableCell>
+                        {format(parseISO(pkg.start_date), 'dd/MM/yyyy', { locale: it })}
+                      </TableCell>
+                      <TableCell>{pkg.total_hours}</TableCell>
+                      <TableCell>{remainingHours.toFixed(1)}</TableCell>
+                      <TableCell>€{parseFloat(pkg.package_cost).toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={remainingHours > 0 ? 'In corso' : 'Terminato'}
+                          color={remainingHours > 0 ? 'primary' : 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={pkg.is_paid ? 'Pagato' : 'Non pagato'}
+                          color={pkg.is_paid ? 'success' : 'error'}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Tooltip title="Visualizza dettagli">
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleViewPackage(pkg.id)}
+                          >
+                            <ViewIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Modifica">
+                          <IconButton
+                            color="secondary"
+                            onClick={() => handleEditPackage(pkg.id)}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Elimina">
+                          <IconButton
+                            color="error"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePackage(pkg.id);
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
             )}
           </TableBody>
         </Table>

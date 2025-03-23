@@ -31,9 +31,9 @@ import {
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
   AddTask as AddLessonIcon,
-  Delete as DeleteIcon, // Aggiungo questa icona
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { format, parseISO, getYear, getMonth, getDaysInMonth, startOfMonth, getDay, isSameDay } from 'date-fns';
+import { format, parseISO, getYear, getMonth, getDaysInMonth, startOfMonth, getDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { packageService, studentService, lessonService, professorService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -52,6 +52,26 @@ function PackageDetailPage() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  // Funzione per calcolare le ore utilizzate e rimanenti del pacchetto
+  const calculatePackageStats = (packageData, packageLessons) => {
+    if (!packageData || !packageLessons) return { usedHours: 0, remainingHours: 0, completionPercentage: 0 };
+    
+    // Calcola ore utilizzate dalle lezioni
+    const usedHours = packageLessons.reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
+    
+    // Calcola ore rimanenti
+    const remainingHours = parseFloat(packageData.total_hours) - usedHours;
+    
+    // Calcola percentuale di completamento
+    const completionPercentage = (usedHours / parseFloat(packageData.total_hours)) * 100;
+    
+    return { 
+      usedHours, 
+      remainingHours, 
+      completionPercentage 
+    };
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -68,7 +88,7 @@ function PackageDetailPage() {
         // Carica le lezioni relative al pacchetto
         const lessonsResponse = await lessonService.getAll();
         const packageLessons = lessonsResponse.data.filter(
-          lesson => lesson.package_id === parseInt(id)
+          lesson => lesson.package_id === parseInt(id) && lesson.is_package
         );
         setLessons(packageLessons);
 
@@ -124,25 +144,22 @@ function PackageDetailPage() {
 
   const handleDeletePackage = async () => {
     try {
-      // Prima ottieni le lezioni per questo pacchetto per mostrare all'utente
-      const packageLessons = lessons;
-
       let confirmMessage = `Sei sicuro di voler eliminare il pacchetto #${id}?`;
 
       // Se ci sono lezioni associate, avvisa l'utente che verranno eliminate anche quelle
-      if (packageLessons.length > 0) {
-        confirmMessage += `\n\nATTENZIONE: Questo pacchetto contiene ${packageLessons.length} lezioni che verranno eliminate:`;
+      if (lessons.length > 0) {
+        confirmMessage += `\n\nATTENZIONE: Questo pacchetto contiene ${lessons.length} lezioni che verranno eliminate:`;
 
-        // Aggiungi informazioni sulle prime 5 lezioni (per non rendere il messaggio troppo lungo)
+        // Aggiungi informazioni sulle prime 5 lezioni
         const maxLessonsToShow = 5;
-        packageLessons.slice(0, maxLessonsToShow).forEach(lesson => {
+        lessons.slice(0, maxLessonsToShow).forEach(lesson => {
           const lessonDate = format(parseISO(lesson.lesson_date), 'dd/MM/yyyy', { locale: it });
           confirmMessage += `\n- Lezione #${lesson.id} del ${lessonDate} (${lesson.duration} ore)`;
         });
 
         // Se ci sono più di 5 lezioni, indica che ce ne sono altre
-        if (packageLessons.length > maxLessonsToShow) {
-          confirmMessage += `\n...e altre ${packageLessons.length - maxLessonsToShow} lezioni`;
+        if (lessons.length > maxLessonsToShow) {
+          confirmMessage += `\n...e altre ${lessons.length - maxLessonsToShow} lezioni`;
         }
       }
 
@@ -366,12 +383,8 @@ function PackageDetailPage() {
     );
   }
 
-  // Calcola la percentuale di completamento del pacchetto
-  const completionPercentage = ((packageData.total_hours - packageData.remaining_hours) / packageData.total_hours) * 100;
-
-  // Calcola statistiche
-  const totalLessons = lessons.length;
-  const totalHoursDone = packageData.total_hours - packageData.remaining_hours;
+  // Calcola statistiche del pacchetto in tempo reale
+  const { usedHours, remainingHours, completionPercentage } = calculatePackageStats(packageData, lessons);
 
   return (
     <Box>
@@ -478,10 +491,10 @@ function PackageDetailPage() {
                   </Typography>
                   <Typography
                     variant="body1"
-                    color={packageData.remaining_hours > 0 ? 'primary' : 'text.primary'}
+                    color={remainingHours > 0 ? 'primary' : 'text.primary'}
                     gutterBottom
                   >
-                    {packageData.remaining_hours}
+                    {remainingHours.toFixed(1)}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
@@ -521,7 +534,7 @@ function PackageDetailPage() {
                 <Grid item xs={6}>
                   <Box textAlign="center">
                     <EventIcon color="primary" fontSize="large" />
-                    <Typography variant="h6">{totalLessons}</Typography>
+                    <Typography variant="h6">{lessons.length}</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Lezioni registrate
                     </Typography>
@@ -530,7 +543,7 @@ function PackageDetailPage() {
                 <Grid item xs={6}>
                   <Box textAlign="center">
                     <AccessTimeIcon color="primary" fontSize="large" />
-                    <Typography variant="h6">{totalHoursDone.toFixed(1)}</Typography>
+                    <Typography variant="h6">{usedHours.toFixed(1)}</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Ore effettuate
                     </Typography>
@@ -552,7 +565,7 @@ function PackageDetailPage() {
           </Card>
         </Grid>
 
-        {/* Lezioni (riposizionato sotto Informazioni Pacchetto) */}
+        {/* Lezioni */}
         <Grid item xs={12} md={8}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
@@ -622,7 +635,7 @@ function PackageDetailPage() {
           </Paper>
         </Grid>
 
-        {/* Calendario lezioni (nuovo componente) */}
+        {/* Calendario lezioni */}
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>

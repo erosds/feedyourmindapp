@@ -12,6 +12,50 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+# Aggiungere questa funzione all'inizio del file packages.py, dopo le importazioni
+
+from decimal import Decimal
+from sqlalchemy import func
+
+def update_package_remaining_hours(db: Session, package_id: int, commit: bool = True):
+    """
+    Calcola e aggiorna le ore rimanenti di un pacchetto in base alle lezioni associate.
+    
+    Args:
+        db: Sessione del database
+        package_id: ID del pacchetto da aggiornare
+        commit: Se True, esegue il commit delle modifiche
+        
+    Returns:
+        Il pacchetto aggiornato
+    """
+    # Recupera il pacchetto
+    package = db.query(models.Package).filter(models.Package.id == package_id).first()
+    if not package:
+        return None
+    
+    # Calcola le ore utilizzate nelle lezioni
+    hours_used = db.query(func.sum(models.Lesson.duration)).filter(
+        models.Lesson.package_id == package_id,
+        models.Lesson.is_package == True
+    ).scalar() or Decimal('0')
+    
+    # Aggiorna le ore rimanenti
+    package.remaining_hours = package.total_hours - hours_used
+    
+    # Aggiorna lo stato del pacchetto in base alle ore rimanenti
+    if package.remaining_hours <= 0:
+        package.status = "completed"
+    else:
+        package.status = "in_progress"
+    
+    # Commit se richiesto
+    if commit:
+        db.commit()
+        db.refresh(package)
+    
+    return package
+
 # CRUD operations
 @router.post("/", response_model=models.PackageResponse, status_code=status.HTTP_201_CREATED)
 def create_package(package: models.PackageCreate, db: Session = Depends(get_db)):
@@ -92,9 +136,6 @@ def read_student_active_package(student_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{package_id}", response_model=models.PackageResponse)
 def update_package(package_id: int, package: models.PackageUpdate, db: Session = Depends(get_db)):
-    # Importa func da sqlalchemy all'inizio della funzione
-    from sqlalchemy import func
-    
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
@@ -118,27 +159,17 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
     # Aggiorna i campi se presenti
     update_data = package.dict(exclude_unset=True)
     for key, value in update_data.items():
-        setattr(db_package, key, value)
+        # Non aggiornare remaining_hours direttamente, verranno calcolate dalla funzione helper
+        if key != 'remaining_hours':
+            setattr(db_package, key, value)
     
-    # Ricalcola sempre le ore rimanenti (non modificabili direttamente)
-    if package.total_hours is not None or package.status is not None:
-        # Calcola le ore già utilizzate
-        hours_used = db.query(func.sum(models.Lesson.duration)).filter(
-            models.Lesson.package_id == package_id,
-            models.Lesson.is_package == True
-        ).scalar() or Decimal('0')
-        
-        # Ore rimanenti = ore totali - ore utilizzate
-        db_package.remaining_hours = db_package.total_hours - hours_used
-        
-        # Se non ci sono più ore rimanenti, imposta lo stato a "completed"
-        if db_package.remaining_hours <= 0 and db_package.status != "completed":
-            db_package.status = "completed"
-        # Se ci sono ore rimanenti e lo stato era "completed", riattivalo
-        elif db_package.remaining_hours > 0 and db_package.status == "completed":
-            db_package.status = "in_progress"
-    
+    # Esegui il commit per salvare le modifiche di base
     db.commit()
+    
+    # Ricalcola e aggiorna le ore rimanenti
+    update_package_remaining_hours(db, package_id)
+    
+    # Refresh per ottenere tutti i campi aggiornati
     db.refresh(db_package)
     return db_package
 
