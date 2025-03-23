@@ -1,7 +1,7 @@
 # app/utils.py
 import bcrypt
-import models
 from sqlalchemy.orm import Session
+from app import models
 
 def get_password_hash(password: str) -> str:
     """Genera un hash della password."""

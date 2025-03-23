@@ -570,12 +570,11 @@ function LessonFormPage() {
                         {isEditMode && originalLesson && originalLesson.is_package && 
                          originalLesson.package_id === parseInt(values.package_id) ? (
                           <>
-                            Ore disponibili: {totalAvailable.toFixed(1)} 
-                            (incluse le {parseFloat(originalLesson.duration).toFixed(1)} ore della lezione corrente)
+                            Ore disponibili all'inserimento: {totalAvailable.toFixed(1)} 
                           </>
                         ) : (
                           <>
-                            Ore disponibili: {availableHours.toFixed(1)} di {selectedPackage.total_hours}
+                            Ore disponibili all'inserimento: {availableHours.toFixed(1)} di {selectedPackage.total_hours}
                           </>
                         )}
                         
