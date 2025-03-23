@@ -57,7 +57,7 @@ function AdminDashboardPage() {
   const [lessons, setLessons] = useState([]);
   const [professors, setProfessors] = useState([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  
+
   // Genera i giorni della settimana a partire dal lunedì
   const daysOfWeek = eachDayOfInterval({
     start: currentWeekStart,
@@ -115,7 +115,7 @@ function AdminDashboardPage() {
 
     // Ottiene gli ID dei professori che hanno lezioni quel giorno
     const professorIds = [...new Set(dayLessons.map(lesson => lesson.professor_id))];
-    
+
     // Filtra l'array dei professori per ottenere solo quelli con lezioni
     return professors.filter(professor => professorIds.includes(professor.id));
   };
@@ -135,13 +135,13 @@ function AdminDashboardPage() {
     const professorLessons = currentWeekLessons.filter(
       lesson => lesson.professor_id === professor.id
     );
-    
+
     // Calcola il totale pagato a questo professore
     const totalPayment = professorLessons.reduce(
-      (sum, lesson) => sum + parseFloat(lesson.total_payment), 
+      (sum, lesson) => sum + parseFloat(lesson.total_payment),
       0
     );
-    
+
     // Trova l'ultimo giorno di lezione della settimana per questo professore
     let lastLessonDate = null;
     if (professorLessons.length > 0) {
@@ -150,7 +150,7 @@ function AdminDashboardPage() {
         return lastDate ? (lessonDate > lastDate ? lessonDate : lastDate) : lessonDate;
       }, null);
     }
-    
+
     return {
       ...professor,
       weeklyLessons: professorLessons.length,
@@ -161,7 +161,7 @@ function AdminDashboardPage() {
 
   // Calcola il totale delle paghe di tutti i professori per la settimana
   const totalProfessorPayments = professorWeeklyData.reduce(
-    (sum, prof) => sum + prof.totalPayment, 
+    (sum, prof) => sum + prof.totalPayment,
     0
   );
 
@@ -213,13 +213,13 @@ function AdminDashboardPage() {
                 </Button>
               </Box>
             </Box>
-            
-            <Typography 
-              variant="subtitle1" 
-              align="center" 
-              sx={{ 
-                fontWeight: 'bold', 
-                fontSize: '1.1rem', 
+
+            <Typography
+              variant="subtitle1"
+              align="center"
+              sx={{
+                fontWeight: 'bold',
+                fontSize: '1.1rem',
                 mb: 3,
                 backgroundColor: 'primary.light',
                 color: 'primary.contrastText',
@@ -229,36 +229,37 @@ function AdminDashboardPage() {
             >
               {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
             </Typography>
-            
+
             {professorWeeklyData.length === 0 ? (
               <Typography align="center" color="text.secondary" sx={{ py: 3 }}>
                 Nessun professore attivo questa settimana
               </Typography>
             ) : (
               <TableContainer sx={{ mb: 2 }}>
-                <Table>
+                <Table size='small'>
                   <TableHead>
                     <TableRow>
                       <TableCell>Professore</TableCell>
-                      <TableCell align="center">Lezioni</TableCell>
+                      <TableCell align="center">Lezioni in questa settimana</TableCell>
+                      <TableCell align="right">Ultimo giorno</TableCell>
                       <TableCell align="right">Pagamento</TableCell>
-                      <TableCell align="right">Ultimo Giorno</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {professorWeeklyData.map((prof) => (
-                      <TableRow 
+                      <TableRow
                         key={prof.id}
                         hover
                         onClick={() => navigate(`/professors/${prof.id}`)}
-                        sx={{ cursor: 'pointer' }}
+                        sx={{cursor: 'pointer', height: 20}}
+                        
                       >
                         <TableCell>
                           <Box display="flex" alignItems="center">
-                            <Avatar 
-                              sx={{ 
-                                width: 32, 
-                                height: 32, 
+                            <Avatar
+                              sx={{
+                                width: 24,
+                                height: 24,
                                 mr: 1,
                                 bgcolor: prof.is_admin ? 'secondary.main' : 'primary.main',
                                 fontSize: '0.875rem'
@@ -278,12 +279,12 @@ function AdminDashboardPage() {
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body1">
-                            €{prof.totalPayment.toFixed(2)}
+                            {prof.lastLessonDate ? format(prof.lastLessonDate, "EEEE dd/MM", { locale: it }) : '-'}
                           </Typography>
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body1">
-                            {prof.lastLessonDate ? format(prof.lastLessonDate, "EEEE dd/MM", { locale: it }) : '-'}
+                            €{prof.totalPayment.toFixed(2)}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -292,12 +293,12 @@ function AdminDashboardPage() {
                       <TableCell colSpan={2} sx={{ fontWeight: 'bold' }}>
                         <Typography variant="subtitle1" fontWeight="medium">Totale Pagamenti</Typography>
                       </TableCell>
+                      <TableCell align="right"></TableCell>
                       <TableCell align="right" sx={{ fontWeight: 'bold' }}>
                         <Typography variant="subtitle1" fontWeight="medium">
                           €{totalProfessorPayments.toFixed(2)}
                         </Typography>
                       </TableCell>
-                      <TableCell></TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -373,16 +374,17 @@ function AdminDashboardPage() {
                               }}
                             >
                               <ListItemAvatar>
-                                <Avatar sx={{ bgcolor: professor.is_admin ? 'secondary.main' : 'primary.main' }}>
+                                <Avatar sx={{ bgcolor: professor.is_admin ? 'secondary.main' : 'primary.main',width: 24,
+                                height: 24}}>
                                   {professor.first_name.charAt(0)}
                                 </Avatar>
                               </ListItemAvatar>
                               <ListItemText
                                 primary={`${professor.first_name} ${professor.last_name}`}
-                                primaryTypographyProps={{ 
-                                  variant: 'body2', 
-                                  noWrap: true, 
-                                  color: 'text.primary' 
+                                primaryTypographyProps={{
+                                  variant: 'body2',
+                                  noWrap: true,
+                                  color: 'text.primary'                            
                                 }}
                               />
                             </ListItem>

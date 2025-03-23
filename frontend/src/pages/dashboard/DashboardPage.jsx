@@ -200,7 +200,7 @@ function DashboardPage() {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        Dashboard
+        Le mie lezioni
       </Typography>
 
       <Grid container spacing={3}>

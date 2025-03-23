@@ -63,26 +63,33 @@ function MainLayout() {
   };
 
   // Navigazione menu
-  const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
-    { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
-    { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
-  ];
+  let menuItems = [];
 
-  // Solo gli admin possono vedere la dashboard amministrativa e tutti i professori
   if (isAdmin()) {
-    // Aggiungi la nuova dashboard amministrativa subito dopo la dashboard principale
-    menuItems.splice(1, 0, { text: 'Dashboard Admin', icon: <AdminDashboardIcon />, path: '/admin-dashboard' });
-    // Aggiungi la gestione professori dopo
-    menuItems.splice(2, 0, { text: 'Professori', icon: <PeopleIcon />, path: '/professors' });
+    // Per gli admin, metti prima la dashboard admin e poi la dashboard normale
+    menuItems = [
+      { text: 'AdminDashboard', icon: <AdminDashboardIcon />, path: '/admin-dashboard' },
+      { text: 'MyDashboard', icon: <DashboardIcon />, path: '/dashboard' },
+      { text: 'Professori', icon: <PeopleIcon />, path: '/professors' },
+      { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
+      { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
+      { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
+    ];
+  } else {
+    // Per gli utenti normali, mostra solo le opzioni standard
+    menuItems = [
+      { text: 'MyDashboard', icon: <DashboardIcon />, path: '/dashboard' },
+      { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
+      { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
+      { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
+    ];
   }
 
   const drawer = (
     <div>
       <Toolbar>
         <Typography variant="h6" noWrap component="div">
-          School Manager
+          FeedYourMind App
         </Typography>
       </Toolbar>
       <Divider />
@@ -125,17 +132,17 @@ function MainLayout() {
           >
             <MenuIcon />
           </IconButton>
-          
+
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {/* Titolo dinamico basato sul percorso */}
-            {location.pathname.includes('/dashboard') && !location.pathname.includes('/admin-dashboard') && 'Dashboard'}
-            {location.pathname.includes('/admin-dashboard') && 'Dashboard Amministrazione'}
+            {location.pathname.includes('/admin-dashboard') && 'AdminDashboard'}
+            {location.pathname.includes('/dashboard') && !location.pathname.includes('/admin-dashboard') && 'MyDashboard'}
             {location.pathname.includes('/professors') && 'Gestione Professori'}
             {location.pathname.includes('/students') && 'Gestione Studenti'}
             {location.pathname.includes('/packages') && 'Gestione Pacchetti'}
             {location.pathname.includes('/lessons') && 'Gestione Lezioni'}
           </Typography>
-          
+
           {currentUser && (
             <div>
               <IconButton
@@ -172,7 +179,7 @@ function MainLayout() {
           )}
         </Toolbar>
       </AppBar>
-      
+
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
@@ -203,7 +210,7 @@ function MainLayout() {
           {drawer}
         </Drawer>
       </Box>
-      
+
       <Box
         component="main"
         sx={{

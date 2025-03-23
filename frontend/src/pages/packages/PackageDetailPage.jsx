@@ -32,9 +32,9 @@ import {
   Cancel as CancelIcon,
   AddTask as AddLessonIcon,
 } from '@mui/icons-material';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, getYear, getMonth, getDaysInMonth, startOfMonth, getDay, isSameDay } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { packageService, studentService, lessonService } from '../../services/api';
+import { packageService, studentService, lessonService, professorService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 function PackageDetailPage() {
@@ -44,10 +44,12 @@ function PackageDetailPage() {
   const [packageData, setPackageData] = useState(null);
   const [student, setStudent] = useState(null);
   const [lessons, setLessons] = useState([]);
+  const [professors, setProfessors] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,6 +70,19 @@ function PackageDetailPage() {
           lesson => lesson.package_id === parseInt(id)
         );
         setLessons(packageLessons);
+        
+        // Inizializza il mese corrente al mese della prima lezione o oggi se non ci sono lezioni
+        if (packageLessons.length > 0) {
+          setCurrentMonth(parseISO(packageLessons[0].lesson_date));
+        }
+        
+        // Carica tutti i professori e crea un dizionario per nome/cognome
+        const professorsResponse = await professorService.getAll();
+        const professorsMap = {};
+        professorsResponse.data.forEach(professor => {
+          professorsMap[professor.id] = `${professor.first_name} ${professor.last_name}`;
+        });
+        setProfessors(professorsMap);
       } catch (err) {
         console.error('Error fetching package data:', err);
         setError('Impossibile caricare i dati del pacchetto. Riprova più tardi.');
@@ -104,6 +119,162 @@ function PackageDetailPage() {
         is_package: true 
       } 
     });
+  };
+
+  // Funzione per cambiare il mese visualizzato
+  const changeMonth = (offset) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() + offset);
+    setCurrentMonth(newMonth);
+  };
+
+  // Funzione per generare il calendario
+  const generateCalendar = () => {
+    const year = getYear(currentMonth);
+    const month = getMonth(currentMonth);
+    const daysInMonth = getDaysInMonth(new Date(year, month));
+    const firstDayOfMonth = getDay(startOfMonth(new Date(year, month)));
+    
+    // Nomi giorni della settimana (abbreviati)
+    const weekdays = ["Lu", "Ma", "Me", "Gi", "Ve", "Sa", "Do"];
+    
+    // Adatta i giorni della settimana per iniziare da lunedì (0 = lunedì)
+    const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+    
+    // Crea array con tutti i giorni del mese
+    let days = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(i);
+    }
+    
+    // Aggiungi giorni vuoti all'inizio per allineare il calendario
+    const emptyDays = Array(adjustedFirstDay).fill(null);
+    days = [...emptyDays, ...days];
+    
+    // Calcola le ore totali di lezione per ogni giorno
+    const lessonHoursByDay = {};
+    
+    lessons.forEach(lesson => {
+      const lessonDate = parseISO(lesson.lesson_date);
+      const dateKey = format(lessonDate, 'yyyy-MM-dd');
+      
+      if (!lessonHoursByDay[dateKey]) {
+        lessonHoursByDay[dateKey] = 0;
+      }
+      
+      lessonHoursByDay[dateKey] += parseFloat(lesson.duration);
+    });
+    
+    return (
+      <Box>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+          <IconButton size="small" onClick={() => changeMonth(-1)}>
+            <ArrowBackIcon fontSize="small" />
+          </IconButton>
+          <Typography variant="subtitle1" align="center">
+            {format(currentMonth, 'MMMM yyyy', { locale: it })}
+          </Typography>
+          <IconButton size="small" onClick={() => changeMonth(1)}>
+            <ArrowBackIcon fontSize="small" sx={{ transform: 'rotate(180deg)' }} />
+          </IconButton>
+        </Box>
+        
+        <Grid container spacing={0.5}>
+          {/* Intestazione giorni della settimana */}
+          {weekdays.map((day, index) => (
+            <Grid item xs={12/7} key={`weekday-${index}`}>
+              <Box 
+                sx={{ 
+                  textAlign: 'center', 
+                  fontWeight: 'bold',
+                  p: 0.5,
+                  fontSize: '0.75rem',
+                }}
+              >
+                {day}
+              </Box>
+            </Grid>
+          ))}
+          
+          {/* Giorni del mese */}
+          {days.map((day, index) => {
+            if (!day) {
+              // Cella vuota per i giorni prima dell'inizio del mese
+              return <Grid item xs={12/7} key={`day-${index}`} />;
+            }
+            
+            // Controlla se questo giorno ha lezioni
+            const dateKey = format(new Date(year, month, day), 'yyyy-MM-dd');
+            const hasLesson = lessonHoursByDay[dateKey] > 0;
+            const totalHours = hasLesson ? lessonHoursByDay[dateKey] : 0;
+            
+            return (
+              <Grid item xs={12/7} key={`day-${index}`}>
+                <Box sx={{ 
+                  position: 'relative', 
+                  height: 38, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                }}>
+                  <Box 
+                    sx={{ 
+                      position: 'relative',
+                      textAlign: 'center',
+                      borderRadius: '50%',
+                      height: 32,
+                      width: 32,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: hasLesson ? 'primary.main' : 'transparent',
+                      color: hasLesson ? 'primary.contrastText' : 'text.primary',
+                      fontWeight: hasLesson ? 'bold' : 'normal',
+                      cursor: hasLesson ? 'default' : 'default',
+                      transition: 'all 0.3s ease',
+                      '&:hover': hasLesson ? {
+                        height: 38,
+                        width: 38,
+                        '& .hour-info': {
+                          opacity: 1,
+                          top: -18,
+                        }
+                      } : {},
+                    }}
+                  >
+                    {day}
+                    {hasLesson && (
+                      <Box 
+                        className="hour-info"
+                        sx={{ 
+                          position: 'absolute', 
+                          top: -15, 
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          bgcolor: 'secondary.main',
+                          color: 'secondary.contrastText',
+                          borderRadius: 1,
+                          px: 1,
+                          py: 0.2,
+                          fontSize: '0.65rem',
+                          fontWeight: 'bold',
+                          opacity: 0,
+                          transition: 'all 0.3s ease',
+                          whiteSpace: 'nowrap',
+                          zIndex: 10,
+                        }}
+                      >
+                        {totalHours} {totalHours === 1 ? 'ora' : 'ore'}
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Box>
+    );
   };
 
   if (loading) {
@@ -306,8 +477,8 @@ function PackageDetailPage() {
           </Card>
         </Grid>
 
-        {/* Lezioni */}
-        <Grid item xs={12}>
+        {/* Lezioni (riposizionato sotto Informazioni Pacchetto) */}
+        <Grid item xs={12} md={8}>
           <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Lezioni
@@ -350,8 +521,7 @@ function PackageDetailPage() {
                               {format(parseISO(lesson.lesson_date), 'dd/MM/yyyy', { locale: it })}
                             </TableCell>
                             <TableCell>
-                              {/* Idealmente qui ci sarebbe il nome del professore */}
-                              Prof. #{lesson.professor_id}
+                              {professors[lesson.professor_id] || `Prof. #${lesson.professor_id}`}
                             </TableCell>
                             <TableCell>{lesson.duration}</TableCell>
                             <TableCell>€{parseFloat(lesson.hourly_rate).toFixed(2)}</TableCell>
@@ -373,6 +543,23 @@ function PackageDetailPage() {
                   labelDisplayedRows={({ from, to, count }) => `${from}-${to} di ${count}`}
                 />
               </>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Calendario lezioni (nuovo componente) */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Calendario Lezioni
+            </Typography>
+            
+            {lessons.length === 0 ? (
+              <Typography align="center" color="text.secondary" sx={{ py: 3 }}>
+                Nessuna lezione registrata per questo pacchetto
+              </Typography>
+            ) : (
+              generateCalendar()
             )}
           </Paper>
         </Grid>

@@ -34,7 +34,7 @@ function AuthLayout() {
           }}
         >
           <Typography component="h1" variant="h5" color="primary" gutterBottom>
-            School Management
+            Feed Your Mind
           </Typography>
           <Outlet />
         </Paper>
