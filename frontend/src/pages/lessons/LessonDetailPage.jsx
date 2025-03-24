@@ -201,6 +201,17 @@ function LessonDetailPage() {
                   <Box display="flex" alignItems="center" mb={1}>
                     <TimeIcon sx={{ mr: 1 }} color="primary" />
                     <Typography variant="body2" color="text.secondary">
+                      Orario di inizio
+                    </Typography>
+                  </Box>
+                  <Typography variant="body1" gutterBottom>
+                    {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <TimeIcon sx={{ mr: 1 }} color="primary" />
+                    <Typography variant="body2" color="text.secondary">
                       Durata
                     </Typography>
                   </Box>
@@ -262,21 +273,36 @@ function LessonDetailPage() {
 
                 {/* Stato Pagamento (solo per lezioni singole) */}
                 {!lesson.is_package && (
-                  <Grid item xs={12} sm={6}>
-                    <Box display="flex" alignItems="center" mb={1}>
-                      <EuroIcon sx={{ mr: 1 }} color="primary" />
-                      <Typography variant="body2" color="text.secondary">
-                        Stato pagamento
-                      </Typography>
-                    </Box>
-                    <Chip
-                      icon={lesson.is_paid ? <CheckIcon /> : <CancelIcon />}
-                      label={lesson.is_paid ? 'Pagata' : 'Non pagata'}
-                      color={lesson.is_paid ? 'success' : 'error'}
-                      variant="outlined"
-                      size="small"
-                    />
-                  </Grid>
+                  <>
+                    <Grid item xs={12} sm={6}>
+                      <Box display="flex" alignItems="center" mb={1}>
+                        <EuroIcon sx={{ mr: 1 }} color="primary" />
+                        <Typography variant="body2" color="text.secondary">
+                          Stato pagamento
+                        </Typography>
+                      </Box>
+                      <Chip
+                        icon={lesson.is_paid ? <CheckIcon /> : <CancelIcon />}
+                        label={lesson.is_paid ? 'Pagata' : 'Non pagata'}
+                        color={lesson.is_paid ? 'success' : 'error'}
+                        variant="outlined"
+                        size="small"
+                      />
+                    </Grid>
+                    {lesson.is_paid && lesson.payment_date && (
+                      <Grid item xs={12} sm={6}>
+                        <Box display="flex" alignItems="center" mb={1}>
+                          <CalendarIcon sx={{ mr: 1 }} color="primary" />
+                          <Typography variant="body2" color="text.secondary">
+                            Data pagamento
+                          </Typography>
+                        </Box>
+                        <Typography variant="body1" gutterBottom>
+                          {format(parseISO(lesson.payment_date), 'EEEE d MMMM yyyy', { locale: it })}
+                        </Typography>
+                      </Grid>
+                    )}
+                  </>
                 )}
               </Grid>
             </CardContent>

@@ -36,6 +36,103 @@ export const calculatePackageHours = ({ packageLessons, totalHours, originalLess
 };
 
 /**
+ * Verifica se una lezione si sovrappone con altre lezioni dello stesso studente
+ * 
+ * @param {Object} params - Parametri della funzione
+ * @param {Array} params.existingLessons - Lezioni esistenti dello studente
+ * @param {Object} params.newLesson - Nuova lezione da verificare
+ * @param {number} params.lessonIdToExclude - ID della lezione da escludere (in caso di modifica)
+ * @returns {Object} Risultato della verifica
+ */
+export const checkLessonOverlap = ({ existingLessons, newLesson, lessonIdToExclude = null }) => {
+  // Converti data e ora della nuova lezione in oggetti Date
+  const newLessonDate = new Date(newLesson.lesson_date);
+  
+  // Estrai ore e minuti dalla stringa "HH:MM:SS"
+  let startHours, startMinutes;
+  
+  if (newLesson.start_time instanceof Date) {
+    // Se start_time è già un oggetto Date
+    startHours = newLesson.start_time.getHours();
+    startMinutes = newLesson.start_time.getMinutes();
+  } else {
+    // Se start_time è una stringa nel formato "HH:MM:SS"
+    [startHours, startMinutes] = newLesson.start_time.split(':').map(Number);
+  }
+  
+  // Crea Date oggetti per l'inizio e la fine della nuova lezione
+  const newLessonStart = new Date(newLessonDate);
+  newLessonStart.setHours(startHours, startMinutes, 0, 0);
+  
+  // Calcola l'orario di fine (ore * durata)
+  const newLessonDuration = parseFloat(newLesson.duration);
+  const durationHours = Math.floor(newLessonDuration);
+  const durationMinutes = (newLessonDuration - durationHours) * 60;
+  
+  const newLessonEnd = new Date(newLessonStart);
+  newLessonEnd.setHours(
+    newLessonStart.getHours() + durationHours,
+    newLessonStart.getMinutes() + durationMinutes,
+    0,
+    0
+  );
+  
+  // Filtra le lezioni dello stesso giorno
+  const sameDayLessons = existingLessons.filter(lesson => {
+    // Escludi la lezione corrente se stiamo modificando
+    if (lessonIdToExclude && lesson.id === lessonIdToExclude) return false;
+    
+    // Verifica se la lezione è dello stesso giorno
+    const lessonDate = new Date(lesson.lesson_date);
+    return lessonDate.getFullYear() === newLessonDate.getFullYear() &&
+           lessonDate.getMonth() === newLessonDate.getMonth() &&
+           lessonDate.getDate() === newLessonDate.getDate();
+  });
+  
+  // Verifica se c'è sovrapposizione
+  for (const lesson of sameDayLessons) {
+    // Converti l'orario di inizio della lezione esistente
+    const lessonStartTime = lesson.start_time;
+    let existingStartHours, existingStartMinutes;
+    
+    if (typeof lessonStartTime === 'string') {
+      [existingStartHours, existingStartMinutes] = lessonStartTime.split(':').map(Number);
+    } else {
+      // Se non c'è start_time, ignora questa lezione (non dovrebbe accadere)
+      continue;
+    }
+    
+    // Crea Date oggetti per l'inizio e la fine della lezione esistente
+    const existingLessonStart = new Date(new Date(lesson.lesson_date));
+    existingLessonStart.setHours(existingStartHours, existingStartMinutes, 0, 0);
+    
+    // Calcola l'orario di fine
+    const existingLessonDuration = parseFloat(lesson.duration);
+    const existingDurationHours = Math.floor(existingLessonDuration);
+    const existingDurationMinutes = (existingLessonDuration - existingDurationHours) * 60;
+    
+    const existingLessonEnd = new Date(existingLessonStart);
+    existingLessonEnd.setHours(
+      existingLessonStart.getHours() + existingDurationHours,
+      existingLessonStart.getMinutes() + existingDurationMinutes,
+      0,
+      0
+    );
+    
+    // Verifica sovrapposizione
+    // (nuova inizio < esistente fine) AND (nuova fine > esistente inizio)
+    if (newLessonStart < existingLessonEnd && newLessonEnd > existingLessonStart) {
+      return {
+        hasOverlap: true,
+        overlappingLesson: lesson
+      };
+    }
+  }
+  
+  return { hasOverlap: false };
+};
+
+/**
  * Controlla se la durata della lezione supera le ore disponibili nel pacchetto
  * 
  * @param {Object} params - Parametri della funzione

@@ -15,7 +15,7 @@ import { it } from 'date-fns/locale';
 
 function LessonDetailsDialog({ open, onClose, onViewDetails, selectedLesson, studentsMap }) {
   if (!selectedLesson) return null;
-  
+
   return (
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>
@@ -25,6 +25,9 @@ function LessonDetailsDialog({ open, onClose, onViewDetails, selectedLesson, stu
         <List dense>
           <ListItem>
             <ListItemText primary="Data" secondary={format(parseISO(selectedLesson.lesson_date), "EEEE d MMMM yyyy", { locale: it })} />
+          </ListItem>
+          <ListItem>
+            <ListItemText primary="Orario" secondary={selectedLesson.start_time ? selectedLesson.start_time.substring(0, 5) : '00:00'} />
           </ListItem>
           <ListItem>
             <ListItemText primary="Studente" secondary={studentsMap[selectedLesson.student_id] || `Studente #${selectedLesson.student_id}`} />
@@ -41,9 +44,9 @@ function LessonDetailsDialog({ open, onClose, onViewDetails, selectedLesson, stu
           <ListItem>
             <ListItemText primary="Totale" secondary={`€${parseFloat(selectedLesson.total_payment).toFixed(2)}`} />
           </ListItem>
-          {!selectedLesson.is_package && (
+          {!selectedLesson.is_package && selectedLesson.is_paid && selectedLesson.payment_date && (
             <ListItem>
-              <ListItemText primary="Stato pagamento" secondary={selectedLesson.is_paid ? "Pagata" : "Non pagata"} />
+              <ListItemText primary="Data pagamento" secondary={format(parseISO(selectedLesson.payment_date), "dd/MM/yyyy", { locale: it })} />
             </ListItem>
           )}
         </List>

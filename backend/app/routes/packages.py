@@ -30,7 +30,7 @@ def update_package_remaining_hours(db: Session, package_id: int, commit: bool = 
         Il pacchetto aggiornato
     """
     # Recupera il pacchetto
-    package = db.query(models.Package).filter(models.Package.id == package_id).first()
+    package = db.query(models.Package).filter(models.Package.id == package_id).with_for_update().first()  # Aggiunge un blocco a livello di database
     if not package:
         return None
     
@@ -71,10 +71,16 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
     ).first()
     
     if active_package:
-        # Opzionale: gestisci il caso in cui lo studente ha già un pacchetto attivo
-        # Ad esempio, potresti impostare il pacchetto precedente come completato
-        active_package.status = "completed"
-        db.commit()
+        # Invece di impostare automaticamente come completato, solleva un'eccezione
+        # o offri un parametro per decidere cosa fare
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "Lo studente ha già un pacchetto attivo",
+                "active_package_id": active_package.id,
+                "active_package_remaining_hours": float(active_package.remaining_hours)
+            }
+        )
     
     # Crea un nuovo pacchetto
     db_package = models.Package(

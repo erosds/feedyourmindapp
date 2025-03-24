@@ -4,9 +4,11 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from decimal import Decimal, InvalidOperation
+from datetime import date, time
 
 from .. import models
 from ..database import get_db
+from ..utils import parse_time_string, determine_payment_date
 
 router = APIRouter(
     prefix="/lessons",
@@ -39,6 +41,13 @@ def create_lesson(
     student = db.query(models.Student).filter(models.Student.id == lesson.student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Gestione di start_time usando la funzione di utilità
+    start_time_obj = None
+    if lesson.start_time:
+        start_time_obj = parse_time_string(lesson.start_time)
+        if start_time_obj is None:
+            raise HTTPException(status_code=400, detail="Invalid time format. Use HH:MM or HH:MM:SS")
     
     # Gestione del pacchetto (se applicabile)
     if lesson.is_package:
@@ -85,7 +94,13 @@ def create_lesson(
                 "overflow_hours": float(overflow_hours)
             })
         
-        # Crea la lezione normale
+        # Determina la data di pagamento usando la funzione di utilità
+        payment_date = determine_payment_date(
+            is_paid=package.is_paid,
+            reference_date=package.start_date
+        )
+
+        # Crea la lezione nel pacchetto
         db_lesson = models.Lesson(
             professor_id=lesson.professor_id,
             student_id=lesson.student_id,
@@ -95,7 +110,9 @@ def create_lesson(
             package_id=package_id,
             hourly_rate=lesson.hourly_rate,
             total_payment=lesson.duration * lesson.hourly_rate,
-            is_paid=True  # Le lezioni da pacchetto sono considerate pagate
+            is_paid=True,  # Le lezioni da pacchetto sono considerate pagate
+            start_time=start_time_obj,  # Usa l'oggetto time invece della stringa
+            payment_date=payment_date
         )
         
         db.add(db_lesson)
@@ -108,6 +125,12 @@ def create_lesson(
         return db_lesson
     
     else:
+        # Gestione della data di pagamento usando la funzione di utilità
+        payment_date = determine_payment_date(
+            is_paid=lesson.is_paid,
+            explicit_payment_date=lesson.payment_date
+        )
+            
         # Lezione singola (non parte di un pacchetto)
         db_lesson = models.Lesson(
             professor_id=lesson.professor_id,
@@ -117,7 +140,9 @@ def create_lesson(
             is_package=False,
             hourly_rate=lesson.hourly_rate,
             total_payment=lesson.duration * lesson.hourly_rate,
-            is_paid=lesson.is_paid  # Usa il valore fornito dal frontend
+            is_paid=lesson.is_paid,
+            start_time=start_time_obj,  # Usa l'oggetto time invece della stringa
+            payment_date=payment_date
         )
         
         db.add(db_lesson)
@@ -184,146 +209,199 @@ def handle_lesson_overflow(
         "lessons_created": []
     }
     
-    if action == 'use_package':
-        # 1. Crea lezione nel pacchetto originale con le ore disponibili
-        lesson_in_package = models.Lesson(
-            professor_id=lesson_data["professor_id"],
-            student_id=lesson_data["student_id"],
-            lesson_date=lesson_data["lesson_date"],
-            duration=lesson_hours_in_package,
-            is_package=True,
-            package_id=package_id,
-            hourly_rate=lesson_data["hourly_rate"],
-            total_payment=lesson_hours_in_package * Decimal(str(lesson_data["hourly_rate"]))
-        )
+    try:
+        # Inizia una transazione esplicita
+        db.begin_nested()
         
-        # 2. Crea lezione singola per le ore rimanenti
-        lesson_single = models.Lesson(
-            professor_id=lesson_data["professor_id"],
-            student_id=lesson_data["student_id"],
-            lesson_date=lesson_data["lesson_date"],
-            duration=overflow_hours,
-            is_package=False,
-            hourly_rate=lesson_data["hourly_rate"],
-            total_payment=overflow_hours * Decimal(str(lesson_data["hourly_rate"]))
-        )
-        
-        db.add(lesson_in_package)
-        db.add(lesson_single)
-        db.commit()
-        db.refresh(lesson_in_package)
-        db.refresh(lesson_single)
-        
-        # Aggiorna le ore rimanenti del pacchetto con la nostra funzione helper
-        update_package_remaining_hours(db, package_id)
-        package = db.query(models.Package).filter(models.Package.id == package_id).first()
-        
-        # Aggiungi informazioni alla risposta
-        response_data["lessons_created"] = [
-            {
-                "id": lesson_in_package.id,
-                "type": "package",
-                "duration": float(lesson_in_package.duration),
-                "total_payment": float(lesson_in_package.total_payment)
-            },
-            {
-                "id": lesson_single.id,
-                "type": "single",
-                "duration": float(lesson_single.duration),
-                "total_payment": float(lesson_single.total_payment)
+        if action == 'use_package':
+            # Parse delle informazioni di tempo
+            start_time_obj = None
+            if 'start_time' in lesson_data and lesson_data['start_time']:
+                start_time_obj = parse_time_string(lesson_data['start_time'])
+            
+            # Determina la data di pagamento per la lezione nel pacchetto
+            payment_date_package = determine_payment_date(
+                is_paid=True,
+                reference_date=package.start_date
+            )
+            
+            # 1. Crea lezione nel pacchetto originale con le ore disponibili
+            lesson_in_package = models.Lesson(
+                professor_id=lesson_data["professor_id"],
+                student_id=lesson_data["student_id"],
+                lesson_date=lesson_data["lesson_date"],
+                duration=lesson_hours_in_package,
+                is_package=True,
+                package_id=package_id,
+                hourly_rate=lesson_data["hourly_rate"],
+                total_payment=lesson_hours_in_package * Decimal(str(lesson_data["hourly_rate"])),
+                is_paid=True,
+                start_time=start_time_obj,
+                payment_date=payment_date_package
+            )
+            
+            # Determina la data di pagamento per la lezione singola (non pagata)
+            payment_date_single = determine_payment_date(is_paid=False)
+            
+            # 2. Crea lezione singola per le ore rimanenti
+            lesson_single = models.Lesson(
+                professor_id=lesson_data["professor_id"],
+                student_id=lesson_data["student_id"],
+                lesson_date=lesson_data["lesson_date"],
+                duration=overflow_hours,
+                is_package=False,
+                hourly_rate=lesson_data["hourly_rate"],
+                total_payment=overflow_hours * Decimal(str(lesson_data["hourly_rate"])),
+                is_paid=False,  # Non pagata di default
+                start_time=start_time_obj,
+                payment_date=payment_date_single
+            )
+            
+            db.add(lesson_in_package)
+            db.add(lesson_single)
+            db.flush()
+            
+            # Aggiorna le ore rimanenti del pacchetto con la nostra funzione helper
+            update_package_remaining_hours(db, package_id, commit=False)
+            package = db.query(models.Package).filter(models.Package.id == package_id).first()
+            
+            # Aggiungi informazioni alla risposta
+            response_data["lessons_created"] = [
+                {
+                    "id": lesson_in_package.id,
+                    "type": "package",
+                    "duration": float(lesson_in_package.duration),
+                    "total_payment": float(lesson_in_package.total_payment)
+                },
+                {
+                    "id": lesson_single.id,
+                    "type": "single",
+                    "duration": float(lesson_single.duration),
+                    "total_payment": float(lesson_single.total_payment)
+                }
+            ]
+            response_data["remaining_hours"] = float(package.remaining_hours)
+            response_data["package_status"] = package.status
+            
+        elif action == 'create_new_package':
+            # Calcola il costo proporzionale per il nuovo pacchetto
+            # Se il pacchetto originale costa X per Y ore, il nuovo costerà (X/Y)*Z per Z ore
+            original_hourly_cost = package.package_cost / package.total_hours
+            new_package_cost = original_hourly_cost * overflow_hours
+            
+            # Crea nuovo pacchetto per le ore rimanenti
+            new_package = models.Package(
+                student_id=package.student_id,
+                start_date=lesson_data["lesson_date"],
+                total_hours=overflow_hours,
+                package_cost=new_package_cost,
+                status="in_progress",
+                is_paid=False,
+                remaining_hours=overflow_hours
+            )
+            db.add(new_package)
+            db.flush()  # Ottiene l'ID del nuovo pacchetto senza commit
+            
+            # Parse delle informazioni di tempo
+            start_time_obj = None
+            if 'start_time' in lesson_data and lesson_data['start_time']:
+                start_time_obj = parse_time_string(lesson_data['start_time'])
+            
+            # Determina la data di pagamento per le lezioni
+            payment_date_original = determine_payment_date(
+                is_paid=True,
+                reference_date=package.start_date
+            )
+            
+            payment_date_new = determine_payment_date(
+                is_paid=True,
+                reference_date=new_package.start_date
+            )
+            
+            # Crea lezione nel pacchetto originale
+            lesson_in_original_package = models.Lesson(
+                professor_id=lesson_data["professor_id"],
+                student_id=lesson_data["student_id"],
+                lesson_date=lesson_data["lesson_date"],
+                duration=lesson_hours_in_package,
+                is_package=True,
+                package_id=package_id,
+                hourly_rate=lesson_data["hourly_rate"],
+                total_payment=lesson_hours_in_package * Decimal(str(lesson_data["hourly_rate"])),
+                is_paid=True,
+                start_time=start_time_obj,
+                payment_date=payment_date_original
+            )
+            
+            # Crea lezione nel nuovo pacchetto
+            lesson_in_new_package = models.Lesson(
+                professor_id=lesson_data["professor_id"],
+                student_id=lesson_data["student_id"],
+                lesson_date=lesson_data["lesson_date"],
+                duration=overflow_hours,
+                is_package=True,
+                package_id=new_package.id,
+                hourly_rate=lesson_data["hourly_rate"],
+                total_payment=overflow_hours * Decimal(str(lesson_data["hourly_rate"])),
+                is_paid=True,
+                start_time=start_time_obj,
+                payment_date=payment_date_new
+            )
+            
+            db.add(lesson_in_original_package)
+            db.add(lesson_in_new_package)
+            db.flush()
+            
+            # Aggiorna le ore rimanenti di entrambi i pacchetti con la nostra funzione helper
+            update_package_remaining_hours(db, package_id, commit=False)
+            update_package_remaining_hours(db, new_package.id, commit=False)
+            
+            # Aggiorna le referenze per la risposta
+            package = db.query(models.Package).filter(models.Package.id == package_id).first()
+            
+            # Aggiungi informazioni alla risposta
+            response_data["lessons_created"] = [
+                {
+                    "id": lesson_in_original_package.id,
+                    "type": "package",
+                    "package_id": package_id,
+                    "duration": float(lesson_in_original_package.duration),
+                    "total_payment": float(lesson_in_original_package.total_payment)
+                },
+                {
+                    "id": lesson_in_new_package.id,
+                    "type": "package",
+                    "package_id": new_package.id,
+                    "duration": float(lesson_in_new_package.duration),
+                    "total_payment": float(lesson_in_new_package.total_payment)
+                }
+            ]
+            response_data["new_package"] = {
+                "id": new_package.id,
+                "total_hours": float(new_package.total_hours),
+                "package_cost": float(new_package.package_cost)
             }
-        ]
-        response_data["remaining_hours"] = float(package.remaining_hours)
-        response_data["package_status"] = package.status
-        
-    elif action == 'create_new_package':
-        # Calcola il costo proporzionale per il nuovo pacchetto
-        # Se il pacchetto originale costa X per Y ore, il nuovo costerà (X/Y)*Z per Z ore
-        original_hourly_cost = package.package_cost / package.total_hours
-        new_package_cost = original_hourly_cost * overflow_hours
-        
-        # Crea nuovo pacchetto per le ore rimanenti
-        new_package = models.Package(
-            student_id=package.student_id,
-            start_date=lesson_data["lesson_date"],
-            total_hours=overflow_hours,
-            package_cost=new_package_cost,
-            status="in_progress",
-            is_paid=False,
-            remaining_hours=overflow_hours
-        )
-        db.add(new_package)
-        db.flush()  # Ottiene l'ID del nuovo pacchetto senza commit
-        
-        # Crea lezione nel pacchetto originale
-        lesson_in_original_package = models.Lesson(
-            professor_id=lesson_data["professor_id"],
-            student_id=lesson_data["student_id"],
-            lesson_date=lesson_data["lesson_date"],
-            duration=lesson_hours_in_package,
-            is_package=True,
-            package_id=package_id,
-            hourly_rate=lesson_data["hourly_rate"],
-            total_payment=lesson_hours_in_package * Decimal(str(lesson_data["hourly_rate"]))
-        )
-        
-        # Crea lezione nel nuovo pacchetto
-        lesson_in_new_package = models.Lesson(
-            professor_id=lesson_data["professor_id"],
-            student_id=lesson_data["student_id"],
-            lesson_date=lesson_data["lesson_date"],
-            duration=overflow_hours,
-            is_package=True,
-            package_id=new_package.id,
-            hourly_rate=lesson_data["hourly_rate"],
-            total_payment=overflow_hours * Decimal(str(lesson_data["hourly_rate"]))
-        )
-        
-        db.add(lesson_in_original_package)
-        db.add(lesson_in_new_package)
-        db.commit()
-        db.refresh(new_package)
-        db.refresh(lesson_in_original_package)
-        db.refresh(lesson_in_new_package)
-        
-        # Aggiorna le ore rimanenti di entrambi i pacchetti con la nostra funzione helper
-        update_package_remaining_hours(db, package_id)
-        update_package_remaining_hours(db, new_package.id)
-        
-        # Aggiorna le referenze per la risposta
-        package = db.query(models.Package).filter(models.Package.id == package_id).first()
-        
-        # Aggiungi informazioni alla risposta
-        response_data["lessons_created"] = [
-            {
-                "id": lesson_in_original_package.id,
-                "type": "package",
-                "package_id": package_id,
-                "duration": float(lesson_in_original_package.duration),
-                "total_payment": float(lesson_in_original_package.total_payment)
-            },
-            {
-                "id": lesson_in_new_package.id,
-                "type": "package",
-                "package_id": new_package.id,
-                "duration": float(lesson_in_new_package.duration),
-                "total_payment": float(lesson_in_new_package.total_payment)
+            response_data["original_package"] = {
+                "remaining_hours": float(package.remaining_hours),
+                "status": package.status
             }
-        ]
-        response_data["new_package"] = {
-            "id": new_package.id,
-            "total_hours": float(new_package.total_hours),
-            "package_cost": float(new_package.package_cost)
-        }
-        response_data["original_package"] = {
-            "remaining_hours": float(package.remaining_hours),
-            "status": package.status
-        }
+            
+        else:
+            db.rollback()
+            raise HTTPException(status_code=400, detail="Azione non valida")
         
-    else:
-        raise HTTPException(status_code=400, detail="Azione non valida")
-    
-    return response_data
+        # Commit della transazione se tutto è andato bene
+        db.commit()
+        return response_data
+        
+    except Exception as e:
+        # Rollback in caso di errori
+        db.rollback()
+        print(f"Errore durante la gestione dell'overflow: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Si è verificato un errore durante l'elaborazione: {str(e)}"
+        )
 
 @router.get("/", response_model=List[models.LessonResponse])
 def read_lessons(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -360,7 +438,6 @@ def read_student_lessons(student_id: int, db: Session = Depends(get_db)):
     return lessons
 
 @router.put("/{lesson_id}", response_model=models.LessonResponse)
-@router.put("/{lesson_id}", response_model=models.LessonResponse)
 def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Depends(get_db)):
     """
     Aggiorna una lezione esistente. Se la lezione fa parte di un pacchetto, aggiorna anche le ore rimanenti del pacchetto.
@@ -387,9 +464,12 @@ def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Dep
         new_hourly_rate = update_data.get("hourly_rate", db_lesson.hourly_rate)
         update_data["total_payment"] = new_duration * new_hourly_rate
     
-    # Aggiorna i campi della lezione
-    for key, value in update_data.items():
-        setattr(db_lesson, key, value)
+    # Gestione del campo start_time usando la funzione di utilità
+    if "start_time" in update_data and update_data["start_time"] is not None:
+        time_obj = parse_time_string(update_data["start_time"])
+        if time_obj is None:
+            raise HTTPException(status_code=400, detail="Invalid time format. Use HH:MM or HH:MM:SS")
+        update_data["start_time"] = time_obj
     
     # Controlla se la lezione sta cambiando tipo (da singola a pacchetto o viceversa)
     is_becoming_package = "is_package" in update_data and update_data["is_package"] and not old_is_package
@@ -403,6 +483,10 @@ def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Dep
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Ore rimanenti nel pacchetto ({package.remaining_hours}) insufficienti per la durata della lezione ({db_lesson.duration})"
             )
+    
+    # Aggiorna i campi della lezione
+    for key, value in update_data.items():
+        setattr(db_lesson, key, value)
     
     # Esegui il commit delle modifiche alla lezione
     db.commit()
@@ -427,7 +511,6 @@ def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Dep
     db.refresh(db_lesson)
     return db_lesson
 
-@router.delete("/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
 @router.delete("/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_lesson(lesson_id: int, db: Session = Depends(get_db)):
     # Importa la funzione update_package_remaining_hours

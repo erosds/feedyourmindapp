@@ -286,13 +286,14 @@ function LessonListPage() {
             <TableRow>
               <TableCell>ID</TableCell>
               <TableCell>Data</TableCell>
+              <TableCell>Orario</TableCell> {/* Nuova colonna */}
               <TableCell>Professore</TableCell>
               <TableCell>Studente</TableCell>
               <TableCell>Durata</TableCell>
               <TableCell>Tipo</TableCell>
               <TableCell align="right">Tariffa Oraria</TableCell>
               <TableCell align="right">Totale</TableCell>
-              <TableCell>Pagamento</TableCell> {/* Nuova colonna */}
+              <TableCell>Pagamento</TableCell>
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
@@ -311,6 +312,9 @@ function LessonListPage() {
                     <TableCell>#{lesson.id}</TableCell>
                     <TableCell>
                       {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
+                    </TableCell>
+                    <TableCell>
+                      {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
                     </TableCell>
                     <TableCell>{professors[lesson.professor_id] || `Prof. #${lesson.professor_id}`}</TableCell>
                     <TableCell>{students[lesson.student_id] || `Studente #${lesson.student_id}`}</TableCell>
@@ -345,12 +349,20 @@ function LessonListPage() {
                           />
                         </Tooltip>
                       ) : (
-                        <Chip
-                          label={lesson.is_paid ? "Pagata" : "Non pagata"}
-                          color={lesson.is_paid ? "success" : "error"}
-                          size="small"
-                          variant="outlined"
-                        />
+                        <Tooltip
+                          title={
+                            lesson.is_paid && lesson.payment_date
+                              ? `Pagata il ${format(parseISO(lesson.payment_date), 'dd/MM/yyyy', { locale: it })}`
+                              : (lesson.is_paid ? "Pagata" : "Non pagata")
+                          }
+                        >
+                          <Chip
+                            label={lesson.is_paid ? "Pagata" : "Non pagata"}
+                            color={lesson.is_paid ? "success" : "error"}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </Tooltip>
                       )}
                     </TableCell>
 

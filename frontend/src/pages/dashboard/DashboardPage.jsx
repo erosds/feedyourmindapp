@@ -55,11 +55,13 @@ function DashboardPage() {
     professor_id: currentUser ? currentUser.id : '',
     student_id: '',
     lesson_date: new Date(),
+    start_time: new Date(new Date().setHours(9, 0, 0, 0)), // Default alle 9:00
     duration: 1,
     is_package: false,
     package_id: null,
     hourly_rate: '',
     is_paid: true,
+    payment_date: new Date(), // Default oggi
   });
 
   // Caricamento iniziale dei dati

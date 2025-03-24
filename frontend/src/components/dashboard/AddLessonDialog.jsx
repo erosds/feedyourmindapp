@@ -20,7 +20,7 @@ import {
   Switch,
   TextField
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers';
+import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { lessonService } from '../../services/api';
@@ -48,13 +48,13 @@ function AddLessonDialog({
   // Calcola le ore disponibili per il pacchetto selezionato
   const getAvailableHours = () => {
     if (!selectedPackage) return 0;
-    
+
     // Utilizza il metodo di calcolo per ottenere le ore disponibili
     const { availableHours } = calculatePackageHours(
-      selectedPackage.id, 
+      selectedPackage.id,
       selectedPackage.total_hours
     );
-    
+
     return availableHours;
   };
 
@@ -86,6 +86,10 @@ function AddLessonDialog({
       const formattedValues = {
         ...lessonForm,
         lesson_date: format(lessonForm.lesson_date, 'yyyy-MM-dd'),
+        start_time: format(lessonForm.start_time, 'HH:mm:ss'),
+        payment_date: lessonForm.is_paid && lessonForm.payment_date 
+        ? format(lessonForm.payment_date, 'yyyy-MM-dd')
+        : null,
       };
 
       // Se utilizza un pacchetto, verifica che ci siano ore sufficienti
@@ -125,7 +129,7 @@ function AddLessonDialog({
 
   // Disponibilità ore per il pacchetto selezionato
   const availableHours = getAvailableHours();
-  
+
   return (
     <Dialog
       open={open}
@@ -183,6 +187,28 @@ function AddLessonDialog({
           </Grid>
 
           <Grid item xs={12} md={6}>
+            <TimePicker
+              llabel="Orario inizio"
+              value={lessonForm.start_time}
+              onChange={(time) => setLessonForm({ ...lessonForm, start_time: time })}
+              ampm={false}
+              minutesStep={30}
+              views={['hours', 'minutes']}
+              skipDisabled={true}  // Salta i minuti disabilitati nella navigazione
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  required: true,
+                },
+                minutesClockNumberProps: { 
+                  // Filtra i numeri dei minuti per mostrare solo 0 e 30
+                  visibleMinutes: (minutes) => minutes % 30 === 0 
+                }
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
             <TextField
               fullWidth
               name="duration"
@@ -220,12 +246,19 @@ function AddLessonDialog({
             <FormControlLabel
               control={
                 <Switch
-                  name="is_package"
-                  checked={lessonForm.is_package}
-                  onChange={handlePackageToggle}
+                  name="is_paid"
+                  checked={lessonForm.is_paid}
+                  onChange={(e) => {
+                    const isPaid = e.target.checked;
+                    setLessonForm({
+                      ...lessonForm,
+                      is_paid: isPaid,
+                      payment_date: isPaid ? new Date() : null
+                    });
+                  }}
                 />
               }
-              label="Parte di un pacchetto"
+              label="Lezione pagata"
             />
           </Grid>
 
@@ -269,20 +302,18 @@ function AddLessonDialog({
           )}
 
           {/* Stato del pagamento (solo per lezioni singole) */}
-          {!lessonForm.is_package && (
+          {!lessonForm.is_package && lessonForm.is_paid && (
             <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    name="is_paid"
-                    checked={lessonForm.is_paid}
-                    onChange={(e) => setLessonForm({
-                      ...lessonForm,
-                      is_paid: e.target.checked
-                    })}
-                  />
-                }
-                label="Lezione pagata"
+              <DatePicker
+                label="Data pagamento"
+                value={lessonForm.payment_date}
+                onChange={(date) => setLessonForm({ ...lessonForm, payment_date: date })}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    required: true,
+                  },
+                }}
               />
             </Grid>
           )}

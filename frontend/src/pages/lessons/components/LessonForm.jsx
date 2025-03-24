@@ -16,7 +16,7 @@ import {
   Switch,
   TextField
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers';
+import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 
@@ -25,6 +25,7 @@ const LessonSchema = Yup.object().shape({
   professor_id: Yup.number().required('Professore obbligatorio'),
   student_id: Yup.number().required('Studente obbligatorio'),
   lesson_date: Yup.date().required('Data obbligatoria'),
+  start_time: Yup.date().required('Orario di inizio obbligatorio'),
   duration: Yup.number()
     .positive('La durata deve essere positiva')
     .required('Durata obbligatoria'),
@@ -38,6 +39,11 @@ const LessonSchema = Yup.object().shape({
     .positive('La tariffa oraria deve essere positiva')
     .required('Tariffa oraria obbligatoria'),
   is_paid: Yup.boolean(),
+  payment_date: Yup.date().nullable().when('is_paid', {
+    is: true,
+    then: () => Yup.date().required('Data di pagamento obbligatoria'),
+    otherwise: () => Yup.date().nullable(),
+  }),
 });
 
 function LessonForm({
@@ -76,14 +82,14 @@ function LessonForm({
         isSubmitting,
       }) => {
         // Trova il pacchetto selezionato
-        const selectedPackage = values.package_id ? 
+        const selectedPackage = values.package_id ?
           packages.find(pkg => pkg.id === parseInt(values.package_id)) : null;
-        
+
         // Calcola le ore disponibili
-        const { availableHours, totalAvailable } = selectedPackage ? 
-          calculatePackageHours(values.package_id, selectedPackage.total_hours) : 
+        const { availableHours, totalAvailable } = selectedPackage ?
+          calculatePackageHours(values.package_id, selectedPackage.total_hours) :
           { availableHours: 0, totalAvailable: 0 };
-        
+
         return (
           <Form>
             <Grid container spacing={3}>
@@ -134,7 +140,7 @@ function LessonForm({
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
                 <DatePicker
                   label="Data lezione"
                   value={values.lesson_date}
@@ -146,6 +152,28 @@ function LessonForm({
                       error: touched.lesson_date && Boolean(errors.lesson_date),
                       helperText: touched.lesson_date && errors.lesson_date,
                     },
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <TimePicker
+                  label="Orario inizio"
+                  value={values.start_time}
+                  onChange={(time) => setFieldValue('start_time', time)}
+                  ampm={false}
+                  minutesStep={30}
+                  views={['hours', 'minutes']}
+                  skipDisabled={true}  // Salta i minuti disabilitati nella navigazione
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: true,
+                    },
+                    minutesClockNumberProps: {
+                      // Filtra i numeri dei minuti per mostrare solo 0 e 30
+                      visibleMinutes: (minutes) => minutes % 30 === 0
+                    }
                   }}
                 />
               </Grid>
@@ -169,23 +197,23 @@ function LessonForm({
                 />
                 {selectedPackage && values.is_package && (
                   <FormHelperText>
-                    {isEditMode && originalLesson && originalLesson.is_package && 
-                     originalLesson.package_id === parseInt(values.package_id) ? (
+                    {isEditMode && originalLesson && originalLesson.is_package &&
+                      originalLesson.package_id === parseInt(values.package_id) ? (
                       <>
-                        Ore disponibili all'inserimento: {totalAvailable.toFixed(1)} 
+                        Ore disponibili all'inserimento: {totalAvailable.toFixed(1)}
                       </>
                     ) : (
                       <>
                         Ore disponibili all'inserimento: {availableHours.toFixed(1)} di {selectedPackage.total_hours}
                       </>
                     )}
-                    
+
                     {((isEditMode && parseFloat(values.duration) > totalAvailable) ||
                       (!isEditMode && parseFloat(values.duration) > availableHours)) && (
-                      <span style={{ color: 'red' }}>
-                        {' '}(Attenzione: la durata supera le ore disponibili)
-                      </span>
-                    )}
+                        <span style={{ color: 'red' }}>
+                          {' '}(Attenzione: la durata supera le ore disponibili)
+                        </span>
+                      )}
                   </FormHelperText>
                 )}
               </Grid>
@@ -263,18 +291,47 @@ function LessonForm({
 
               {/* Campo per indicare se la lezione è stata pagata (solo per lezioni singole) */}
               {!values.is_package && (
-                <Grid item xs={12} md={6}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        name="is_paid"
-                        checked={values.is_paid}
-                        onChange={handleChange}
+                <>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          name="is_paid"
+                          checked={values.is_paid}
+                          onChange={(e) => {
+                            const isPaid = e.target.checked;
+                            setFieldValue('is_paid', isPaid);
+
+                            // Se abilitiamo il pagamento, imposta data corrente come default
+                            if (isPaid && !values.payment_date) {
+                              setFieldValue('payment_date', new Date());
+                            }
+                          }}
+                        />
+                      }
+                      label="Lezione pagata"
+                    />
+                  </Grid>
+
+                  {/* Data di pagamento (mostrata solo se la lezione è pagata) */}
+                  {values.is_paid && (
+                    <Grid item xs={12} md={6}>
+                      <DatePicker
+                        label="Data pagamento"
+                        value={values.payment_date}
+                        onChange={(date) => setFieldValue('payment_date', date)}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            required: true,
+                            error: touched.payment_date && Boolean(errors.payment_date),
+                            helperText: touched.payment_date && errors.payment_date,
+                          },
+                        }}
                       />
-                    }
-                    label="Lezione pagata"
-                  />
-                </Grid>
+                    </Grid>
+                  )}
+                </>
               )}
 
               {/* Totale calcolato automaticamente */}

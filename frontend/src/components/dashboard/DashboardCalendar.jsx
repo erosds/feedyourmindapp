@@ -127,7 +127,7 @@ function DashboardCalendar({
                         }}
                       >
                         <ListItemText
-                          primary={studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
+                          primary={`${lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'} - ${studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}`}
                           secondary={`${lesson.duration} ore`}
                           primaryTypographyProps={{ variant: 'body2', noWrap: true, color: 'text.primary' }}
                           secondaryTypographyProps={{ variant: 'caption', noWrap: true, color: 'text.secondary' }}

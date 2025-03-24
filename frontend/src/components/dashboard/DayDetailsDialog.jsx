@@ -19,7 +19,7 @@ import AddIcon from '@mui/icons-material/Add';
 
 function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons, studentsMap }) {
   if (!selectedDay) return null;
-  
+
   return (
     <Dialog
       open={open}
@@ -36,6 +36,19 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
             {dayLessons.map((lesson) => (
               <ListItem key={lesson.id} divider>
                 <Box sx={{ width: '100%' }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'} - {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
+                    </Typography>
+                    {lesson.is_package && (
+                      <Chip
+                        label="Pacchetto"
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                    )}
+                  </Box>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
                     <Typography variant="subtitle1" fontWeight="medium">
                       {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}

@@ -38,3 +38,56 @@ def recalculate_package_hours(package_id: int, db: Session):
         package.status = "in_progress"
     
     db.commit()
+
+def determine_payment_date(is_paid, explicit_payment_date=None, reference_date=None):
+    """
+    Determina la data di pagamento in base ai parametri forniti.
+    
+    Args:
+        is_paid: Se la lezione o il pacchetto è pagato
+        explicit_payment_date: Data di pagamento esplicita (opzionale)
+        reference_date: Data di riferimento come fallback (opzionale)
+        
+    Returns:
+        Data di pagamento o None
+    """
+    from datetime import date
+    
+    if not is_paid:
+        return None
+    
+    if explicit_payment_date:
+        return explicit_payment_date
+    
+    if reference_date:
+        return reference_date
+    
+    return date.today()
+
+def parse_time_string(time_str):
+    """
+    Converte una stringa nel formato HH:MM o HH:MM:SS in un oggetto time.
+    
+    Args:
+        time_str: Stringa nel formato orario
+        
+    Returns:
+        Oggetto time o None se la stringa è invalida
+    """
+    from datetime import time
+    
+    if not time_str:
+        return None
+        
+    try:
+        # Gestisci sia formato HH:MM che HH:MM:SS
+        time_parts = time_str.split(':')
+        hours = int(time_parts[0])
+        minutes = int(time_parts[1])
+        seconds = 0
+        if len(time_parts) > 2:
+            seconds = int(time_parts[2])
+        return time(hour=hours, minute=minutes, second=seconds)
+    except (ValueError, IndexError) as e:
+        print(f"Error parsing time: {e}")
+        return None

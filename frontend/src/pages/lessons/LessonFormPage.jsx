@@ -4,7 +4,13 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Paper,
   Typography,
 } from '@mui/material';
@@ -14,7 +20,7 @@ import { format } from 'date-fns';
 
 import LessonForm from './components/LessonForm';
 import PackageOverflowDialog from './components/PackageOverflowDialog';
-import { checkPackageOverflow } from './utils/packageUtils.jsx';
+import { checkPackageOverflow, checkLessonOverlap } from './utils/packageUtils';
 
 function LessonFormPage() {
   const { id } = useParams();
@@ -42,17 +48,26 @@ function LessonFormPage() {
     remainingHours: 0,
     overflowHours: 0
   });
+  
+  // Dialog di sovrapposizione
+  const [overlapDialogOpen, setOverlapDialogOpen] = useState(false);
+  const [overlapLesson, setOverlapLesson] = useState(null);
+  
+  // Lezioni dello studente selezionato
+  const [studentLessons, setStudentLessons] = useState([]);
 
   // Valori iniziali predefiniti
   const [initialValues, setInitialValues] = useState({
     professor_id: currentUser ? currentUser.id : '',
     student_id: location.state?.student_id || '',
     lesson_date: new Date(),
+    start_time: new Date(new Date().setHours(9, 0, 0, 0)), // Default alle 9:00
     duration: 1,
     is_package: location.state?.is_package || false,
     package_id: location.state?.package_id || null,
     hourly_rate: '',
     is_paid: true,
+    payment_date: new Date(), // Default oggi
   });
 
   // Carica i dati necessari
@@ -123,15 +138,39 @@ function LessonFormPage() {
     }
 
     // Imposta i valori iniziali del form
+    const lessonDate = new Date(lesson.lesson_date);
+    let startTime = null;
+    
+    if (lesson.start_time) {
+      // Se start_time esiste nel formato "HH:MM:SS", lo convertiamo in un oggetto Date
+      const [hours, minutes] = lesson.start_time.split(':').map(Number);
+      startTime = new Date();
+      startTime.setHours(hours, minutes, 0, 0);
+    } else {
+      // Default alle 9:00 se non esiste
+      startTime = new Date();
+      startTime.setHours(9, 0, 0, 0);
+    }
+    
+    // Gestisci la data di pagamento
+    let paymentDate = null;
+    if (lesson.is_paid && lesson.payment_date) {
+      paymentDate = new Date(lesson.payment_date);
+    } else if (lesson.is_paid) {
+      paymentDate = new Date(); // Default oggi se è pagata ma non ha data
+    }
+    
     setInitialValues({
       professor_id: lesson.professor_id,
       student_id: lesson.student_id,
-      lesson_date: new Date(lesson.lesson_date),
+      lesson_date: lessonDate,
+      start_time: startTime,
       duration: lesson.duration,
       is_package: lesson.is_package,
       package_id: lesson.package_id,
       hourly_rate: lesson.hourly_rate,
-      is_paid: lesson.is_paid !== undefined ? lesson.is_paid : true
+      is_paid: lesson.is_paid !== undefined ? lesson.is_paid : true,
+      payment_date: paymentDate
     });
   };
 
@@ -162,8 +201,20 @@ function LessonFormPage() {
       professor_id,
       overflow_hours,
       lesson_date,
+      start_time,
       original_hourly_rate
     } = location.state;
+
+    // Crea una data per l'orario di inizio
+    let startTimeDate = new Date();
+    if (start_time) {
+      // Se c'è un orario nella forma "HH:MM:SS"
+      const [hours, minutes] = start_time.split(':').map(Number);
+      startTimeDate.setHours(hours, minutes, 0, 0);
+    } else {
+      // Default alle 9:00
+      startTimeDate.setHours(9, 0, 0, 0);
+    }
 
     // Pre-compila il form
     setInitialValues({
@@ -171,11 +222,13 @@ function LessonFormPage() {
       student_id: student_id,
       professor_id: professor_id,
       lesson_date: new Date(lesson_date),
+      start_time: startTimeDate,
       duration: overflow_hours,
       is_package: false,
       package_id: null,
       hourly_rate: original_hourly_rate || '',
       is_paid: false,
+      payment_date: null,
     });
 
     setInfoMessage(`Stai creando una lezione singola per ${overflow_hours} ore eccedenti da un'altra lezione. Puoi modificare la tariffa oraria o altri dettagli se necessario.`);
@@ -190,9 +243,26 @@ function LessonFormPage() {
       setFieldValue('package_id', null);
       setLessonsInPackage([]);
 
+      // Carica i pacchetti dello studente
       await loadStudentPackages(studentId);
+      
+      // Carica le lezioni dello studente per verificare le sovrapposizioni
+      await loadStudentLessons(studentId);
     } catch (err) {
-      console.error('Error fetching student packages:', err);
+      console.error('Error fetching student data:', err);
+    }
+  };
+  
+  // Carica le lezioni dello studente
+  const loadStudentLessons = async (studentId) => {
+    try {
+      const response = await lessonService.getByStudent(studentId);
+      setStudentLessons(response.data);
+      return response.data;
+    } catch (err) {
+      console.error('Error loading student lessons:', err);
+      setError('Impossibile caricare le lezioni dello studente');
+      return [];
     }
   };
 
@@ -238,6 +308,7 @@ function LessonFormPage() {
         overflow_from_lesson: true,
         overflow_hours: overflowDetails.overflowHours,
         lesson_date: overflowLessonData.lesson_date,
+        start_time: overflowLessonData.start_time,
         professor_id: overflowLessonData.professor_id,
         original_hourly_rate: overflowLessonData.hourly_rate,
       }
@@ -256,6 +327,7 @@ function LessonFormPage() {
         lesson_data: {
           professor_id: overflowLessonData.professor_id,
           lesson_date: overflowLessonData.lesson_date,
+          start_time: overflowLessonData.start_time,
           duration: overflowDetails.overflowHours,
           hourly_rate: overflowLessonData.hourly_rate
         }
@@ -280,46 +352,14 @@ function LessonFormPage() {
       } else {
         await lessonService.create(partialLessonData);
       }
+      return true;
     } catch (err) {
       console.error('Error saving partial lesson:', err);
       alert('Si è verificato un errore nel salvare la lezione principale. Si prega di verificare e riprovare.');
+      return false;
     } finally {
       setLoading(false);
     }
-  };
-
-  // Gestisce l'invio del form
-  const handleSubmit = async (values) => {
-    try {
-      setError(null);
-
-      // Formatta la data per l'API
-      const formattedValues = {
-        ...values,
-        lesson_date: format(values.lesson_date, 'yyyy-MM-dd'),
-      };
-
-      // Se non è un pacchetto, rimuovi l'ID del pacchetto
-      if (!formattedValues.is_package) {
-        formattedValues.package_id = null;
-      }
-
-      // Controlla l'overflow delle ore se è un pacchetto
-      if (formattedValues.is_package && formattedValues.package_id) {
-        const shouldShowOverflowDialog = await handlePackageOverflow(formattedValues);
-        if (shouldShowOverflowDialog) return;
-      }
-
-      // Salva la lezione
-      await saveLesson(formattedValues);
-      
-    } catch (err) {
-      console.error('Error saving lesson:', err);
-      setError('Errore durante il salvataggio. Verifica i dati e riprova.');
-      return false;
-    }
-    
-    return true;
   };
 
   // Controlla se la durata supera le ore disponibili nel pacchetto
@@ -339,22 +379,6 @@ function LessonFormPage() {
     }
     
     return false;
-  };
-
-  // Salva la lezione e naviga
-  const saveLesson = async (formattedValues) => {
-    if (isEditMode) {
-      await lessonService.update(id, formattedValues);
-    } else {
-      await lessonService.create(formattedValues);
-    }
-
-    // Se siamo ritornati dal pacchetto, torniamo alla pagina del pacchetto
-    if (location.state?.returnToPackage && formattedValues.is_package && formattedValues.package_id) {
-      navigate(`/packages/${formattedValues.package_id}`, { state: { refreshPackage: true } });
-    } else {
-      navigate('/lessons');
-    }
   };
 
   // Calcola le ore disponibili nel pacchetto selezionato
@@ -379,6 +403,69 @@ function LessonFormPage() {
       availableHours,
       totalAvailable: availableHours + originalLessonHours
     };
+  };
+
+  // Salva la lezione e naviga
+  const saveLesson = async (formattedValues) => {
+    if (isEditMode) {
+      await lessonService.update(id, formattedValues);
+    } else {
+      await lessonService.create(formattedValues);
+    }
+
+    // Se siamo ritornati dal pacchetto, torniamo alla pagina del pacchetto
+    if (location.state?.returnToPackage && formattedValues.is_package && formattedValues.package_id) {
+      navigate(`/packages/${formattedValues.package_id}`, { state: { refreshPackage: true } });
+    } else {
+      navigate('/lessons');
+    }
+  };
+
+  // Gestisce l'invio del form
+  const handleSubmit = async (values) => {
+    try {
+      setError(null);
+
+      // Formatta le date e l'orario per l'API
+      const formattedValues = {
+        ...values,
+        lesson_date: format(values.lesson_date, 'yyyy-MM-dd'),
+        start_time: values.start_time ? format(values.start_time, 'HH:mm:ss') : null,
+        payment_date: values.is_paid && values.payment_date ? format(values.payment_date, 'yyyy-MM-dd') : null,
+      };
+
+      // Se non è un pacchetto, rimuovi l'ID del pacchetto
+      if (!formattedValues.is_package) {
+        formattedValues.package_id = null;
+      }
+
+      // Verifica sovrapposizioni con altre lezioni dello stesso studente
+      const { hasOverlap, overlappingLesson } = checkLessonOverlap({
+        existingLessons: studentLessons,
+        newLesson: formattedValues,
+        lessonIdToExclude: isEditMode ? parseInt(id) : null
+      });
+
+      if (hasOverlap) {
+        setOverlapLesson(overlappingLesson);
+        setOverlapDialogOpen(true);
+        return false;
+      }
+
+      // Controlla l'overflow delle ore se è un pacchetto
+      if (formattedValues.is_package && formattedValues.package_id) {
+        const shouldShowOverflowDialog = await handlePackageOverflow(formattedValues);
+        if (shouldShowOverflowDialog) return false;
+      }
+
+      // Salva la lezione
+      await saveLesson(formattedValues);
+      return true;
+    } catch (err) {
+      console.error('Error saving lesson:', err);
+      setError('Errore durante il salvataggio. Verifica i dati e riprova.');
+      return false;
+    }
   };
 
   if (loading) {
@@ -431,6 +518,53 @@ function LessonFormPage() {
         onAction={handleOverflowAction}
         details={overflowDetails}
       />
+
+      {/* Dialog per gestire le sovrapposizioni delle lezioni */}
+      <Dialog
+        open={overlapDialogOpen}
+        onClose={() => setOverlapDialogOpen(false)}
+        aria-labelledby="overlap-dialog-title"
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle id="overlap-dialog-title">
+          Sovrapposizione di orario rilevata
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText gutterBottom>
+            Lo studente ha già una lezione programmata in questo orario. Non è possibile creare lezioni sovrapposte per lo stesso studente.
+          </DialogContentText>
+          
+          {overlapLesson && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Dettagli della lezione in conflitto:
+              </Typography>
+              <Typography variant="body2">
+                <strong>Data:</strong> {format(new Date(overlapLesson.lesson_date), 'dd/MM/yyyy')}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Orario:</strong> {overlapLesson.start_time?.substring(0, 5)}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Durata:</strong> {overlapLesson.duration} ore
+              </Typography>
+              <Typography variant="body2">
+                <strong>ID lezione:</strong> #{overlapLesson.id}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setOverlapDialogOpen(false)} 
+            color="primary"
+            variant="contained"
+          >
+            Modifica orario
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
