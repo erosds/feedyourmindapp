@@ -308,7 +308,7 @@ function AdminDashboardPage() {
         </Grid>
 
         {/* Calendario Settimanale dei Professori (spostato sotto, a sinistra) */}
-        <Grid item xs={12} md={10}>
+        <Grid item xs={12} md={9}>
           <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
               <Typography variant="h6">
@@ -402,7 +402,7 @@ function AdminDashboardPage() {
         </Grid>
 
         {/* Pannello laterale con riepilogo professori (spostato sotto, a destra) */}
-        <Grid item xs={12} md={2}>
+        <Grid item xs={12} md={3}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
