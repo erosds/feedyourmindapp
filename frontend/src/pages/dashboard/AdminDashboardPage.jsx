@@ -10,13 +10,9 @@ import {
   Paper,
   ButtonGroup,
   Button,
-  Divider,
   List,
   ListItem,
-  ListItemText,
-  ListItemAvatar,
   Avatar,
-  Chip,
   Table,
   TableBody,
   TableCell,
@@ -33,19 +29,14 @@ import {
   subWeeks,
   parseISO,
   isEqual,
-  getDay,
   isToday,
   isWithinInterval,
-  max,
 } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { lessonService, professorService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import {
-  Person as PersonIcon,
-  Euro as EuroIcon,
-  CalendarToday as CalendarIcon,
   ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
 
