@@ -458,8 +458,20 @@ function AddLessonDialog({
             />
           </Grid>
 
+          {/* Totale calcolato automaticamente */}
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Totale lezione"
+              value={`€ ${totalAmount}`}
+              InputProps={{
+                readOnly: true,
+              }}
+            />
+          </Grid>
+
           {/* Toggle per pacchetto */}
-          <Grid item xs={12}>
+          <Grid item xs={12} md={6}>
             <FormControlLabel
               control={
                 <Switch
@@ -485,9 +497,36 @@ function AddLessonDialog({
             </Box>
           </Grid>
 
+          {/* Toggle pagamento (disabilitato per lezioni da pacchetto) */}
+          <Grid item xs={12} md={6}>
+            <FormControlLabel
+              control={
+                <Switch
+                  name="is_paid"
+                  checked={lessonForm.is_paid}
+                  onChange={(e) => {
+                    const isPaid = e.target.checked;
+                    setLessonForm(prev => ({
+                      ...prev,
+                      is_paid: isPaid,
+                      payment_date: isPaid ? new Date() : null
+                    }));
+                  }}
+                  disabled={submitting || (lessonForm.is_package && localSelectedPackage)}
+                />
+              }
+              label="Lezione pagata"
+            />
+            {lessonForm.is_package && (
+              <FormHelperText>
+                La lezione viene saldata con il pacchetto stesso
+              </FormHelperText>
+            )}
+          </Grid>
+
           {/* Selezione pacchetto (mostrato solo se is_package è true) */}
           {lessonForm.is_package && (
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12}>
               <FormControl fullWidth disabled={isLoadingPackages || submitting}>
                 <InputLabel id="package-label">Pacchetto</InputLabel>
                 <Select
@@ -529,36 +568,9 @@ function AddLessonDialog({
             </Grid>
           )}
 
-          {/* Toggle pagamento (disabilitato per lezioni da pacchetto) */}
-          <Grid item xs={12}>
-            <FormControlLabel
-              control={
-                <Switch
-                  name="is_paid"
-                  checked={lessonForm.is_paid}
-                  onChange={(e) => {
-                    const isPaid = e.target.checked;
-                    setLessonForm(prev => ({
-                      ...prev,
-                      is_paid: isPaid,
-                      payment_date: isPaid ? new Date() : null
-                    }));
-                  }}
-                  disabled={submitting || (lessonForm.is_package && localSelectedPackage)}
-                />
-              }
-              label="Lezione pagata"
-            />
-            {lessonForm.is_package && (
-              <FormHelperText>
-                Le lezioni da pacchetto sono automaticamente considerate pagate
-              </FormHelperText>
-            )}
-          </Grid>
-
           {/* Data pagamento (solo per lezioni singole pagate) */}
           {!lessonForm.is_package && lessonForm.is_paid && (
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12}>
               <DatePicker
                 label="Data pagamento"
                 value={lessonForm.payment_date}
@@ -574,17 +586,7 @@ function AddLessonDialog({
             </Grid>
           )}
 
-          {/* Totale calcolato automaticamente */}
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Totale lezione"
-              value={`€ ${totalAmount}`}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-          </Grid>
+          
         </Grid>
       </DialogContent>
       <DialogActions>
