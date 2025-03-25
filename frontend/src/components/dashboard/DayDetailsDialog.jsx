@@ -76,9 +76,19 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
             ))}
           </List>
         ) : (
-          <Typography align="center" color="text.secondary" sx={{ py: 2 }}>
-            Nessuna lezione in questo giorno
-          </Typography>
+          <Box
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="center"
+            minHeight="150px"
+            p={3}
+            textAlign="center"
+          >
+            <Typography variant="body1" color="text.secondary" paragraph>
+              Non hai lezioni programmate per questa giornata.
+            </Typography>
+          </Box>
         )}
       </DialogContent>
       <DialogActions>

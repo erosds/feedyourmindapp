@@ -25,8 +25,8 @@ import {
   Euro as EuroIcon,
   EventNote as PackageIcon,
   Delete as DeleteIcon,
-  CheckCircle as CheckIcon,  // Aggiungi per icona pagamento
-  Cancel as CancelIcon,      // Aggiungi per icona non pagamento
+  CheckCircle as CheckIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -176,225 +176,254 @@ function LessonDetailPage() {
         </Box>
       </Box>
 
-      {/* Dati principali */}
-      <Grid container spacing={3}>
-        {/* Informazioni lezione */}
-        <Grid item xs={12} md={6}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
+      {/* Dati principali - Unica card con tutte le informazioni */}
+      <Card>
+        <CardContent>
+          <Grid container spacing={3}>
+            {/* Prima sezione: Informazioni Lezione */}
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom color="primary">
                 Informazioni Lezione
               </Typography>
-              <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={12} sm={6}>
-                  <Box display="flex" alignItems="center" mb={1}>
-                    <CalendarIcon sx={{ mr: 1 }} color="primary" />
-                    <Typography variant="body2" color="text.secondary">
-                      Data della lezione
-                    </Typography>
-                  </Box>
-                  <Typography variant="body1" gutterBottom>
-                    {format(parseISO(lesson.lesson_date), 'EEEE d MMMM yyyy', { locale: it })}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Box display="flex" alignItems="center" mb={1}>
-                    <TimeIcon sx={{ mr: 1 }} color="primary" />
-                    <Typography variant="body2" color="text.secondary">
-                      Orario di inizio
-                    </Typography>
-                  </Box>
-                  <Typography variant="body1" gutterBottom>
-                    {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Box display="flex" alignItems="center" mb={1}>
-                    <TimeIcon sx={{ mr: 1 }} color="primary" />
-                    <Typography variant="body2" color="text.secondary">
-                      Durata
-                    </Typography>
-                  </Box>
-                  <Typography variant="body1" gutterBottom>
-                    {lesson.duration} ore
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {/* Studente */}
+                <Box sx={{ minWidth: '200px' }}>
                   <Box display="flex" alignItems="center" mb={1}>
                     <StudentIcon sx={{ mr: 1 }} color="primary" />
                     <Typography variant="body2" color="text.secondary">
                       Studente
                     </Typography>
                   </Box>
-                  <Typography variant="body1" gutterBottom>
+                  <Typography variant="body1" fontWeight="medium">
                     <Link to={`/students/${student.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                       {student.first_name} {student.last_name}
                     </Link>
                   </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Box>
+                
+                {/* Professore */}
+                <Box sx={{ minWidth: '200px' }}>
                   <Box display="flex" alignItems="center" mb={1}>
                     <ProfessorIcon sx={{ mr: 1 }} color="primary" />
                     <Typography variant="body2" color="text.secondary">
                       Professore
                     </Typography>
                   </Box>
-                  <Typography variant="body1" gutterBottom>
+                  <Typography variant="body1" fontWeight="medium">
                     <Link to={`/professors/${professor.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                       {professor.first_name} {professor.last_name}
                     </Link>
                   </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 1 }} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Box>
+                
+                {/* Data */}
+                <Box sx={{ minWidth: '200px' }}>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <CalendarIcon sx={{ mr: 1 }} color="primary" />
+                    <Typography variant="body2" color="text.secondary">
+                      Data
+                    </Typography>
+                  </Box>
+                  <Typography variant="body1" fontWeight="medium">
+                    {format(parseISO(lesson.lesson_date), 'EEEE d MMMM yyyy', { locale: it })}
+                  </Typography>
+                </Box>
+                
+                {/* Orario */}
+                <Box sx={{ minWidth: '120px' }}>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <TimeIcon sx={{ mr: 1 }} color="primary" />
+                    <Typography variant="body2" color="text.secondary">
+                      Orario
+                    </Typography>
+                  </Box>
+                  <Typography variant="body1" fontWeight="medium">
+                    {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
+                  </Typography>
+                </Box>
+                
+                {/* Durata */}
+                <Box sx={{ minWidth: '120px' }}>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <TimeIcon sx={{ mr: 1 }} color="primary" />
+                    <Typography variant="body2" color="text.secondary">
+                      Durata
+                    </Typography>
+                  </Box>
+                  <Typography variant="body1" fontWeight="medium">
+                    {lesson.duration} ore
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
+
+            {/* Divider tra le sezioni */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+            </Grid>
+
+            {/* Seconda sezione: Tipo di lezione e pagamento */}
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
+                Tipo di Lezione e Pagamento
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {/* Tipo di lezione */}
+                <Box sx={{ minWidth: '200px' }}>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <PackageIcon sx={{ mr: 1 }} color="primary" />
+                    <Typography variant="body2" color="text.secondary">
+                      Tipo di lezione
+                    </Typography>
+                  </Box>
+                  {lesson.is_package ? (
+                    <Chip
+                      icon={<PackageIcon />}
+                      label={`Pacchetto #${lesson.package_id}`}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  ) : (
+                    <Chip
+                      label="Lezione singola"
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
+                
+                {/* Tariffa oraria */}
+                <Box sx={{ minWidth: '140px' }}>
                   <Box display="flex" alignItems="center" mb={1}>
                     <EuroIcon sx={{ mr: 1 }} color="primary" />
                     <Typography variant="body2" color="text.secondary">
                       Tariffa oraria
                     </Typography>
                   </Box>
-                  <Typography variant="body1" gutterBottom>
+                  <Typography variant="body1" fontWeight="medium">
                     €{parseFloat(lesson.hourly_rate).toFixed(2)}
                   </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Box>
+                
+                {/* Totale lezione */}
+                <Box sx={{ minWidth: '140px' }}>
                   <Box display="flex" alignItems="center" mb={1}>
                     <EuroIcon sx={{ mr: 1 }} color="primary" />
                     <Typography variant="body2" color="text.secondary">
                       Totale lezione
                     </Typography>
                   </Box>
-                  <Typography variant="h6" color="primary" gutterBottom>
+                  <Typography variant="body1" fontWeight="bold" color="primary">
                     €{parseFloat(lesson.total_payment).toFixed(2)}
                   </Typography>
-                </Grid>
-
-                {/* Stato Pagamento (solo per lezioni singole) */}
+                </Box>
+                
+                {/* Stato pagamento (solo per lezioni singole) */}
                 {!lesson.is_package && (
-                  <>
-                    <Grid item xs={12} sm={6}>
-                      <Box display="flex" alignItems="center" mb={1}>
-                        <EuroIcon sx={{ mr: 1 }} color="primary" />
-                        <Typography variant="body2" color="text.secondary">
-                          Stato pagamento
-                        </Typography>
-                      </Box>
-                      <Chip
-                        icon={lesson.is_paid ? <CheckIcon /> : <CancelIcon />}
-                        label={lesson.is_paid ? 'Pagata' : 'Non pagata'}
-                        color={lesson.is_paid ? 'success' : 'error'}
-                        variant="outlined"
-                        size="small"
-                      />
-                    </Grid>
-                    {lesson.is_paid && lesson.payment_date && (
-                      <Grid item xs={12} sm={6}>
-                        <Box display="flex" alignItems="center" mb={1}>
-                          <CalendarIcon sx={{ mr: 1 }} color="primary" />
-                          <Typography variant="body2" color="text.secondary">
-                            Data pagamento
-                          </Typography>
-                        </Box>
-                        <Typography variant="body1" gutterBottom>
-                          {format(parseISO(lesson.payment_date), 'EEEE d MMMM yyyy', { locale: it })}
-                        </Typography>
-                      </Grid>
-                    )}
-                  </>
-                )}
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Informazioni sul pacchetto (se applicabile) */}
-        <Grid item xs={12} md={6}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Tipo di Lezione
-              </Typography>
-              <Box sx={{ mt: 2 }}>
-                {lesson.is_package ? (
-                  <>
-                    <Box display="flex" alignItems="center" mb={2}>
-                      <PackageIcon sx={{ mr: 1 }} color="primary" />
-                      <Typography variant="body1">
-                        Questa lezione fa parte di un pacchetto
+                  <Box sx={{ minWidth: '150px' }}>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <EuroIcon sx={{ mr: 1 }} color="primary" />
+                      <Typography variant="body2" color="text.secondary">
+                        Stato pagamento
                       </Typography>
                     </Box>
-                    {packageData && (
-                      <Paper elevation={0} variant="outlined" sx={{ p: 2 }}>
-                        <Grid container spacing={2}>
-                          <Grid item xs={12}>
-                            <Typography variant="subtitle1" gutterBottom>
-                              Dettagli Pacchetto #{packageData.id}
-                            </Typography>
-                          </Grid>
-                          <Grid item xs={12} sm={6}>
-                            <Typography variant="body2" color="text.secondary">
-                              Ore totali
-                            </Typography>
-                            <Typography variant="body1">
-                              {packageData.total_hours}
-                            </Typography>
-                          </Grid>
-                          <Grid item xs={12} sm={6}>
-                            <Typography variant="body2" color="text.secondary">
-                              Ore rimanenti
-                            </Typography>
-                            <Typography variant="body1" color="primary">
-                              {packageData.remaining_hours}
-                            </Typography>
-                          </Grid>
-                          <Grid item xs={12} sm={6}>
-                            <Typography variant="body2" color="text.secondary">
-                              Stato
-                            </Typography>
-                            <Chip
-                              label={packageData.status === 'in_progress' ? 'In corso' : 'Terminato'}
-                              color={packageData.status === 'in_progress' ? 'primary' : 'default'}
-                              size="small"
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={6}>
-                            <Typography variant="body2" color="text.secondary">
-                              Costo totale
-                            </Typography>
-                            <Typography variant="body1">
-                              €{parseFloat(packageData.package_cost).toFixed(2)}
-                            </Typography>
-                          </Grid>
-                          <Grid item xs={12}>
-                            <Button
-                              component={Link}
-                              to={`/packages/${packageData.id}`}
-                              size="small"
-                              color="primary"
-                              sx={{ mt: 1 }}
-                            >
-                              Vai al pacchetto
-                            </Button>
-                          </Grid>
-                        </Grid>
-                      </Paper>
-                    )}
-                  </>
-                ) : (
-                  <Box display="flex" alignItems="center" mb={2}>
-                    <CalendarIcon sx={{ mr: 1 }} color="primary" />
-                    <Typography variant="body1">
-                      Questa è una lezione singola (non fa parte di un pacchetto)
+                    <Chip
+                      icon={lesson.is_paid ? <CheckIcon /> : <CancelIcon />}
+                      label={lesson.is_paid ? 'Pagata' : 'Non pagata'}
+                      color={lesson.is_paid ? 'success' : 'error'}
+                      variant="outlined"
+                    />
+                  </Box>
+                )}
+                
+                {/* Data pagamento (solo per lezioni singole pagate) */}
+                {!lesson.is_package && lesson.is_paid && lesson.payment_date && (
+                  <Box sx={{ minWidth: '200px' }}>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <CalendarIcon sx={{ mr: 1 }} color="primary" />
+                      <Typography variant="body2" color="text.secondary">
+                        Data pagamento
+                      </Typography>
+                    </Box>
+                    <Typography variant="body1" fontWeight="medium">
+                      {format(parseISO(lesson.payment_date), 'dd/MM/yyyy', { locale: it })}
                     </Typography>
                   </Box>
                 )}
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+            </Grid>
+
+            {/* Informazioni sul pacchetto se applicabile */}
+            {lesson.is_package && packageData && (
+              <>
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="h6" gutterBottom color="primary">
+                    Dettagli Pacchetto
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    Ore totali pacchetto
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {packageData.total_hours}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    Ore rimanenti
+                  </Typography>
+                  <Typography variant="body1" fontWeight="bold" color="primary" gutterBottom>
+                    {packageData.remaining_hours}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    Stato pacchetto
+                  </Typography>
+                  <Chip
+                    label={packageData.status === 'in_progress' ? 'In corso' : 'Terminato'}
+                    color={packageData.status === 'in_progress' ? 'primary' : 'default'}
+                    size="small"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    Costo totale pacchetto
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    €{parseFloat(packageData.package_cost).toFixed(2)}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Button
+                    component={Link}
+                    to={`/packages/${packageData.id}`}
+                    color="primary"
+                    variant="outlined"
+                    startIcon={<PackageIcon />}
+                    size="small"
+                    sx={{ mt: 1 }}
+                  >
+                    Vai al pacchetto
+                  </Button>
+                </Grid>
+              </>
+            )}
+          </Grid>
+        </CardContent>
+      </Card>
     </Box>
   );
 }

@@ -1,4 +1,4 @@
-// src/pages/dashboard/DashboardPage.jsx
+// src/pages/dashboard/DashboardPage.jsx - versione aggiornata
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -158,12 +158,9 @@ function DashboardPage() {
   // Funzione per gestire il click su un giorno per visualizzare le lezioni
   const handleDayClick = (day) => {
     setSelectedDay(day);
-    const dayLessons = getLessonsForDay(day);
-
-    if (dayLessons.length > 0) {
-      // Se ci sono lezioni, mostriamo un riepilogo
-      setDayDetailDialogOpen(true);
-    }
+    
+    // Apriamo sempre il dialog, anche se non ci sono lezioni
+    setDayDetailDialogOpen(true);
   };
 
   // Funzione per gestire il click sul pulsante + per aggiungere una lezione

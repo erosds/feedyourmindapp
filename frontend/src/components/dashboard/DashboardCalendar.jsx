@@ -22,7 +22,7 @@ import {
   isToday,
   isEqual
 } from 'date-fns';
-import { is, it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
 
 function DashboardCalendar({
   currentWeekStart,
@@ -192,7 +192,10 @@ function DashboardCalendar({
                     height: 42,
                     boxShadow: 1
                   }}
-                  onClick={(e) => handleAddLessonClick(day, e)}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Impedisce di aprire il dialogo del giorno
+                    handleAddLessonClick(day, e);
+                  }}
                 >
                   <AddIcon />
                 </IconButton>
