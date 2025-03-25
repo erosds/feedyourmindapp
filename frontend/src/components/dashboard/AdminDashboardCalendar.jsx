@@ -121,7 +121,7 @@ function AdminDashboardCalendar({
                     </Typography>
                   </Box>
                 ) : (
-                  <List dense disablePadding sx={{ flexGrow: 1 }}>
+                  <List dense disablePadding sx={{ flexGrow: 1 , mb: .5}}>
                     {dayProfessors.map(professor => (
                       <ListItem
                         key={professor.id}
@@ -145,7 +145,7 @@ function AdminDashboardCalendar({
                             width: '100%',
                             bgcolor: 'primary.main',
                             color: 'white',
-                            py: 0.5,
+                            py: 0.7,
                             px: 1,
                             borderRadius: 1,
                             textAlign: 'center',

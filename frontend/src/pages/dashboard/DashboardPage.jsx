@@ -1,10 +1,13 @@
-// src/pages/dashboard/DashboardPage.jsx - versione aggiornata
 import React, { useState, useEffect } from 'react';
 import {
   Box,
   CircularProgress,
   Grid,
   Typography,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   startOfWeek,
@@ -18,7 +21,7 @@ import {
   endOfYear,
 } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { lessonService, studentService, packageService } from '../../services/api';
+import { lessonService, studentService, professorService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 // Importa i componenti modulari
@@ -35,6 +38,8 @@ function DashboardPage() {
   const [error, setError] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [students, setStudents] = useState([]);
+  const [professors, setProfessors] = useState([]);
+  const [selectedProfessor, setSelectedProfessor] = useState(currentUser?.id || '');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [studentPackages, setStudentPackages] = useState([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -49,7 +54,7 @@ function DashboardPage() {
   const [formError, setFormError] = useState('');
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [packageLessons, setPackageLessons] = useState({});
-  
+
   // Stato per il form di aggiunta lezione
   const [lessonForm, setLessonForm] = useState({
     professor_id: currentUser ? currentUser.id : '',
@@ -66,24 +71,34 @@ function DashboardPage() {
 
   // Caricamento iniziale dei dati
   useEffect(() => {
-    fetchData();
-  }, [currentUser?.id]);
+    if (currentUser && selectedProfessor) {
+      fetchData(selectedProfessor);
+      if (currentUser.is_admin) {
+        fetchProfessors();
+      }
+    }
+  }, [currentUser?.id, selectedProfessor]);
 
-  const fetchData = async () => {
+  const fetchData = async (professorId) => {
+    if (!professorId) return;
+
     try {
       setLoading(true);
 
-      // Recupera le lezioni del professore corrente
-      const response = await lessonService.getByProfessor(currentUser.id);
-      setLessons(response.data);
+      // Recupera le lezioni del professore selezionato
+      const response = await lessonService.getByProfessor(professorId);
+      setLessons(response.data || []);
 
       // Recupera i dati degli studenti
       const studentsResponse = await studentService.getAll();
-      setStudents(studentsResponse.data);
+      const studentsData = studentsResponse.data || [];
+      setStudents(studentsData);
 
       const studentsMapData = {};
-      studentsResponse.data.forEach(student => {
-        studentsMapData[student.id] = `${student.first_name} ${student.last_name}`;
+      studentsData.forEach(student => {
+        if (student && student.id) {
+          studentsMapData[student.id] = `${student.first_name} ${student.last_name}`;
+        }
       });
       setStudentsMap(studentsMapData);
     } catch (err) {
@@ -94,209 +109,136 @@ function DashboardPage() {
     }
   };
 
-  // Funzione per ottenere le lezioni di un giorno specifico
+  const fetchProfessors = async () => {
+    try {
+      const response = await professorService.getAll();
+      setProfessors(response.data || []);
+    } catch (err) {
+      console.error('Error fetching professors:', err);
+    }
+  };
+
+  const handleProfessorChange = (event) => {
+    setSelectedProfessor(event.target.value);
+  };
+
+  const handleChangeWeek = (newWeekStart) => {
+    // Assicuriamoci che newWeekStart sia un oggetto Date valido
+    if (newWeekStart instanceof Date && !isNaN(newWeekStart)) {
+      setCurrentWeekStart(newWeekStart);
+    } else {
+      console.error('Invalid date provided to handleChangeWeek:', newWeekStart);
+    }
+  };
+
   const getLessonsForDay = (day) => {
+    if (!day || !Array.isArray(lessons)) return [];
+
     return lessons.filter(lesson => {
-      const lessonDate = parseISO(lesson.lesson_date);
-      return isEqual(
-        new Date(lessonDate.getFullYear(), lessonDate.getMonth(), lessonDate.getDate()),
-        new Date(day.getFullYear(), day.getMonth(), day.getDate())
-      );
+      if (!lesson || !lesson.lesson_date) return false;
+      try {
+        const lessonDate = parseISO(lesson.lesson_date);
+        return isEqual(lessonDate, day);
+      } catch (err) {
+        console.error('Error parsing lesson date:', err);
+        return false;
+      }
     });
   };
 
-  // Funzione per ottenere le lezioni nel periodo selezionato
-  const getLessonsForPeriod = () => {
-    let startDate, endDate;
-
-    switch (periodFilter) {
-      case 'week':
-        startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
-        endDate = endOfWeek(new Date(), { weekStartsOn: 1 });
-        break;
-      case 'month':
-        startDate = startOfMonth(new Date());
-        endDate = endOfMonth(new Date());
-        break;
-      case 'year':
-        startDate = startOfYear(new Date());
-        endDate = endOfYear(new Date());
-        break;
-      default:
-        startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
-        endDate = endOfWeek(new Date(), { weekStartsOn: 1 });
-    }
-
-    return lessons.filter(lesson => {
-      const lessonDate = parseISO(lesson.lesson_date);
-      return isWithinInterval(lessonDate, { start: startDate, end: endDate });
-    });
-  };
-
-  // Calcola il totale guadagnato per un periodo
-  const calculateEarnings = (lessonsArray) => {
-    return lessonsArray.reduce((total, lesson) => total + parseFloat(lesson.total_payment), 0);
-  };
-
-  // Funzione per cambiare settimana
-  const handleChangeWeek = (direction) => {
-    if (direction === 'next') {
-      setCurrentWeekStart(date => new Date(date.setDate(date.getDate() + 7)));
-    } else if (direction === 'prev') {
-      setCurrentWeekStart(date => new Date(date.setDate(date.getDate() - 7)));
-    } else if (direction === 'reset') {
-      setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
-    }
-  };
-
-  // Funzione per gestire il click su una lezione
   const handleLessonClick = (lesson) => {
     setSelectedLesson(lesson);
     setLessonDialogOpen(true);
   };
 
-  // Funzione per gestire il click su un giorno per visualizzare le lezioni
   const handleDayClick = (day) => {
     setSelectedDay(day);
-    
-    // Apriamo sempre il dialog, anche se non ci sono lezioni
     setDayDetailDialogOpen(true);
   };
 
-  // Funzione per gestire il click sul pulsante + per aggiungere una lezione
-  const handleAddLessonClick = (day, e) => {
-    if (e) e.stopPropagation(); // Impedisce la propagazione al click del giorno
+  const handleAddLessonClick = (day) => {
     setSelectedDay(day);
-    setLessonForm({
-      ...lessonForm,
-      professor_id: currentUser.id,
-      lesson_date: day,
-      student_id: '',
-      is_package: false,
-      package_id: null,
-      hourly_rate: '',
-      is_paid: true,
-    });
-    setSelectedPackage(null);
-    setStudentPackages([]);
+    setLessonForm(prevForm => ({
+      ...prevForm,
+      lesson_date: day || new Date(),
+    }));
     setAddLessonDialogOpen(true);
-    setFormError('');
   };
 
-  // Funzione per chiudere il dialog di dettaglio lezione
   const handleCloseDialog = () => {
     setLessonDialogOpen(false);
   };
 
-  // Funzione per chiudere il dialog di aggiunta lezione
+  const handleViewLessonDetails = (lesson) => {
+    navigate(`/lessons/${lesson.id}`);
+  };
+
   const handleCloseAddLessonDialog = () => {
     setAddLessonDialogOpen(false);
-    setSelectedStudent('');
-    setStudentPackages([]);
-    setSelectedPackage(null);
-    setFormError('');
   };
 
-  // Funzione per navigare alla pagina di dettaglio della lezione
-  const handleViewLessonDetails = () => {
-    setLessonDialogOpen(false);
-    navigate(`/lessons/${selectedLesson.id}`);
+  const handleStudentChange = (event) => {
+    setSelectedStudent(event.target.value);
   };
 
-  // Funzione per gestire il cambio dello studente nel form
-  const handleStudentChange = async (studentId) => {
-    setSelectedStudent(studentId);
-    setLessonForm({
-      ...lessonForm,
-      student_id: studentId,
-      package_id: null,
-    });
-    setSelectedPackage(null);
+  const handlePackageChange = (event) => {
+    setSelectedPackage(event.target.value);
+  };
 
-    if (studentId) {
+  const calculatePackageHours = (packageId) => {
+    const selectedPackage = studentPackages.find(pkg => pkg && pkg.id === packageId);
+    return selectedPackage ? selectedPackage.hours : 0;
+  };
+
+  // Calcola le lezioni del periodo corrente in modo sicuro
+  const getFilteredLessons = () => {
+    if (!Array.isArray(lessons)) return [];
+
+    return lessons.filter(lesson => {
+      if (!lesson || !lesson.lesson_date) return false;
+
       try {
-        // Carica i pacchetti attivi dello studente
-        const packagesResponse = await packageService.getByStudent(studentId);
-        const activePackages = packagesResponse.data.filter(pkg => pkg.status === 'in_progress');
-        setStudentPackages(activePackages);
+        const lessonDate = parseISO(lesson.lesson_date);
+
+        switch (periodFilter) {
+          case 'month':
+            return isWithinInterval(lessonDate, {
+              start: startOfMonth(currentWeekStart),
+              end: endOfMonth(currentWeekStart),
+            });
+          case 'year':
+            return isWithinInterval(lessonDate, {
+              start: startOfYear(currentWeekStart),
+              end: endOfYear(currentWeekStart),
+            });
+          default: // week
+            return isWithinInterval(lessonDate, {
+              start: currentWeekStart,
+              end: endOfWeek(currentWeekStart, { weekStartsOn: 1 }),
+            });
+        }
       } catch (err) {
-        console.error('Error fetching student packages:', err);
+        console.error('Error filtering lessons by date:', err);
+        return false;
       }
-    } else {
-      setStudentPackages([]);
-    }
-  };
-
-  // Funzione per gestire il cambio del pacchetto nel form
-  const handlePackageChange = async (packageId) => {
-    const parsedPackageId = parseInt(packageId);
-    
-    setLessonForm({
-      ...lessonForm,
-      package_id: parsedPackageId,
     });
-
-    if (!parsedPackageId) {
-      setSelectedPackage(null);
-      return;
-    }
-
-    try {
-      // Trova il pacchetto selezionato
-      const pkg = studentPackages.find(p => p.id === parsedPackageId);
-      setSelectedPackage(pkg);
-
-      // Carica le lezioni associate a questo pacchetto
-      const lessonsResponse = await lessonService.getAll();
-      const filteredLessons = lessonsResponse.data.filter(lesson => 
-        lesson.package_id === parsedPackageId && 
-        lesson.is_package
-      );
-      
-      // Salva le lezioni nel dizionario packageLessons
-      setPackageLessons(prev => ({
-        ...prev,
-        [parsedPackageId]: filteredLessons
-      }));
-    } catch (err) {
-      console.error('Error fetching package lessons:', err);
-    }
   };
 
-  // Calcola le ore disponibili per un pacchetto
-  const calculatePackageHours = (packageId, totalHours) => {
-    if (!packageId || !totalHours) return { usedHours: 0, availableHours: 0 };
-    
-    // Ottiene le lezioni associate al pacchetto
-    const packageLessonsList = packageLessons[packageId] || [];
-    
-    // Calcola le ore utilizzate
-    const usedHours = packageLessonsList.reduce((total, lesson) => {
-      return total + parseFloat(lesson.duration);
+  const currentWeekLessons = getFilteredLessons();
+
+  const calculateEarnings = (filteredLessons) => {
+    if (!Array.isArray(filteredLessons)) return 0;
+
+    return filteredLessons.reduce((total, lesson) => {
+      if (!lesson || typeof lesson.hourly_rate !== 'number' || typeof lesson.duration !== 'number') {
+        return total;
+      }
+      return total + lesson.hourly_rate * lesson.duration;
     }, 0);
-    
-    // Calcola le ore disponibili
-    const availableHours = parseFloat(totalHours) - usedHours;
-    
-    return { usedHours, availableHours };
   };
 
-  // Calcola le lezioni della settimana corrente
-  const currentWeekLessons = lessons.filter(lesson => {
-    const lessonDate = parseISO(lesson.lesson_date);
-    return isWithinInterval(lessonDate, {
-      start: currentWeekStart,
-      end: endOfWeek(currentWeekStart, { weekStartsOn: 1 }),
-    });
-  });
-
-  // Calcola i guadagni della settimana corrente
   const currentWeekEarnings = calculateEarnings(currentWeekLessons);
 
-  // Calcola i guadagni nel periodo selezionato
-  const periodLessons = getLessonsForPeriod();
-  const periodEarnings = calculateEarnings(periodLessons);
-  
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
@@ -318,7 +260,6 @@ function DashboardPage() {
       <Typography variant="h4" gutterBottom>
         Le mie lezioni
       </Typography>
-
       <Grid container spacing={3}>
         {/* Calendario Settimanale */}
         <Grid item xs={12} md={9}>
@@ -335,6 +276,38 @@ function DashboardPage() {
 
         {/* Pannello laterale con riepilogo guadagni */}
         <Grid item xs={12} md={3}>
+          {currentUser?.is_admin && (
+            <FormControl fullWidth sx={{ mb: 2 }} variant="outlined">
+              <InputLabel id="select-professor-label">Seleziona Professore</InputLabel>
+              <Select
+                labelId="select-professor-label"
+                id="select-professor"
+                value={selectedProfessor}
+                onChange={handleProfessorChange}
+                label="Seleziona Professore"
+              >
+                {[...professors]
+                  .sort((a, b) => {
+                    // Ordinamento alfabetico per cognome
+                    const firstNameA = a.first_name.toLowerCase();
+                    const firstNameB = b.first_name.toLowerCase();
+
+                    // Se i cognomi sono uguali, ordina per nome
+                    if (firstNameA === firstNameB) {
+                      return a.first_name.toLowerCase().localeCompare(b.last_name.toLowerCase());
+                    }
+
+                    return firstNameA.localeCompare(firstNameB);
+                  })
+                  .map(professor => (
+                    <MenuItem key={professor.id} value={professor.id}>
+                      {professor.first_name} {professor.last_name}
+                    </MenuItem>
+                  ))
+                }
+              </Select>
+            </FormControl>
+          )}
           <DashboardSummary
             currentWeekLessons={currentWeekLessons}
             currentWeekEarnings={currentWeekEarnings}
@@ -342,8 +315,8 @@ function DashboardPage() {
             setCurrentTab={setCurrentTab}
             periodFilter={periodFilter}
             setPeriodFilter={setPeriodFilter}
-            periodLessons={periodLessons}
-            periodEarnings={periodEarnings}
+            periodLessons={currentWeekLessons} // Utilizziamo lo stesso array filtrato
+            periodEarnings={currentWeekEarnings} // Utilizziamo lo stesso calcolo
             calculateEarnings={calculateEarnings}
             navigate={navigate}
           />
@@ -388,7 +361,7 @@ function DashboardPage() {
         handlePackageChange={handlePackageChange}
         calculatePackageHours={calculatePackageHours}
         currentUser={currentUser}
-        updateLessons={fetchData}
+        updateLessons={() => fetchData(selectedProfessor)}
       />
     </Box>
   );

@@ -17,7 +17,10 @@ import {
   format,
   endOfWeek,
   eachDayOfInterval,
-  isToday
+  isToday,
+  addWeeks,
+  subWeeks,
+  startOfWeek
 } from 'date-fns';
 import { it } from 'date-fns/locale';
 
@@ -36,12 +39,31 @@ function DashboardCalendar({
     end: endOfWeek(currentWeekStart, { weekStartsOn: 1 }),
   });
 
+  // Funzione per gestire il cambio settimana, calcolando le nuove date
+  const handleWeekChange = (action) => {
+    if (action === 'prev') {
+      // Settimana precedente
+      const newWeekStart = subWeeks(currentWeekStart, 1);
+      handleChangeWeek(newWeekStart);
+    } else if (action === 'next') {
+      // Settimana successiva
+      const newWeekStart = addWeeks(currentWeekStart, 1);
+      handleChangeWeek(newWeekStart);
+    } else if (action === 'reset') {
+      // Settimana corrente
+      const newWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+      handleChangeWeek(newWeekStart);
+    }
+  };
+
   // Funzione per ordinare le lezioni per orario di inizio
   const sortLessonsByTime = (lessons) => {
+    if (!Array.isArray(lessons)) return [];
+    
     return [...lessons].sort((a, b) => {
       // Estrae l'ora dall'attributo start_time (formato "HH:MM:SS")
-      const timeA = a.start_time ? a.start_time.substring(0, 5) : '00:00';
-      const timeB = b.start_time ? b.start_time.substring(0, 5) : '00:00';
+      const timeA = a && a.start_time ? a.start_time.substring(0, 5) : '00:00';
+      const timeB = b && b.start_time ? b.start_time.substring(0, 5) : '00:00';
 
       // Confronta le stringhe di orario
       return timeA.localeCompare(timeB);
@@ -55,11 +77,11 @@ function DashboardCalendar({
           Calendario Settimanale
         </Typography>
         <ButtonGroup size="small">
-          <Button onClick={() => handleChangeWeek('prev')}>Precedente</Button>
-          <Button onClick={() => handleChangeWeek('reset')}>
+          <Button onClick={() => handleWeekChange('prev')}>Precedente</Button>
+          <Button onClick={() => handleWeekChange('reset')}>
             Corrente
           </Button>
-          <Button onClick={() => handleChangeWeek('next')}>Successiva</Button>
+          <Button onClick={() => handleWeekChange('next')}>Successiva</Button>
         </ButtonGroup>
       </Box>
 
@@ -70,7 +92,7 @@ function DashboardCalendar({
 
       <Grid container spacing={1} sx={{ flexGrow: 1, mt: 0 }}>
         {daysOfWeek.map(day => {
-          const dayLessons = getLessonsForDay(day);
+          const dayLessons = getLessonsForDay(day) || [];
           // Ordina le lezioni per orario di inizio
           const sortedLessons = sortLessonsByTime(dayLessons);
           const isCurrentDay = isToday(day);
@@ -150,7 +172,7 @@ function DashboardCalendar({
                             {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
                           </Typography>
                           <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
-                            {lesson.duration} {lesson.duration == 1.00 ? 'ora' : 'ore'}
+                            {lesson.duration} {lesson.duration === 1 || lesson.duration === 1.00 ? 'ora' : 'ore'}
                           </Typography>
                         </Box>
                         {lesson.is_package && (
