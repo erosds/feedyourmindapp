@@ -226,7 +226,7 @@ function PackageFormPage() {
       navigate('/packages');
     } catch (err) {
       console.error('Error saving package:', err);
-      setError('Errore durante il salvataggio. Verifica i dati e riprova.');
+      setError('Errore durante il salvataggio. Probabilmente lo studente ha già un pacchetto aperto.');
     } finally {
       setSubmitting(false);
     }
