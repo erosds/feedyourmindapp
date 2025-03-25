@@ -8,7 +8,6 @@ import {
   IconButton,
   List,
   ListItem,
-  ListItemText,
   Paper,
   Typography,
   Chip
@@ -16,11 +15,9 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import {
   format,
-  startOfWeek,
   endOfWeek,
   eachDayOfInterval,
-  isToday,
-  isEqual
+  isToday
 } from 'date-fns';
 import { it } from 'date-fns/locale';
 
@@ -153,7 +150,7 @@ function DashboardCalendar({
                             {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
                           </Typography>
                           <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
-                            {lesson.duration} ore
+                            {lesson.duration} {lesson.duration == 1.00 ? 'ora' : 'ore'}
                           </Typography>
                         </Box>
                         {lesson.is_package && (

@@ -46,7 +46,7 @@ function DayProfessorsDialog({ open, onClose, selectedDay, professorSchedules, h
                   <TableCell align="center">Numero lezioni</TableCell>
                   <TableCell align="center">Orario inizio</TableCell>
                   <TableCell align="center">Orario fine</TableCell>
-                  <TableCell align="right">Totale ore</TableCell>
+                  <TableCell align="right">Ore di lezione svolte</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>

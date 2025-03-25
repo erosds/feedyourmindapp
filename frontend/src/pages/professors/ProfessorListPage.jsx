@@ -43,7 +43,7 @@ function ProfessorListPage() {
 
   // Stato per l'ordinamento
   const [order, setOrder] = useState('asc');
-  const [orderBy, setOrderBy] = useState('last_name');
+  const [orderBy, setOrderBy] = useState('first_name');
 
   // Funzione per gestire la richiesta di cambio dell'ordinamento
   const handleRequestSort = (property) => {

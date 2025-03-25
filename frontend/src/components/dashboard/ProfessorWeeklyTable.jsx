@@ -11,7 +11,6 @@ import {
   TableHead,
   TableRow,
   Avatar,
-  ButtonGroup,
   Button
 } from '@mui/material';
 import { format } from 'date-fns';
@@ -21,8 +20,6 @@ import { ArrowForward as ArrowForwardIcon } from '@mui/icons-material';
 function ProfessorWeeklyTable({
   currentWeekStart,
   endOfWeek,
-  handleChangeWeek,
-  resetToCurrentWeek,
   navigateToManageProfessors,
   professorWeeklyData,
   totalProfessorPayments,
@@ -35,13 +32,6 @@ function ProfessorWeeklyTable({
           Riepilogo Settimanale Professori
         </Typography>
         <Box display="flex" alignItems="center">
-          <ButtonGroup sx={{ mr: 2 }}>
-            <Button onClick={() => handleChangeWeek('prev')}>Precedente</Button>
-            <Button onClick={resetToCurrentWeek}>
-              Corrente
-            </Button>
-            <Button onClick={() => handleChangeWeek('next')}>Successiva</Button>
-          </ButtonGroup>
           <Button
             variant="contained"
             color="primary"
@@ -53,19 +43,8 @@ function ProfessorWeeklyTable({
         </Box>
       </Box>
 
-      <Typography
-        variant="subtitle1"
-        align="center"
-        sx={{
-          fontWeight: 'bold',
-          fontSize: '1.1rem',
-          mb: 3,
-          backgroundColor: 'primary.light',
-          color: 'primary.contrastText',
-          py: 1,
-          borderRadius: 1
-        }}
-      >
+      <Typography variant="subtitle1" align="center" gutterBottom
+        sx={{ fontWeight: 'bold', fontSize: '1rem', my: 2 }}>
         {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
       </Typography>
 

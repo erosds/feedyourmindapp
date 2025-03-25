@@ -36,7 +36,7 @@ function AdminDashboardPage() {
   const [lessons, setLessons] = useState([]);
   const [professors, setProfessors] = useState([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  
+
   // State for day professors dialog
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
@@ -116,10 +116,10 @@ function AdminDashboardPage() {
   // Function to handle day click and show professor details dialog
   const handleDayClick = (day) => {
     setSelectedDay(day);
-    
+
     // Get professors with lessons on this day
     const professorsList = getProfessorsForDay(day);
-    
+
     // Get lessons for this day
     const dayLessons = lessons.filter(lesson => {
       const lessonDate = parseISO(lesson.lesson_date);
@@ -128,28 +128,28 @@ function AdminDashboardPage() {
         new Date(day.getFullYear(), day.getMonth(), day.getDate())
       );
     });
-    
+
     // Calculate schedule details for each professor
     const schedules = professorsList.map(professor => {
       // Get this professor's lessons for the day
       const professorLessons = dayLessons.filter(
         lesson => lesson.professor_id === professor.id
       );
-      
+
       // Sort lessons by start time
       const sortedLessons = [...professorLessons].sort((a, b) => {
         const timeA = a.start_time || "00:00:00";
         const timeB = b.start_time || "00:00:00";
         return timeA.localeCompare(timeB);
       });
-      
+
       // Find first and last lesson
       const firstLesson = sortedLessons[0];
       const lastLesson = sortedLessons[sortedLessons.length - 1];
-      
+
       // Calculate start and end times
       const startTime = firstLesson?.start_time ? firstLesson.start_time.substring(0, 5) : "00:00";
-      
+
       // Calculate end time by adding duration to the start time of the last lesson
       let endTime = "00:00";
       if (lastLesson) {
@@ -157,26 +157,26 @@ function AdminDashboardPage() {
         const startHour = parseInt(startTimeParts[0]);
         const startMinute = parseInt(startTimeParts[1]);
         const durationHours = parseFloat(lastLesson.duration);
-        
+
         // Convert duration to minutes (e.g., 1.5 hours = 90 minutes)
         const durationMinutes = Math.round(durationHours * 60);
-        
+
         // Create a date object with the start time
         const startDate = new Date();
         startDate.setHours(startHour, startMinute, 0);
-        
+
         // Add duration minutes to get the end time
         const endDate = addMinutes(startDate, durationMinutes);
-        
+
         // Format the end time as "HH:MM"
         endTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
       }
-      
+
       // Calculate total hours
       const totalHours = professorLessons.reduce(
         (sum, lesson) => sum + parseFloat(lesson.duration), 0
       );
-      
+
       return {
         ...professor,
         lessons: professorLessons,
@@ -185,7 +185,7 @@ function AdminDashboardPage() {
         totalHours
       };
     });
-    
+
     setProfessorSchedules(schedules);
     setDayDialogOpen(true);
   };
@@ -258,8 +258,18 @@ function AdminDashboardPage() {
       </Typography>
 
       <Grid container spacing={3}>
-        {/* Professors Weekly Table */}
+        {/* Calendar */}
         <Grid item xs={12}>
+          <AdminDashboardCalendar
+            currentWeekStart={currentWeekStart}
+            handleChangeWeek={handleChangeWeek}
+            getProfessorsForDay={getProfessorsForDay}
+            handleProfessorClick={handleProfessorClick}
+            handleDayClick={handleDayClick}
+          />
+        </Grid>
+        {/* Professors Weekly Table */}
+        <Grid item xs={12} md={9}>
           <ProfessorWeeklyTable
             currentWeekStart={currentWeekStart}
             endOfWeek={endOfWeek}
@@ -271,18 +281,6 @@ function AdminDashboardPage() {
             handleProfessorClick={handleProfessorClick}
           />
         </Grid>
-
-        {/* Calendar */}
-        <Grid item xs={12} md={9}>
-          <AdminDashboardCalendar
-            currentWeekStart={currentWeekStart}
-            handleChangeWeek={handleChangeWeek}
-            getProfessorsForDay={getProfessorsForDay}
-            handleProfessorClick={handleProfessorClick}
-            handleDayClick={handleDayClick}
-          />
-        </Grid>
-
         {/* Summary sidebar */}
         <Grid item xs={12} md={3}>
           <AdminProfessorSummary
@@ -290,6 +288,8 @@ function AdminDashboardPage() {
             totalProfessorPayments={totalProfessorPayments}
           />
         </Grid>
+
+
       </Grid>
 
       {/* Dialog for day professors */}

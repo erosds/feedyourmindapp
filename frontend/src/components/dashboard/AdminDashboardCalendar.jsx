@@ -1,5 +1,4 @@
-// src/components/dashboard/AdminDashboardCalendar.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -12,10 +11,10 @@ import {
 } from '@mui/material';
 import {
   format,
-  startOfWeek,
   endOfWeek,
   eachDayOfInterval,
-  isToday
+  isToday,
+  startOfWeek
 } from 'date-fns';
 import { it } from 'date-fns/locale';
 
@@ -24,12 +23,25 @@ function AdminDashboardCalendar({
   handleChangeWeek,
   getProfessorsForDay,
   handleProfessorClick,
-  handleDayClick
+  handleDayClick,
+  
 }) {
+  const [weekStart, setWeekStart] = useState(currentWeekStart);
+
+  const handleWeekChange = (action) => {
+    if (action === 'prev') {
+      setWeekStart(prev => startOfWeek(new Date(prev.setDate(prev.getDate() - 7)), { weekStartsOn: 1 }));
+    } else if (action === 'next') {
+      setWeekStart(prev => startOfWeek(new Date(prev.setDate(prev.getDate() + 7)), { weekStartsOn: 1 }));
+    } else if (action === 'reset') {
+      setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    }
+  };
+
   // Genera i giorni della settimana a partire dal lunedì
   const daysOfWeek = eachDayOfInterval({
-    start: currentWeekStart,
-    end: endOfWeek(currentWeekStart, { weekStartsOn: 1 }),
+    start: weekStart,
+    end: endOfWeek(weekStart, { weekStartsOn: 1 }),
   });
 
   return (
@@ -39,11 +51,11 @@ function AdminDashboardCalendar({
           Calendario Professori in Sede
         </Typography>
         <ButtonGroup size="small">
-          <Button onClick={() => handleChangeWeek('prev')}>Precedente</Button>
-          <Button onClick={() => handleChangeWeek('reset')}>
+          <Button onClick={() => handleWeekChange('prev')}>Precedente</Button>
+          <Button onClick={() => handleWeekChange('reset')}>
             Corrente
           </Button>
-          <Button onClick={() => handleChangeWeek('next')}>Successiva</Button>
+          <Button onClick={() => handleWeekChange('next')}>Successiva</Button>
         </ButtonGroup>
       </Box>
 
@@ -60,7 +72,7 @@ function AdminDashboardCalendar({
           borderRadius: 1
         }}
       >
-        {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
+        {format(weekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(weekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
       </Typography>
 
       <Grid container spacing={1} sx={{ flexGrow: 1, mt: 0 }}>

@@ -284,7 +284,6 @@ function LessonDetailPage() {
                   </Box>
                   {lesson.is_package ? (
                     <Chip
-                      icon={<PackageIcon />}
                       label={`Pacchetto #${lesson.package_id}`}
                       color="primary"
                       variant="outlined"
