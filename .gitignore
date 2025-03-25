@@ -3,3 +3,4 @@ frontend/node_modules/
 .env
 # Chiave segreta JWT
 .jwt_secret_key
+__pycache__/
