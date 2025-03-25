@@ -58,6 +58,7 @@ class Package(Base):
     package_cost = Column(DECIMAL(10, 2), nullable=False)
     status = Column(String, default="in_progress")
     is_paid = Column(Boolean, default=True)
+    payment_date = Column(Date, nullable=True)  # Nuovo campo
     remaining_hours = Column(DECIMAL(5, 2))
     created_at = Column(TIMESTAMP, server_default=func.now())
     
@@ -192,6 +193,8 @@ class PackageBase(BaseModel):
     total_hours: Decimal
     package_cost: Decimal
     is_paid: bool = False
+    payment_date: Optional[date] = None  # Nuovo campo
+
     
     @field_validator('total_hours')
     @classmethod
@@ -223,6 +226,8 @@ class PackageUpdate(BaseModel):
     package_cost: Optional[Decimal] = None
     status: Optional[str] = None
     is_paid: Optional[bool] = None
+    payment_date: Optional[date] = None  # Nuovo campo
+
     
     @field_validator('total_hours')
     @classmethod
@@ -243,6 +248,8 @@ class PackageResponse(PackageBase):
     status: str
     remaining_hours: Decimal
     created_at: datetime
+    payment_date: Optional[date] = None  # Nuovo campo
+
     
     model_config = ConfigDict(from_attributes=True)
 

@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-
+from datetime import date
 from .. import models
 from ..database import get_db
 
@@ -82,6 +82,11 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
             }
         )
     
+    # Determina la data di pagamento
+    payment_date = None
+    if package.is_paid:
+        payment_date = package.payment_date or package.start_date  # Usa la data di inizio come fallback
+    
     # Crea un nuovo pacchetto
     db_package = models.Package(
         student_id=package.student_id,
@@ -90,6 +95,7 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
         package_cost=package.package_cost,
         status="in_progress",
         is_paid=package.is_paid,
+        payment_date=payment_date,  # Nuovo campo
         remaining_hours=package.total_hours  # Inizialmente, le ore rimanenti sono uguali al totale
     )
     
@@ -145,6 +151,24 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
+    
+    # Se is_paid cambia da False a True e non c'è una data di pagamento, imposta la data corrente
+    if "is_paid" in package.dict(exclude_unset=True) and package.is_paid and not db_package.is_paid:
+        if "payment_date" not in package.dict(exclude_unset=True) or package.payment_date is None:
+            update_data = package.dict(exclude_unset=True)
+            update_data["payment_date"] = date.today()
+            for key, value in update_data.items():
+                setattr(db_package, key, value)
+        else:
+            # Aggiorna normalmente
+            update_data = package.dict(exclude_unset=True)
+            for key, value in update_data.items():
+                setattr(db_package, key, value)
+    else:
+        # Aggiorna normalmente
+        update_data = package.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_package, key, value)
     
     # Se stiamo aggiornando le ore totali, dobbiamo verificare che non siano inferiori 
     # alle ore già utilizzate

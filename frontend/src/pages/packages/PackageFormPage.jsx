@@ -69,6 +69,8 @@ function PackageFormPage() {
     total_hours: '',
     package_cost: '',
     is_paid: false,
+    payment_date: null,  // Nuovo campo
+
   });
 
   useEffect(() => {
@@ -171,12 +173,19 @@ function PackageFormPage() {
       // Determina lo stato del pacchetto
       const status = remainingHours > 0 ? 'in_progress' : 'completed';
 
+      // Gestione della data di pagamento
+      let paymentDate = null;
+      if (values.is_paid && values.payment_date) {
+        paymentDate = format(values.payment_date, 'yyyy-MM-dd');
+      }
+
       // Formatta la data per l'API
       const formattedValues = {
         ...values,
         start_date: format(values.start_date, 'yyyy-MM-dd'),
         status: status,
-        remaining_hours: remainingHours
+        remaining_hours: remainingHours,
+        payment_date: paymentDate
       };
 
       let newPackageId;
@@ -387,6 +396,23 @@ function PackageFormPage() {
                       helperText="Le ore rimanenti sono calcolate automaticamente come differenza tra ore totali e ore utilizzate"
                     />
                   </Grid>
+
+                  {values.is_paid && (
+                    <Grid item xs={12} md={6}>
+                      <DatePicker
+                        label="Data pagamento"
+                        value={values.payment_date}
+                        onChange={(date) => setFieldValue('payment_date', date)}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            error: touched.payment_date && Boolean(errors.payment_date),
+                            helperText: touched.payment_date && errors.payment_date,
+                          },
+                        }}
+                      />
+                    </Grid>
+                  )}
 
                   <Grid item xs={12}>
                     <Box display="flex" justifyContent="flex-end" gap={2}>

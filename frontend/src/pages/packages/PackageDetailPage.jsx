@@ -55,20 +55,20 @@ function PackageDetailPage() {
   // Funzione per calcolare le ore utilizzate e rimanenti del pacchetto
   const calculatePackageStats = (packageData, packageLessons) => {
     if (!packageData || !packageLessons) return { usedHours: 0, remainingHours: 0, completionPercentage: 0 };
-    
+
     // Calcola ore utilizzate dalle lezioni
     const usedHours = packageLessons.reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
-    
+
     // Calcola ore rimanenti
     const remainingHours = parseFloat(packageData.total_hours) - usedHours;
-    
+
     // Calcola percentuale di completamento
     const completionPercentage = (usedHours / parseFloat(packageData.total_hours)) * 100;
-    
-    return { 
-      usedHours, 
-      remainingHours, 
-      completionPercentage 
+
+    return {
+      usedHours,
+      remainingHours,
+      completionPercentage
     };
   };
 
@@ -509,6 +509,20 @@ function PackageDetailPage() {
                     size="small"
                     sx={{ mt: 0.5 }}
                   />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="body2" color="text.secondary">
+                    Data pagamento
+                  </Typography>
+                  {packageData.is_paid && packageData.payment_date ? (
+                    <Typography variant="body1">
+                      {format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it })}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                      Non inserita
+                    </Typography>
+                  )}
                 </Grid>
                 <Grid item xs={12}>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
