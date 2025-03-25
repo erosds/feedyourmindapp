@@ -90,7 +90,12 @@ function DashboardCalendar({
                   color: isCurrentDay ? 'primary.contrastText' : 'text.primary',
                   border: '1px solid',
                   borderColor: 'divider',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  position: 'relative',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    cursor: 'pointer'
+                  }
                 }}
                 onClick={() => handleDayClick(day)}
               >

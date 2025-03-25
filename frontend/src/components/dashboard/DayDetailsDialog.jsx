@@ -44,7 +44,7 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
               <ListItem key={lesson.id} divider>
                 <Box sx={{ width: '100%' }}>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="subtitle1" fontWeight="medium">
+                    <Typography variant="subtitle1" fontWeight="medium" sx={{backgroundColor: 'rgba(0, 0, 0, 0.04)', borderRadius: 2, px:1}}>
                       {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'} - {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
                     </Typography>
                     {lesson.is_package && (
