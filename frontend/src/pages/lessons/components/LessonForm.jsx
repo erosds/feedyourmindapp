@@ -19,6 +19,7 @@ import {
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
+import StudentAutocomplete from '../../../components/common/StudentAutocomplete';
 
 // Schema di validazione
 const LessonSchema = Yup.object().shape({
@@ -93,7 +94,22 @@ function LessonForm({
         return (
           <Form>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
+                <StudentAutocomplete
+                  value={values.student_id}
+                  onChange={(studentId) => {
+                    setFieldValue('student_id', studentId);
+                    if (onStudentChange) {
+                      onStudentChange(studentId, setFieldValue);
+                    }
+                  }}
+                  error={touched.student_id && Boolean(errors.student_id)}
+                  helperText={touched.student_id && errors.student_id}
+                  required={true}
+                  students={students}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
                 <FormControl fullWidth error={touched.professor_id && Boolean(errors.professor_id)}>
                   <InputLabel id="professor-label">Professore</InputLabel>
                   <Select
@@ -116,30 +132,6 @@ function LessonForm({
                   )}
                 </FormControl>
               </Grid>
-
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth error={touched.student_id && Boolean(errors.student_id)}>
-                  <InputLabel id="student-label">Studente</InputLabel>
-                  <Select
-                    labelId="student-label"
-                    name="student_id"
-                    value={values.student_id}
-                    onChange={(e) => onStudentChange(e.target.value, setFieldValue)}
-                    onBlur={handleBlur}
-                    label="Studente"
-                  >
-                    {students.map((student) => (
-                      <MenuItem key={student.id} value={student.id}>
-                        {student.first_name} {student.last_name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {touched.student_id && errors.student_id && (
-                    <FormHelperText>{errors.student_id}</FormHelperText>
-                  )}
-                </FormControl>
-              </Grid>
-
               <Grid item xs={12} md={4}>
                 <DatePicker
                   label="Data lezione"
@@ -156,7 +148,7 @@ function LessonForm({
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
                 <TimePicker
                   label="Orario inizio"
                   value={values.start_time}

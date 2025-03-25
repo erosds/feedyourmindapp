@@ -17,7 +17,7 @@ import {
 import { professorService, studentService, packageService, lessonService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
-
+import StudentAutocomplete from '../../components/common/StudentAutocomplete';
 import LessonForm from './components/LessonForm';
 import PackageOverflowDialog from './components/PackageOverflowDialog';
 import { checkPackageOverflow, checkLessonOverlap } from './utils/packageUtils';

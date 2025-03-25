@@ -25,6 +25,8 @@ import { studentService, packageService, lessonService } from '../../services/ap
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { format, parseISO } from 'date-fns';
+import StudentAutocomplete from '../../components/common/StudentAutocomplete';
+
 
 // Schema di validazione
 const PackageSchema = Yup.object().shape({
@@ -165,7 +167,7 @@ function PackageFormPage() {
 
       // Calcola le ore rimanenti
       const remainingHours = calculateRemainingHours(values.total_hours);
-      
+
       // Determina lo stato del pacchetto
       const status = remainingHours > 0 ? 'in_progress' : 'completed';
 
@@ -266,32 +268,22 @@ function PackageFormPage() {
           }) => {
             // Calcola le ore rimanenti in tempo reale
             const remainingHours = calculateRemainingHours(values.total_hours || 0);
-            
+
             return (
               <Form>
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={6}>
-                    <FormControl fullWidth error={touched.student_id && Boolean(errors.student_id)}>
-                      <InputLabel id="student-label">Studente</InputLabel>
-                      <Select
-                        labelId="student-label"
-                        name="student_id"
-                        value={values.student_id}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        label="Studente"
-                        disabled={isEditMode} // Non permettere di cambiare lo studente in modalità modifica
-                      >
-                        {students.map((student) => (
-                          <MenuItem key={student.id} value={student.id}>
-                            {student.first_name} {student.last_name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {touched.student_id && errors.student_id && (
-                        <FormHelperText>{errors.student_id}</FormHelperText>
-                      )}
-                    </FormControl>
+                    <StudentAutocomplete
+                      value={values.student_id}
+                      onChange={(studentId) => {
+                        setFieldValue('student_id', studentId);
+                      }}
+                      error={touched.student_id && Boolean(errors.student_id)}
+                      helperText={touched.student_id && errors.student_id}
+                      disabled={isEditMode} // Non permettere di cambiare lo studente in modalità modifica
+                      required={true}
+                      students={students}
+                    />
                   </Grid>
 
                   <Grid item xs={12} md={6}>
