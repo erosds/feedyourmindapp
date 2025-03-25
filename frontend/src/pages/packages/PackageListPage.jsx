@@ -45,6 +45,81 @@ function PackageListPage() {
   const [showActive, setShowActive] = useState(false);
   const [lessonsPerPackage, setLessonsPerPackage] = useState({});
 
+  // Stato per l'ordinamento
+  const [order, setOrder] = useState('desc');
+  const [orderBy, setOrderBy] = useState('id');
+
+  // Funzione per gestire la richiesta di cambio dell'ordinamento
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  // Funzione helper per l'ordinamento stabile
+  const descendingComparator = (a, b, orderBy) => {
+    // Casi speciali per i formati di data
+    if (orderBy === 'start_date') {
+      return new Date(b.start_date) - new Date(a.start_date);
+    }
+    
+    // Per i campi numerici
+    if (['total_hours', 'remaining_hours', 'package_cost'].includes(orderBy)) {
+      return parseFloat(b[orderBy]) - parseFloat(a[orderBy]);
+    }
+    
+    // Per student_id, usa il nome mappato
+    if (orderBy === 'student_id') {
+      return (students[b.student_id] || '').localeCompare(students[a.student_id] || '');
+    }
+    
+    // Per ordinare in base allo stato
+    if (orderBy === 'status') {
+      // Prima i pacchetti attivi
+      if (a.status === 'in_progress' && b.status !== 'in_progress') return -1;
+      if (a.status !== 'in_progress' && b.status === 'in_progress') return 1;
+      return 0;
+    }
+
+    // Per ordinare in base al pagamento
+    if (orderBy === 'is_paid') {
+      return (b.is_paid === a.is_paid) ? 0 : b.is_paid ? -1 : 1;
+    }
+    
+    // Per ottenere un ordinamento preciso in base alle ore rimanenti
+    if (orderBy === 'remaining_calc') {
+      const remainingA = getRemainingHours(a);
+      const remainingB = getRemainingHours(b);
+      return remainingB - remainingA;
+    }
+    
+    // Per altri campi
+    if (b[orderBy] < a[orderBy]) {
+      return -1;
+    }
+    if (b[orderBy] > a[orderBy]) {
+      return 1;
+    }
+    return 0;
+  };
+
+  const getComparator = (order, orderBy) => {
+    return order === 'desc'
+      ? (a, b) => descendingComparator(a, b, orderBy)
+      : (a, b) => -descendingComparator(a, b, orderBy);
+  };
+
+  // Funzione per ordinare in modo stabile
+  const stableSort = (array, comparator) => {
+    const stabilizedThis = array.map((el, index) => [el, index]);
+    stabilizedThis.sort((a, b) => {
+      const order = comparator(a[0], b[0]);
+      if (order !== 0) return order;
+      return a[1] - b[1];
+    });
+    return stabilizedThis.map((el) => el[0]);
+  };
+
   // Funzione per calcolare le ore utilizzate e rimanenti di ogni pacchetto
   const calculatePackageStats = (packageId, lessons) => {
     const packageLessons = lessons.filter(lesson => 
@@ -121,9 +196,11 @@ function PackageListPage() {
       filtered = filtered.filter(pkg => pkg.status === 'in_progress');
     }
     
-    setFilteredPackages(filtered);
+    // Applica l'ordinamento
+    const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
+    setFilteredPackages(sortedFiltered);
     setPage(0); // Reset to first page after filtering
-  }, [searchTerm, packages, students, showActive]);
+  }, [searchTerm, packages, students, showActive, order, orderBy]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -146,7 +223,8 @@ function PackageListPage() {
     navigate(`/packages/${id}`);
   };
 
-  const handleEditPackage = (id) => {
+  const handleEditPackage = (id, event) => {
+    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
     navigate(`/packages/edit/${id}`);
   };
 
@@ -154,7 +232,9 @@ function PackageListPage() {
     navigate('/packages/new');
   };
 
-  const handleDeletePackage = async (id) => {
+  const handleDeletePackage = async (id, event) => {
+    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
+    
     try {
       // Prima ottieni le lezioni per questo pacchetto per mostrare all'utente
       const lessonsResponse = await lessonService.getAll();
@@ -235,6 +315,40 @@ function PackageListPage() {
     return parseFloat(pkg.total_hours) - stats.usedHours;
   };
 
+  // Componente SortableTableCell per le intestazioni delle colonne
+  const SortableTableCell = ({ id, label, numeric }) => {
+    const isActive = orderBy === id;
+    
+    return (
+      <TableCell
+        align={numeric ? "right" : "left"}
+        sortDirection={isActive ? order : false}
+        onClick={() => handleRequestSort(id)}
+        sx={{
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+          },
+          fontWeight: isActive ? 'bold' : 'normal',
+          '& .sort-icon': {
+            opacity: isActive ? 1 : 0.35,
+            marginLeft: '4px',
+            fontSize: '1rem',
+            transition: 'transform 0.2s',
+            transform: isActive && order === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+          }
+        }}
+      >
+        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: numeric ? 'flex-end' : 'flex-start' }}>
+          {label}
+          <Box component="span" className="sort-icon">
+            {order === 'desc' ? '▼' : '▲'}
+          </Box>
+        </Box>
+      </TableCell>
+    );
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
@@ -292,14 +406,14 @@ function PackageListPage() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Studente</TableCell>
-              <TableCell>Data Inizio</TableCell>
-              <TableCell>Ore Totali</TableCell>
-              <TableCell>Ore Rimanenti</TableCell>
-              <TableCell>Costo</TableCell>
-              <TableCell>Stato</TableCell>
-              <TableCell>Pagamento</TableCell>
+              <SortableTableCell id="id" label="ID" />
+              <SortableTableCell id="student_id" label="Studente" />
+              <SortableTableCell id="start_date" label="Data Inizio" />
+              <SortableTableCell id="total_hours" label="Ore Totali" numeric />
+              <SortableTableCell id="remaining_calc" label="Ore Rimanenti" numeric />
+              <SortableTableCell id="package_cost" label="Costo" numeric />
+              <SortableTableCell id="status" label="Stato" />
+              <SortableTableCell id="is_paid" label="Pagamento" />
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
@@ -318,7 +432,17 @@ function PackageListPage() {
                   const remainingHours = getRemainingHours(pkg);
                   
                   return (
-                    <TableRow key={pkg.id}>
+                    <TableRow 
+                      key={pkg.id}
+                      hover
+                      onClick={() => handleViewPackage(pkg.id)}
+                      sx={{ 
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                        }
+                      }}
+                    >
                       <TableCell>#{pkg.id}</TableCell>
                       <TableCell>{students[pkg.student_id] || `Studente #${pkg.student_id}`}</TableCell>
                       <TableCell>
@@ -342,30 +466,19 @@ function PackageListPage() {
                           variant="outlined"
                         />
                       </TableCell>
-                      <TableCell align="right">
-                        <Tooltip title="Visualizza dettagli">
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleViewPackage(pkg.id)}
-                          >
-                            <ViewIcon />
-                          </IconButton>
-                        </Tooltip>
+                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                         <Tooltip title="Modifica">
                           <IconButton
-                            color="secondary"
-                            onClick={() => handleEditPackage(pkg.id)}
+                            color="primary"
+                            onClick={(e) => handleEditPackage(pkg.id, e)}
                           >
                             <EditIcon />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Elimina">
                           <IconButton
-                            color="error"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeletePackage(pkg.id);
-                            }}
+                            color="secondary"
+                            onClick={(e) => handleDeletePackage(pkg.id, e)}
                           >
                             <DeleteIcon />
                           </IconButton>

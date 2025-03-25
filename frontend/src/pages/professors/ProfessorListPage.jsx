@@ -41,6 +41,51 @@ function ProfessorListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredProfessors, setFilteredProfessors] = useState([]);
 
+  // Stato per l'ordinamento
+  const [order, setOrder] = useState('asc');
+  const [orderBy, setOrderBy] = useState('last_name');
+
+  // Funzione per gestire la richiesta di cambio dell'ordinamento
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  // Funzione helper per l'ordinamento stabile
+  const descendingComparator = (a, b, orderBy) => {
+    // Ordinamento speciale per ruolo (admin prima)
+    if (orderBy === 'is_admin') {
+      return (b.is_admin === a.is_admin) ? 0 : b.is_admin ? -1 : 1;
+    }
+    
+    // Per altri campi
+    if (b[orderBy] < a[orderBy]) {
+      return -1;
+    }
+    if (b[orderBy] > a[orderBy]) {
+      return 1;
+    }
+    return 0;
+  };
+
+  const getComparator = (order, orderBy) => {
+    return order === 'desc'
+      ? (a, b) => descendingComparator(a, b, orderBy)
+      : (a, b) => -descendingComparator(a, b, orderBy);
+  };
+
+  // Funzione per ordinare in modo stabile
+  const stableSort = (array, comparator) => {
+    const stabilizedThis = array.map((el, index) => [el, index]);
+    stabilizedThis.sort((a, b) => {
+      const order = comparator(a[0], b[0]);
+      if (order !== 0) return order;
+      return a[1] - b[1];
+    });
+    return stabilizedThis.map((el) => el[0]);
+  };
+
   useEffect(() => {
     // Redirect if not admin
     if (!isAdmin()) {
@@ -67,17 +112,21 @@ function ProfessorListPage() {
 
   useEffect(() => {
     if (searchTerm.trim() === '') {
-      setFilteredProfessors(professors);
+      // Applica solo l'ordinamento se non c'è una ricerca
+      const sortedProfessors = stableSort(professors, getComparator(order, orderBy));
+      setFilteredProfessors(sortedProfessors);
     } else {
       const lowercaseSearch = searchTerm.toLowerCase();
       const filtered = professors.filter((professor) => {
         const fullName = `${professor.first_name} ${professor.last_name}`.toLowerCase();
         return fullName.includes(lowercaseSearch) || professor.username.toLowerCase().includes(lowercaseSearch);
       });
-      setFilteredProfessors(filtered);
+      // Applica l'ordinamento ai risultati filtrati
+      const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
+      setFilteredProfessors(sortedFiltered);
     }
-    setPage(0); // Reset to first page after search
-  }, [searchTerm, professors]);
+    setPage(0); // Reset to first page after search or sort
+  }, [searchTerm, professors, order, orderBy]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -96,7 +145,8 @@ function ProfessorListPage() {
     navigate(`/professors/${id}`);
   };
 
-  const handleEditProfessor = (id) => {
+  const handleEditProfessor = (id, event) => {
+    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
     navigate(`/professors/edit/${id}`);
   };
 
@@ -104,7 +154,9 @@ function ProfessorListPage() {
     navigate('/professors/new');
   };
 
-  const handleDeleteProfessor = async (id, name) => {
+  const handleDeleteProfessor = async (id, name, event) => {
+    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
+    
     if (window.confirm(`Sei sicuro di voler eliminare il professore "${name}"? Questa azione non può essere annullata.`)) {
       try {
         await professorService.delete(id);
@@ -117,6 +169,40 @@ function ProfessorListPage() {
         alert('Errore durante l\'eliminazione del professore. Riprova più tardi.');
       }
     }
+  };
+  
+  // Componente SortableTableCell per le intestazioni delle colonne
+  const SortableTableCell = ({ id, label, numeric }) => {
+    const isActive = orderBy === id;
+    
+    return (
+      <TableCell
+        align={numeric ? "right" : "left"}
+        sortDirection={isActive ? order : false}
+        onClick={() => handleRequestSort(id)}
+        sx={{
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+          },
+          fontWeight: isActive ? 'bold' : 'normal',
+          '& .sort-icon': {
+            opacity: isActive ? 1 : 0.35,
+            marginLeft: '4px',
+            fontSize: '1rem',
+            transition: 'transform 0.2s',
+            transform: isActive && order === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+          }
+        }}
+      >
+        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: numeric ? 'flex-end' : 'flex-start' }}>
+          {label}
+          <Box component="span" className="sort-icon">
+            {order === 'desc' ? '▼' : '▲'}
+          </Box>
+        </Box>
+      </TableCell>
+    );
   };
 
   if (loading) {
@@ -163,13 +249,13 @@ function ProfessorListPage() {
       </Box>
 
       <TableContainer component={Paper}>
-        <Table>
+        <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Nome</TableCell>
-              <TableCell>Cognome</TableCell>
-              <TableCell>Username</TableCell>
-              <TableCell>Ruolo</TableCell>
+              <SortableTableCell id="first_name" label="Nome" />
+              <SortableTableCell id="last_name" label="Cognome" />
+              <SortableTableCell id="username" label="Username" />
+              <SortableTableCell id="is_admin" label="Ruolo" />
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
@@ -184,7 +270,17 @@ function ProfessorListPage() {
               filteredProfessors
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((professor) => (
-                  <TableRow key={professor.id}>
+                  <TableRow 
+                    key={professor.id}
+                    hover
+                    onClick={() => handleViewProfessor(professor.id)}
+                    sx={{ 
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                      }
+                    }}
+                  >
                     <TableCell>{professor.first_name}</TableCell>
                     <TableCell>{professor.last_name}</TableCell>
                     <TableCell>{professor.username}</TableCell>
@@ -206,32 +302,21 @@ function ProfessorListPage() {
                         />
                       )}
                     </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Visualizza dettagli">
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleViewProfessor(professor.id)}
-                        >
-                          <ViewIcon />
-                        </IconButton>
-                      </Tooltip>
+                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       {isAdmin() && (
                         <>
                           <Tooltip title="Modifica">
                             <IconButton
-                              color="secondary"
-                              onClick={() => handleEditProfessor(professor.id)}
+                              color="primary"
+                              onClick={(e) => handleEditProfessor(professor.id, e)}
                             >
                               <EditIcon />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Elimina">
                             <IconButton
-                              color="error"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteProfessor(professor.id, `${professor.first_name} ${professor.last_name}`);
-                              }}
+                              color="secondary"
+                              onClick={(e) => handleDeleteProfessor(professor.id, `${professor.first_name} ${professor.last_name}`, e)}
                             >
                               <DeleteIcon />
                             </IconButton>

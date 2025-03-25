@@ -56,6 +56,77 @@ function LessonListPage() {
   const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, month
   const [showOnlyMine, setShowOnlyMine] = useState(!isAdmin()); // Default: professori normali vedono solo le proprie lezioni
 
+  // Stato per l'ordinamento
+  const [order, setOrder] = useState('desc');
+  const [orderBy, setOrderBy] = useState('id');
+
+  // Funzione per gestire la richiesta di cambio dell'ordinamento
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  // Funzione helper per l'ordinamento stabile
+  const descendingComparator = (a, b, orderBy) => {
+    // Casi speciali per i formati di data e ora
+    if (orderBy === 'lesson_date') {
+      return new Date(b.lesson_date) - new Date(a.lesson_date);
+    }
+    if (orderBy === 'start_time') {
+      // Per gli orari, convertire a minuti per facilitare il confronto
+      const timeA = a.start_time ? a.start_time.substring(0, 5).split(':') : ['00', '00'];
+      const timeB = b.start_time ? b.start_time.substring(0, 5).split(':') : ['00', '00'];
+      const minutesA = parseInt(timeA[0]) * 60 + parseInt(timeA[1]);
+      const minutesB = parseInt(timeB[0]) * 60 + parseInt(timeB[1]);
+      return minutesB - minutesA;
+    }
+    // Per i campi numerici
+    if (orderBy === 'duration' || orderBy === 'hourly_rate' || orderBy === 'total_payment') {
+      return parseFloat(b[orderBy]) - parseFloat(a[orderBy]);
+    }
+    // Per i campi stringa nel caso di professor_id e student_id, usa il nome mappato
+    if (orderBy === 'professor_id') {
+      return (professors[b.professor_id] || '').localeCompare(professors[a.professor_id] || '');
+    }
+    if (orderBy === 'student_id') {
+      return (students[b.student_id] || '').localeCompare(students[a.student_id] || '');
+    }
+    // Per il campo is_package
+    if (orderBy === 'is_package') {
+      return (b.is_package === a.is_package) ? 0 : b.is_package ? -1 : 1;
+    }
+    // Per il campo is_paid
+    if (orderBy === 'is_paid') {
+      return (b.is_paid === a.is_paid) ? 0 : b.is_paid ? -1 : 1;
+    }
+    // Per altri campi
+    if (b[orderBy] < a[orderBy]) {
+      return -1;
+    }
+    if (b[orderBy] > a[orderBy]) {
+      return 1;
+    }
+    return 0;
+  };
+
+  const getComparator = (order, orderBy) => {
+    return order === 'desc'
+      ? (a, b) => descendingComparator(a, b, orderBy)
+      : (a, b) => -descendingComparator(a, b, orderBy);
+  };
+
+  // Funzione per ordinare in modo stabile
+  const stableSort = (array, comparator) => {
+    const stabilizedThis = array.map((el, index) => [el, index]);
+    stabilizedThis.sort((a, b) => {
+      const order = comparator(a[0], b[0]);
+      if (order !== 0) return order;
+      return a[1] - b[1];
+    });
+    return stabilizedThis.map((el) => el[0]);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -139,9 +210,11 @@ function LessonListPage() {
       });
     }
 
-    setFilteredLessons(filtered);
+    // Applica l'ordinamento
+    const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
+    setFilteredLessons(sortedFiltered);
     setPage(0); // Reset to first page after filtering
-  }, [searchTerm, lessons, students, professors, timeFilter]);
+  }, [searchTerm, lessons, students, professors, timeFilter, order, orderBy]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -168,7 +241,8 @@ function LessonListPage() {
     navigate(`/lessons/${id}`);
   };
 
-  const handleEditLesson = (id) => {
+  const handleEditLesson = (id, event) => {
+    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
     navigate(`/lessons/edit/${id}`);
   };
 
@@ -176,7 +250,9 @@ function LessonListPage() {
     navigate('/lessons/new');
   };
 
-  const handleDeleteLesson = async (id) => {
+  const handleDeleteLesson = async (id, event) => {
+    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
+    
     if (window.confirm(`Sei sicuro di voler eliminare la lezione #${id}? Questa azione non può essere annullata.`)) {
       try {
         await lessonService.delete(id);
@@ -196,6 +272,40 @@ function LessonListPage() {
         alert('Errore durante l\'eliminazione della lezione. Riprova più tardi.');
       }
     }
+  };
+
+  // Componente SortableTableCell per le intestazioni delle colonne
+  const SortableTableCell = ({ id, label, numeric }) => {
+    const isActive = orderBy === id;
+    
+    return (
+      <TableCell
+        align={numeric ? "right" : "left"}
+        sortDirection={isActive ? order : false}
+        onClick={() => handleRequestSort(id)}
+        sx={{
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+          },
+          fontWeight: isActive ? 'bold' : 'normal',
+          '& .sort-icon': {
+            opacity: isActive ? 1 : 0.35,
+            marginLeft: '4px',
+            fontSize: '1rem',
+            transition: 'transform 0.2s',
+            transform: isActive && order === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+          }
+        }}
+      >
+        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: numeric ? 'flex-end' : 'flex-start' }}>
+          {label}
+          <Box component="span" className="sort-icon">
+            {order === 'desc' ? '▼' : '▲'}
+          </Box>
+        </Box>
+      </TableCell>
+    );
   };
 
   if (loading) {
@@ -284,23 +394,23 @@ function LessonListPage() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Data</TableCell>
-              <TableCell>Orario</TableCell> {/* Nuova colonna */}
-              <TableCell>Professore</TableCell>
-              <TableCell>Studente</TableCell>
-              <TableCell>Durata</TableCell>
-              <TableCell>Tipo</TableCell>
-              <TableCell align="right">Tariffa Oraria</TableCell>
-              <TableCell align="right">Totale</TableCell>
-              <TableCell>Pagamento</TableCell>
+              <SortableTableCell id="id" label="ID" />
+              <SortableTableCell id="lesson_date" label="Data" />
+              <SortableTableCell id="start_time" label="Orario" />
+              <SortableTableCell id="professor_id" label="Professore" />
+              <SortableTableCell id="student_id" label="Studente" />
+              <SortableTableCell id="duration" label="Durata" numeric />
+              <SortableTableCell id="is_package" label="Tipo" />
+              <SortableTableCell id="hourly_rate" label="Tariffa Oraria" numeric />
+              <SortableTableCell id="total_payment" label="Totale" numeric />
+              <SortableTableCell id="is_paid" label="Pagamento" />
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredLessons.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} align="center">
+                <TableCell colSpan={11} align="center">
                   Nessuna lezione trovata
                 </TableCell>
               </TableRow>
@@ -308,9 +418,19 @@ function LessonListPage() {
               filteredLessons
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((lesson) => (
-                  <TableRow key={lesson.id}>
+                  <TableRow 
+                    key={lesson.id}
+                    hover
+                    onClick={() => handleViewLesson(lesson.id)}
+                    sx={{ 
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                      }
+                    }}
+                  >
                     <TableCell>#{lesson.id}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
                       {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                     </TableCell>
                     <TableCell>
@@ -366,19 +486,12 @@ function LessonListPage() {
                       )}
                     </TableCell>
 
-                    <TableCell align="right">
-                      <Tooltip title="Visualizza dettagli">
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleViewLesson(lesson.id)}
-                        >
-                          <ViewIcon />
-                        </IconButton>
-                      </Tooltip>
+                    <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ whiteSpace: 'nowrap' }}>
                       <Tooltip title="Modifica">
                         <IconButton
-                          color="secondary"
-                          onClick={() => handleEditLesson(lesson.id)}
+                          color="primary"
+                          onClick={(e) => handleEditLesson(lesson.id, e)}
+                          sx={{ whiteSpace: 'nowrap' }}
                         >
                           <EditIcon />
                         </IconButton>
@@ -386,10 +499,8 @@ function LessonListPage() {
                       <Tooltip title="Elimina">
                         <IconButton
                           color="error"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Previene la navigazione verso la pagina di dettaglio
-                            handleDeleteLesson(lesson.id);
-                          }}
+                          onClick={(e) => handleDeleteLesson(lesson.id, e)}
+                          sx={{ whiteSpace: 'nowrap' }}
                         >
                           <DeleteIcon />
                         </IconButton>

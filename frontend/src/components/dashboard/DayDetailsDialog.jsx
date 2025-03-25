@@ -20,6 +20,13 @@ import AddIcon from '@mui/icons-material/Add';
 function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons, studentsMap }) {
   if (!selectedDay) return null;
 
+  // Ordina le lezioni per orario di inizio
+  const sortedLessons = [...dayLessons].sort((a, b) => {
+    const timeA = a.start_time ? a.start_time.substring(0, 5) : '00:00';
+    const timeB = b.start_time ? b.start_time.substring(0, 5) : '00:00';
+    return timeA.localeCompare(timeB);
+  });
+
   return (
     <Dialog
       open={open}
@@ -31,27 +38,14 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
         Lezioni per {format(selectedDay, "EEEE d MMMM yyyy", { locale: it })}
       </DialogTitle>
       <DialogContent>
-        {dayLessons.length > 0 ? (
+        {sortedLessons.length > 0 ? (
           <List>
-            {dayLessons.map((lesson) => (
+            {sortedLessons.map((lesson) => (
               <ListItem key={lesson.id} divider>
                 <Box sx={{ width: '100%' }}>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
                     <Typography variant="subtitle1" fontWeight="medium">
                       {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'} - {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
-                    </Typography>
-                    {lesson.is_package && (
-                      <Chip
-                        label="Pacchetto"
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                    )}
-                  </Box>
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="subtitle1" fontWeight="medium">
-                      {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
                     </Typography>
                     {lesson.is_package && (
                       <Chip

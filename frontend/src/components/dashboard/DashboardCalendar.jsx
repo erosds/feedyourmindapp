@@ -22,7 +22,7 @@ import {
   isToday,
   isEqual
 } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { is, it } from 'date-fns/locale';
 
 function DashboardCalendar({
   currentWeekStart,
@@ -38,6 +38,18 @@ function DashboardCalendar({
     start: currentWeekStart,
     end: endOfWeek(currentWeekStart, { weekStartsOn: 1 }),
   });
+
+  // Funzione per ordinare le lezioni per orario di inizio
+  const sortLessonsByTime = (lessons) => {
+    return [...lessons].sort((a, b) => {
+      // Estrae l'ora dall'attributo start_time (formato "HH:MM:SS")
+      const timeA = a.start_time ? a.start_time.substring(0, 5) : '00:00';
+      const timeB = b.start_time ? b.start_time.substring(0, 5) : '00:00';
+
+      // Confronta le stringhe di orario
+      return timeA.localeCompare(timeB);
+    });
+  };
 
   return (
     <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
@@ -62,6 +74,8 @@ function DashboardCalendar({
       <Grid container spacing={1} sx={{ flexGrow: 1, mt: 0 }}>
         {daysOfWeek.map(day => {
           const dayLessons = getLessonsForDay(day);
+          // Ordina le lezioni per orario di inizio
+          const sortedLessons = sortLessonsByTime(dayLessons);
           const isCurrentDay = isToday(day);
           return (
             <Grid item xs sx={{ width: 'calc(100% / 7)' }} key={day.toString()}>
@@ -76,12 +90,7 @@ function DashboardCalendar({
                   color: isCurrentDay ? 'primary.contrastText' : 'text.primary',
                   border: '1px solid',
                   borderColor: 'divider',
-                  boxSizing: 'border-box',
-                  position: 'relative',
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                    cursor: 'pointer'
-                  }
+                  boxSizing: 'border-box'
                 }}
                 onClick={() => handleDayClick(day)}
               >
@@ -99,7 +108,7 @@ function DashboardCalendar({
                   {format(day, "EEEE d", { locale: it })}
                 </Typography>
 
-                {dayLessons.length === 0 ? (
+                {sortedLessons.length === 0 ? (
                   <Box textAlign="center" py={2} sx={{ flexGrow: 1 }}>
                     <Typography variant="body2" color={isCurrentDay ? 'primary.contrastText' : 'text.secondary'}>
                       Nessuna lezione
@@ -107,7 +116,7 @@ function DashboardCalendar({
                   </Box>
                 ) : (
                   <List dense disablePadding sx={{ flexGrow: 1 }}>
-                    {dayLessons.map(lesson => (
+                    {sortedLessons.map(lesson => (
                       <ListItem
                         key={`lesson-${lesson.id}`}
                         divider
@@ -118,20 +127,30 @@ function DashboardCalendar({
                         }}
                         sx={{
                           mb: 0.5,
-                          bgcolor: 'background.paper',
+                          py: 0.2, // Rimuove il padding verticale
+                          minHeight: '28px', // Imposta un'altezza minima più compatta
+                          bgcolor: isCurrentDay ? 'primary.main' : 'background.paper',
                           borderRadius: 1,
                           color: 'text.primary',
                           '&:hover': {
                             bgcolor: 'action.hover',
                           },
+                          position: 'relative', // Necessario per posizionare il chip
+                          pl: 1, // Riduce il padding a sinistra
+                          pr: 2, // Spazio per il chip a destra
                         }}
                       >
-                        <ListItemText
-                          primary={`${lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'} - ${studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}`}
-                          secondary={`${lesson.duration} ore`}
-                          primaryTypographyProps={{ variant: 'body2', noWrap: true, color: 'text.primary' }}
-                          secondaryTypographyProps={{ variant: 'caption', noWrap: true, color: 'text.secondary' }}
-                        />
+                        <Box sx={{ width: '100%' }}>
+                          <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'primary.contrastText' : 'text.primary', fontSize: '0.8rem', fontWeight: 'medium' }}>
+                            {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
+                          </Typography>
+                          <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'primary.contrastText' : 'text.primary', fontSize: '0.75rem' }}>
+                            {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
+                          </Typography>
+                          <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
+                            {lesson.duration} ore
+                          </Typography>
+                        </Box>
                         {lesson.is_package && (
                           <Chip
                             label="P"
@@ -139,8 +158,8 @@ function DashboardCalendar({
                             color="primary"
                             sx={{
                               position: 'absolute',
-                              bottom: 12,
-                              right: 12,
+                              top: 2,
+                              right: 2,
                               borderRadius: 1,
                               width: 'auto',
                               height: 16,

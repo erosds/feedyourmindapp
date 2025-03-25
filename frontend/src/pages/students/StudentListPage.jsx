@@ -40,6 +40,61 @@ function StudentListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredStudents, setFilteredStudents] = useState([]);
 
+  // Stato per l'ordinamento
+  const [order, setOrder] = useState('asc');
+  const [orderBy, setOrderBy] = useState('last_name');
+
+  // Funzione per gestire la richiesta di cambio dell'ordinamento
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  // Funzione helper per l'ordinamento stabile
+  const descendingComparator = (a, b, orderBy) => {
+    // Caso speciale per le date di nascita
+    if (orderBy === 'birth_date') {
+      // Gestisci i valori null o '1970-01-01' (che usiamo come segnaposto per valori nulli)
+      if (!a.birth_date || a.birth_date === '1970-01-01') return 1;
+      if (!b.birth_date || b.birth_date === '1970-01-01') return -1;
+      return new Date(b.birth_date) - new Date(a.birth_date);
+    }
+    
+    // Gestisci i valori null per email e telefono
+    if ((orderBy === 'email' || orderBy === 'phone') && (a[orderBy] === null || b[orderBy] === null)) {
+      if (a[orderBy] === null && b[orderBy] === null) return 0;
+      if (a[orderBy] === null) return 1;
+      if (b[orderBy] === null) return -1;
+    }
+    
+    // Per altri campi
+    if (b[orderBy] < a[orderBy]) {
+      return -1;
+    }
+    if (b[orderBy] > a[orderBy]) {
+      return 1;
+    }
+    return 0;
+  };
+
+  const getComparator = (order, orderBy) => {
+    return order === 'desc'
+      ? (a, b) => descendingComparator(a, b, orderBy)
+      : (a, b) => -descendingComparator(a, b, orderBy);
+  };
+
+  // Funzione per ordinare in modo stabile
+  const stableSort = (array, comparator) => {
+    const stabilizedThis = array.map((el, index) => [el, index]);
+    stabilizedThis.sort((a, b) => {
+      const order = comparator(a[0], b[0]);
+      if (order !== 0) return order;
+      return a[1] - b[1];
+    });
+    return stabilizedThis.map((el) => el[0]);
+  };
+
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -60,17 +115,21 @@ function StudentListPage() {
 
   useEffect(() => {
     if (searchTerm.trim() === '') {
-      setFilteredStudents(students);
+      // Applica solo l'ordinamento se non c'è una ricerca
+      const sortedStudents = stableSort(students, getComparator(order, orderBy));
+      setFilteredStudents(sortedStudents);
     } else {
       const lowercaseSearch = searchTerm.toLowerCase();
       const filtered = students.filter((student) => {
         const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
         return fullName.includes(lowercaseSearch);
       });
-      setFilteredStudents(filtered);
+      // Applica l'ordinamento ai risultati filtrati
+      const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
+      setFilteredStudents(sortedFiltered);
     }
-    setPage(0); // Reset to first page after search
-  }, [searchTerm, students]);
+    setPage(0); // Reset to first page after search or sort
+  }, [searchTerm, students, order, orderBy]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -89,7 +148,8 @@ function StudentListPage() {
     navigate(`/students/${id}`);
   };
 
-  const handleEditStudent = (id) => {
+  const handleEditStudent = (id, event) => {
+    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
     navigate(`/students/edit/${id}`);
   };
 
@@ -97,7 +157,9 @@ function StudentListPage() {
     navigate('/students/new');
   };
 
-  const handleDeleteStudent = async (id, name) => {
+  const handleDeleteStudent = async (id, name, event) => {
+    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
+    
     if (window.confirm(`Sei sicuro di voler eliminare lo studente "${name}"? Questa azione non può essere annullata.`)) {
       try {
         await studentService.delete(id);
@@ -125,6 +187,40 @@ function StudentListPage() {
       console.error('Error formatting date:', error);
       return '-';
     }
+  };
+
+  // Componente SortableTableCell per le intestazioni delle colonne
+  const SortableTableCell = ({ id, label, numeric }) => {
+    const isActive = orderBy === id;
+    
+    return (
+      <TableCell
+        align={numeric ? "right" : "left"}
+        sortDirection={isActive ? order : false}
+        onClick={() => handleRequestSort(id)}
+        sx={{
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+          },
+          fontWeight: isActive ? 'bold' : 'normal',
+          '& .sort-icon': {
+            opacity: isActive ? 1 : 0.35,
+            marginLeft: '4px',
+            fontSize: '1rem',
+            transition: 'transform 0.2s',
+            transform: isActive && order === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+          }
+        }}
+      >
+        <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: numeric ? 'flex-end' : 'flex-start' }}>
+          {label}
+          <Box component="span" className="sort-icon">
+            {order === 'desc' ? '▼' : '▲'}
+          </Box>
+        </Box>
+      </TableCell>
+    );
   };
 
   if (loading) {
@@ -171,14 +267,14 @@ function StudentListPage() {
       </Box>
 
       <TableContainer component={Paper}>
-        <Table>
+        <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Nome</TableCell>
-              <TableCell>Cognome</TableCell>
-              <TableCell>Data di Nascita</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Telefono</TableCell>
+              <SortableTableCell id="first_name" label="Nome" />
+              <SortableTableCell id="last_name" label="Cognome" />
+              <SortableTableCell id="birth_date" label="Data di Nascita" />
+              <SortableTableCell id="email" label="Email" />
+              <SortableTableCell id="phone" label="Telefono" />
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
@@ -193,7 +289,17 @@ function StudentListPage() {
               filteredStudents
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((student) => (
-                  <TableRow key={student.id}>
+                  <TableRow 
+                    key={student.id}
+                    hover
+                    onClick={() => handleViewStudent(student.id)}
+                    sx={{ 
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                      }
+                    }}
+                  >
                     <TableCell>{student.first_name}</TableCell>
                     <TableCell>{student.last_name}</TableCell>
                     <TableCell>
@@ -201,30 +307,19 @@ function StudentListPage() {
                     </TableCell>
                     <TableCell>{student.email || '-'}</TableCell>
                     <TableCell>{student.phone || '-'}</TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Visualizza dettagli">
-                        <IconButton
-                          color="primary"
-                          onClick={() => handleViewStudent(student.id)}
-                        >
-                          <ViewIcon />
-                        </IconButton>
-                      </Tooltip>
+                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       <Tooltip title="Modifica">
                         <IconButton
-                          color="secondary"
-                          onClick={() => handleEditStudent(student.id)}
+                          color="primary"
+                          onClick={(e) => handleEditStudent(student.id, e)}
                         >
                           <EditIcon />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Elimina">
                         <IconButton
-                          color="error"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Previene la navigazione verso la pagina di dettaglio
-                            handleDeleteStudent(student.id, `${student.first_name} ${student.last_name}`);
-                          }}
+                          color="secondary"
+                          onClick={(e) => handleDeleteStudent(student.id, `${student.first_name} ${student.last_name}`, e)}
                         >
                           <DeleteIcon />
                         </IconButton>
