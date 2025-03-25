@@ -119,7 +119,7 @@ function LessonForm({
                     onChange={handleChange}
                     onBlur={handleBlur}
                     label="Professore"
-                    disabled={!isAdmin || isEditMode}
+                    disabled={!isAdmin}
                   >
                     {professors.map((professor) => (
                       <MenuItem key={professor.id} value={professor.id}>
