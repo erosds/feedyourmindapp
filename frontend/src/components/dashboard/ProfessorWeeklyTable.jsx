@@ -32,14 +32,6 @@ function ProfessorWeeklyTable({
           Riepilogo Settimanale Professori
         </Typography>
         <Box display="flex" alignItems="center">
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={navigateToManageProfessors}
-            endIcon={<ArrowForwardIcon />}
-          >
-            Gestione Professori
-          </Button>
         </Box>
       </Box>
 

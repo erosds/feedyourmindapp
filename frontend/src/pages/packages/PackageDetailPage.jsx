@@ -448,7 +448,7 @@ function PackageDetailPage() {
                 Informazioni Pacchetto
               </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Studente
                   </Typography>
@@ -458,7 +458,7 @@ function PackageDetailPage() {
                     </Link>
                   </Typography>
                 </Grid>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Data inizio
                   </Typography>
@@ -466,7 +466,7 @@ function PackageDetailPage() {
                     {format(parseISO(packageData.start_date), 'dd/MM/yyyy', { locale: it })}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Stato
                   </Typography>
@@ -477,27 +477,7 @@ function PackageDetailPage() {
                     sx={{ mt: 0.5 }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    Ore totali
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {packageData.total_hours}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    Ore rimanenti
-                  </Typography>
-                  <Typography
-                    variant="body1"
-                    color={remainingHours > 0 ? 'primary' : 'text.primary'}
-                    gutterBottom
-                  >
-                    {remainingHours.toFixed(1)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Pagamento
                   </Typography>
@@ -510,12 +490,32 @@ function PackageDetailPage() {
                     sx={{ mt: 0.5 }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} md={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    Ore totali
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {packageData.total_hours}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    Ore rimanenti
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    color={remainingHours > 0 ? 'primary' : 'text.primary'}
+                    gutterBottom
+                  >
+                    {remainingHours.toFixed(1)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Data pagamento
                   </Typography>
                   {packageData.is_paid && packageData.payment_date ? (
-                    <Typography variant="body1">
+                    <Typography variant="h6" color="primary">
                       {format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it })}
                     </Typography>
                   ) : (
@@ -524,8 +524,8 @@ function PackageDetailPage() {
                     </Typography>
                   )}
                 </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                <Grid item xs={12} md={3}>
+                  <Typography variant="body2" color="text.secondary">
                     Costo totale
                   </Typography>
                   <Typography variant="h6" color="text.primary">

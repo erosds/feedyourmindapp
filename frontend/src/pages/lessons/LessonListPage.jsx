@@ -399,10 +399,10 @@ function LessonListPage() {
               <SortableTableCell id="start_time" label="Orario" />
               <SortableTableCell id="professor_id" label="Professore" />
               <SortableTableCell id="student_id" label="Studente" />
-              <SortableTableCell id="duration" label="Durata" numeric />
+              <SortableTableCell id="duration" label="Durata" />
               <SortableTableCell id="is_package" label="Tipo" />
-              <SortableTableCell id="hourly_rate" label="Tariffa Oraria" numeric />
-              <SortableTableCell id="total_payment" label="Totale" numeric />
+              <SortableTableCell id="hourly_rate" label="Tariffa Oraria" numeric/>
+              <SortableTableCell id="total_payment" label="Totale" numeric/>
               <SortableTableCell id="is_paid" label="Pagamento" />
               <TableCell align="right">Azioni</TableCell>
             </TableRow>

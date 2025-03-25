@@ -409,9 +409,9 @@ function PackageListPage() {
               <SortableTableCell id="id" label="ID" />
               <SortableTableCell id="student_id" label="Studente" />
               <SortableTableCell id="start_date" label="Data Inizio" />
-              <SortableTableCell id="total_hours" label="Ore Totali" numeric />
-              <SortableTableCell id="remaining_calc" label="Ore Rimanenti" numeric />
-              <SortableTableCell id="package_cost" label="Costo" numeric />
+              <SortableTableCell id="total_hours" label="Ore Totali" />
+              <SortableTableCell id="remaining_calc" label="Ore Rimanenti" />
+              <SortableTableCell id="package_cost" label="Costo" />
               <SortableTableCell id="status" label="Stato" />
               <SortableTableCell id="is_paid" label="Pagamento" />
               <TableCell align="right">Azioni</TableCell>
