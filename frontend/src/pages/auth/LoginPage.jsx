@@ -1,6 +1,6 @@
 // src/pages/auth/LoginPage.jsx
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -14,10 +14,19 @@ import { useAuth } from '../../context/AuthContext';
 function LoginPage() {
   const { login, error } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Controlla se c'è un messaggio di successo passato dal cambio password
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+    }
+  }, [location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,6 +61,12 @@ function LoginPage() {
       <Typography component="h2" variant="h6" gutterBottom align="center">
         Accedi all'app
       </Typography>
+      
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {successMessage}
+        </Alert>
+      )}
       
       {(error || formError) && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -96,6 +111,17 @@ function LoginPage() {
       >
         {loading ? <CircularProgress size={24} /> : 'Accedi'}
       </Button>
+      
+      <Box mt={2} textAlign="center">
+        <Button
+          component={Link}
+          to={`/change-password${username ? `?username=${encodeURIComponent(username)}` : ''}`}
+          color="primary"
+          size="small"
+        >
+          Cambia password
+        </Button>
+      </Box>
     </Box>
   );
 }

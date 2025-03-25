@@ -16,6 +16,8 @@ import AuthLayout from './components/layouts/AuthLayout';
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
+import ChangePasswordPage from './pages/auth/ChangePasswordPage';
+import AdminResetPasswordPage from './pages/admin/ResetPasswordPage'; // Importa la nuova pagina per il reset della password
 
 // Dashboard Pages
 import DashboardPage from './pages/dashboard/DashboardPage';
@@ -72,7 +74,11 @@ function App() {
               <Route element={<AuthLayout />}>
                 <Route path="/login" element={<LoginPage />} />
               </Route>
-
+              <Route path="/change-password" element={<ChangePasswordPage />} />
+              <Route 
+              path="/admin/reset-password" 
+              element={<AdminRoute><AdminResetPasswordPage /></AdminRoute>} 
+              />
               {/* Main App Routes */}
               <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />

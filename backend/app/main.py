@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
+from typing import Dict
+
 
 from app import models, database
 from app.database import get_db
@@ -20,6 +22,10 @@ from app.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES, 
     get_current_professor
 )
+
+from app import models, database
+from app.utils import verify_password, get_password_hash
+from app.auth import get_current_admin
 
 # Creazione dell'istanza dell'applicazione FastAPI
 app = FastAPI(
@@ -192,3 +198,81 @@ def get_professor_stats(db: Session = Depends(get_db)):
             } for professor in top_professors
         ]
     }
+
+# Endpoint per cambiare la password
+@app.post("/change-password", tags=["auth"])
+async def change_password(
+    change_data: Dict[str, str], 
+    db: Session = Depends(get_db)
+):
+    username = change_data.get("username")
+    old_password = change_data.get("old_password")
+    new_password = change_data.get("new_password")
+    
+    if not all([username, old_password, new_password]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username, password attuale e nuova password sono richiesti"
+        )
+    
+    # Trova il professore
+    professor = db.query(models.Professor).filter(models.Professor.username == username).first()
+    if not professor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utente non trovato"
+        )
+    
+    # Verifica la password attuale
+    if not verify_password(old_password, professor.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Password attuale non corretta"
+        )
+    
+    # Aggiorna con la nuova password
+    hashed_password = get_password_hash(new_password)
+    professor.password = hashed_password
+    
+    db.commit()
+    
+    return {"message": "Password aggiornata con successo"}
+
+@app.post("/admin-reset-password")
+async def admin_reset_password(
+    reset_data: dict, 
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_admin)
+):
+    username = reset_data.get("username")
+    new_password = reset_data.get("new_password")
+    
+    if not username or not new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username e nuova password sono richiesti"
+        )
+    
+    # Verifica che l'username esista
+    professor = db.query(models.Professor).filter(models.Professor.username == username).first()
+    if not professor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Utente con username {username} non trovato"
+        )
+    
+    # Verifica che la password rispetti i requisiti
+    if len(new_password) < 4:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La nuova password deve essere di almeno 4 caratteri"
+        )
+    
+    # Hash della nuova password
+    hashed_password = get_password_hash(new_password)
+    
+    # Aggiorna la password
+    professor.password = hashed_password
+    db.commit()
+    
+    return {"message": "Password resettata con successo"}

@@ -28,6 +28,8 @@ import {
   MenuBook as MenuBookIcon,
   AccountCircle,
   AdminPanelSettings as AdminDashboardIcon,
+  LockReset as LockResetIcon, // Aggiungi questa linea
+
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import logo from '../assets/logo.jpg';
@@ -75,13 +77,14 @@ function MainLayout() {
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
       { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
+      { text: 'Reset Password', icon: <LockResetIcon />, path: '/admin/reset-password' }, // Aggiungi questa linea
+
     ];
   } else {
     // Per gli utenti normali, mostra solo le opzioni standard
     menuItems = [
       { text: 'MyDashboard', icon: <DashboardIcon />, path: '/dashboard' },
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
-      { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
     ];
   }
@@ -143,6 +146,8 @@ function MainLayout() {
             {location.pathname.includes('/students') && 'Gestione Studenti'}
             {location.pathname.includes('/packages') && 'Gestione Pacchetti'}
             {location.pathname.includes('/lessons') && 'Gestione Lezioni'}
+            {location.pathname.includes('/admin/reset-password') && 'Reset Password Utenti'} {/* Aggiungi questa linea */}
+
           </Typography>
 
           {currentUser && (

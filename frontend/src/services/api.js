@@ -50,6 +50,22 @@ export const authService = {
   logout: () => {
     localStorage.removeItem('token');
   },
+
+  changePassword: (username, oldPassword, newPassword) => {
+    return api.post('/change-password', {
+      username,
+      old_password: oldPassword,
+      new_password: newPassword
+    });
+  },
+  
+  // Aggiungi questo metodo al tuo authService in src/services/api.js
+  adminResetPassword: (username, newPassword) => {
+    return api.post('/admin-reset-password', {
+      username,
+      new_password: newPassword
+    });
+  }
 };
 
 // Professor service
