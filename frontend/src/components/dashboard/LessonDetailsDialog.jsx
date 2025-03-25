@@ -10,11 +10,15 @@ import {
   Typography,
   Chip,
   Box,
-  Divider
+  Divider,
+  IconButton,
+  Tooltip
 } from '@mui/material';
+import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { lessonService } from '../../services/api';
 
 function LessonDetailsDialog({ open, onClose, selectedLesson, studentsMap }) {
   const navigate = useNavigate();
@@ -26,6 +30,29 @@ function LessonDetailsDialog({ open, onClose, selectedLesson, studentsMap }) {
     navigate(`/lessons/${selectedLesson.id}`);
     onClose(); // Chiudi il dialogo dopo la navigazione
   };
+  
+  // Funzione per modificare la lezione
+  const handleEditLesson = () => {
+    navigate(`/lessons/edit/${selectedLesson.id}`);
+    onClose(); // Chiudi il dialogo dopo la navigazione
+  };
+  
+  // Funzione per eliminare la lezione
+  const handleDeleteLesson = async () => {
+    if (window.confirm(`Sei sicuro di voler eliminare la lezione #${selectedLesson.id}? Questa azione non può essere annullata.`)) {
+      try {
+        // Chiama l'API per eliminare la lezione
+        await lessonService.delete(selectedLesson.id);
+        alert('La lezione è stata eliminata con successo.');
+        onClose();
+        // Rimaniamo sulla dashboard invece di navigare altrove
+        window.location.reload(); // Ricarica la pagina per aggiornare i dati
+      } catch (err) {
+        console.error('Error deleting lesson:', err);
+        alert('Errore durante l\'eliminazione della lezione. Riprova più tardi.');
+      }
+    }
+  };
 
   return (
     <Dialog 
@@ -35,7 +62,21 @@ function LessonDetailsDialog({ open, onClose, selectedLesson, studentsMap }) {
       fullWidth
     >
       <DialogTitle>
-        Dettagli Lezione #{selectedLesson.id}
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6">Dettagli Lezione #{selectedLesson.id}</Typography>
+          <Box>
+            <Tooltip title="Modifica lezione">
+              <IconButton color="primary" onClick={handleEditLesson} size="small" sx={{ mr: 1 }}>
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Elimina lezione">
+              <IconButton color="error" onClick={handleDeleteLesson} size="small">
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
       </DialogTitle>
       <DialogContent>
         <Grid container spacing={3}>
@@ -139,9 +180,9 @@ function LessonDetailsDialog({ open, onClose, selectedLesson, studentsMap }) {
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Chiudi</Button>
-        <Button onClick={handleViewDetails} color="primary" variant="contained">
-          Vedi tutti i dettagli
+        <Button onClick={handleViewDetails}>Vedi tutti i dettagli</Button>
+        <Button onClick={onClose} color="primary" variant="contained">
+          Chiudi
         </Button>
       </DialogActions>
     </Dialog>

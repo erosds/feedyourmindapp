@@ -82,7 +82,11 @@ function DashboardCalendar({
       </Box>
 
       <Typography variant="subtitle1" align="center" gutterBottom
-        sx={{ fontWeight: 'bold', fontSize: '1.2rem', my: 2 }}>
+        sx={{ fontWeight: 'bold', fontSize: '1.2rem', mb: 2,
+          backgroundColor: 'primary.light',
+          color: 'primary.contrastText',
+          py: 1,
+          borderRadius: 1}}>
         {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
       </Typography>
 
@@ -129,14 +133,8 @@ function DashboardCalendar({
                 </Typography>
 
                 <List dense disablePadding sx={{ flexGrow: 1 }}>
-                  
-
                   {sortedLessons.length === 0 ? (
-                    <Box textAlign="center" py={1.5}>
-                      <Typography variant="body2" color={isCurrentDay ? 'primary.contrastText' : 'text.secondary'} fontSize="0.75rem">
-                        Nessuna lezione programmata
-                      </Typography>
-                    </Box>
+                    ''
                   ) : (
                     sortedLessons.map(lesson => (
                       <ListItem
@@ -201,8 +199,8 @@ function DashboardCalendar({
                       handleAddLessonClick(day);
                     }}
                     sx={{
-                      mb: 0.5,
-                      py: 0.7,
+                      mb: 1,
+                      py: 2,
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',
@@ -215,7 +213,7 @@ function DashboardCalendar({
                       transition: 'all 0.2s ease',
                       '&:hover': {
                         bgcolor: 'primary.main',
-                        transform: 'scale(1.02)',
+                        transform: 'scale(1.05)',
                       }
                     }}
                   >

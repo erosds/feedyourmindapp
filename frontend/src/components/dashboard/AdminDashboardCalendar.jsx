@@ -64,7 +64,7 @@ function AdminDashboardCalendar({
         align="center"
         sx={{
           fontWeight: 'bold',
-          fontSize: '1.1rem',
+          fontSize: '1.2rem',
           mb: 2,
           backgroundColor: 'primary.light',
           color: 'primary.contrastText',
