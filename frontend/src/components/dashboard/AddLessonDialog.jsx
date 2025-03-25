@@ -1,5 +1,5 @@
 // src/components/dashboard/AddLessonDialog.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Alert,
   Button,
@@ -23,7 +23,8 @@ import {
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { lessonService } from '../../services/api';
+import { lessonService, packageService } from '../../services/api';
+import StudentAutocomplete from '../common/StudentAutocomplete';
 
 function AddLessonDialog({
   open,
@@ -32,7 +33,7 @@ function AddLessonDialog({
   lessonForm,
   setLessonForm,
   students,
-  studentPackages,
+  studentPackages = [],
   selectedPackage,
   formError,
   formSubmitting,
@@ -44,6 +45,20 @@ function AddLessonDialog({
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isLoadingPackages, setIsLoadingPackages] = useState(false);
+  const [availablePackages, setAvailablePackages] = useState([]);
+
+  // Effetto per resettare l'errore quando il dialogo si apre o chiude
+  useEffect(() => {
+    if (open) {
+      setError('');
+    }
+  }, [open]);
+
+  // Effetto per aggiornare la lista di pacchetti disponibili
+  useEffect(() => {
+    setAvailablePackages(studentPackages.filter(pkg => pkg && pkg.status === 'in_progress') || []);
+  }, [studentPackages]);
 
   // Calcola le ore disponibili per il pacchetto selezionato
   const getAvailableHours = () => {
@@ -69,11 +84,103 @@ function AddLessonDialog({
 
   // Gestione del toggle is_package
   const handlePackageToggle = (e) => {
-    setLessonForm({
+    const isChecked = e.target.checked;
+    
+    // Se non c'è uno studente selezionato o non ci sono pacchetti, impedisci il cambio
+    if (!lessonForm.student_id || availablePackages.length === 0) {
+      return;
+    }
+    
+    // Nuovi valori del form
+    const newFormValues = {
       ...lessonForm,
-      is_package: e.target.checked,
-      package_id: e.target.checked ? lessonForm.package_id : null,
-    });
+      is_package: isChecked,
+      package_id: null // Reset iniziale
+    };
+    
+    // Se attiviamo la modalità pacchetto e ci sono pacchetti disponibili
+    if (isChecked && availablePackages.length > 0) {
+      // Seleziona automaticamente il primo pacchetto disponibile
+      newFormValues.package_id = availablePackages[0].id;
+      
+      // Se il pacchetto è già pagato, impostiamo is_paid a true
+      newFormValues.is_paid = true;
+    }
+    
+    setLessonForm(newFormValues);
+    
+    // Se abbiamo selezionato un pacchetto, chiamiamo anche handlePackageChange
+    if (isChecked && newFormValues.package_id) {
+      handlePackageChange(newFormValues.package_id);
+    }
+  };
+
+  // Gestione del cambio studente con l'autocompletamento
+  const handleStudentAutocomplete = async (studentId) => {
+    if (!studentId) {
+      setLessonForm({
+        ...lessonForm,
+        student_id: '',
+        package_id: null,
+        is_package: false
+      });
+      setAvailablePackages([]);
+      return;
+    }
+
+    try {
+      setIsLoadingPackages(true);
+      setLessonForm({
+        ...lessonForm,
+        student_id: studentId,
+        package_id: null,
+        is_package: false
+      });
+      
+      // Carica i pacchetti attivi dello studente
+      const packagesResponse = await packageService.getByStudent(studentId);
+      const activePackages = packagesResponse.data.filter(pkg => pkg.status === 'in_progress');
+      setAvailablePackages(activePackages);
+      
+      // Se ci sono pacchetti attivi, possiamo eventualmente impostare is_package a true
+      if (activePackages && activePackages.length > 0) {
+        // Opzionale: auto-seleziona il primo pacchetto
+        // setLessonForm(prev => ({
+        //   ...prev,
+        //   is_package: true,
+        //   package_id: activePackages[0].id
+        // }));
+        // handlePackageChange(activePackages[0].id);
+      }
+    } catch (err) {
+      console.error('Error in student selection:', err);
+      setError('Errore nel caricamento dei dati dello studente');
+      setAvailablePackages([]);
+    } finally {
+      setIsLoadingPackages(false);
+    }
+  };
+
+  // Formattazione della data per l'API
+  const formatDateForAPI = (date) => {
+    if (!date) return null;
+    try {
+      return format(date, 'yyyy-MM-dd');
+    } catch (err) {
+      console.error('Error formatting date:', err);
+      return null;
+    }
+  };
+
+  // Formattazione dell'orario per l'API
+  const formatTimeForAPI = (time) => {
+    if (!time) return null;
+    try {
+      return format(time, 'HH:mm:ss');
+    } catch (err) {
+      console.error('Error formatting time:', err);
+      return null;
+    }
   };
 
   // Salvataggio della lezione
@@ -82,14 +189,33 @@ function AddLessonDialog({
       setSubmitting(true);
       setError('');
 
+      // Validazione di base
+      if (!lessonForm.student_id) {
+        setError('Seleziona uno studente');
+        setSubmitting(false);
+        return;
+      }
+
+      if (!lessonForm.hourly_rate || lessonForm.hourly_rate <= 0) {
+        setError('Inserisci una tariffa oraria valida');
+        setSubmitting(false);
+        return;
+      }
+
+      if (lessonForm.is_package && !lessonForm.package_id) {
+        setError('Seleziona un pacchetto');
+        setSubmitting(false);
+        return;
+      }
+
       // Formatta la data per l'API
       const formattedValues = {
         ...lessonForm,
-        lesson_date: format(lessonForm.lesson_date, 'yyyy-MM-dd'),
-        start_time: format(lessonForm.start_time, 'HH:mm:ss'),
+        lesson_date: formatDateForAPI(lessonForm.lesson_date),
+        start_time: formatTimeForAPI(lessonForm.start_time),
         payment_date: lessonForm.is_paid && lessonForm.payment_date 
-        ? format(lessonForm.payment_date, 'yyyy-MM-dd')
-        : null,
+          ? formatDateForAPI(lessonForm.payment_date)
+          : null,
       };
 
       // Se utilizza un pacchetto, verifica che ci siano ore sufficienti
@@ -117,8 +243,15 @@ function AddLessonDialog({
       console.error('Error saving lesson:', err);
 
       // Gestione specifica dell'errore di overflow delle ore
-      if (err.response?.status === 409 && err.response?.data?.detail?.message?.includes('exceeds remaining')) {
-        setError(`Ore eccedenti: il pacchetto ha solo ${err.response.data.detail.remaining_hours} ore rimanenti. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.`);
+      if (err.response?.status === 409 && err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'object' && detail.message && detail.message.includes('exceeds remaining')) {
+          setError(`Ore eccedenti: il pacchetto ha solo ${detail.remaining_hours} ore rimanenti. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.`);
+        } else if (typeof detail === 'string' && detail.includes('exceeds remaining')) {
+          setError('Ore eccedenti nel pacchetto. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.');
+        } else {
+          setError(typeof detail === 'string' ? detail : 'Errore durante il salvataggio della lezione.');
+        }
       } else {
         setError('Errore durante il salvataggio della lezione. Verifica i dati e riprova.');
       }
@@ -129,6 +262,9 @@ function AddLessonDialog({
 
   // Disponibilità ore per il pacchetto selezionato
   const availableHours = getAvailableHours();
+
+  // Verifica se il toggle pacchetto deve essere disabilitato
+  const isPackageToggleDisabled = submitting || !lessonForm.student_id || availablePackages.length === 0;
 
   return (
     <Dialog
@@ -153,23 +289,15 @@ function AddLessonDialog({
 
         <Grid container spacing={3} sx={{ mt: 1 }}>
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
-              <InputLabel id="student-label">Studente</InputLabel>
-              <Select
-                labelId="student-label"
-                name="student_id"
-                value={lessonForm.student_id}
-                onChange={(e) => handleStudentChange(e.target.value)}
-                label="Studente"
-                required
-              >
-                {students.map((student) => (
-                  <MenuItem key={student.id} value={student.id}>
-                    {student.first_name} {student.last_name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <StudentAutocomplete
+              students={students}
+              value={lessonForm.student_id}
+              onChange={handleStudentAutocomplete}
+              disabled={submitting}
+              required
+              error={!lessonForm.student_id}
+              helperText={!lessonForm.student_id ? "Seleziona uno studente" : ""}
+            />
           </Grid>
 
           <Grid item xs={12} md={6}>
@@ -181,6 +309,7 @@ function AddLessonDialog({
                 textField: {
                   fullWidth: true,
                   required: true,
+                  disabled: submitting
                 },
               }}
             />
@@ -188,7 +317,7 @@ function AddLessonDialog({
 
           <Grid item xs={12} md={6}>
             <TimePicker
-              llabel="Orario inizio"
+              label="Orario inizio"
               value={lessonForm.start_time}
               onChange={(time) => setLessonForm({ ...lessonForm, start_time: time })}
               ampm={false}
@@ -199,6 +328,7 @@ function AddLessonDialog({
                 textField: {
                   fullWidth: true,
                   required: true,
+                  disabled: submitting
                 },
                 minutesClockNumberProps: { 
                   // Filtra i numeri dei minuti per mostrare solo 0 e 30
@@ -221,9 +351,10 @@ function AddLessonDialog({
                 step: 0.5,
               }}
               required
+              disabled={submitting}
               error={lessonForm.is_package && selectedPackage && parseFloat(lessonForm.duration) > availableHours}
               helperText={lessonForm.is_package && selectedPackage && parseFloat(lessonForm.duration) > availableHours ?
-                `Attenzione: la durata supera le ore disponibili (${availableHours})` : ''}
+                `Attenzione: la durata supera le ore disponibili (${availableHours.toFixed(1)})` : ''}
             />
           </Grid>
 
@@ -237,8 +368,12 @@ function AddLessonDialog({
               onChange={handleFormChange}
               InputProps={{
                 startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                inputProps: { min: 0.01, step: 0.5 }
               }}
               required
+              disabled={submitting}
+              error={!lessonForm.hourly_rate}
+              helperText={!lessonForm.hourly_rate ? "Inserisci una tariffa oraria" : ""}
             />
           </Grid>
 
@@ -246,25 +381,24 @@ function AddLessonDialog({
             <FormControlLabel
               control={
                 <Switch
-                  name="is_paid"
-                  checked={lessonForm.is_paid}
-                  onChange={(e) => {
-                    const isPaid = e.target.checked;
-                    setLessonForm({
-                      ...lessonForm,
-                      is_paid: isPaid,
-                      payment_date: isPaid ? new Date() : null
-                    });
-                  }}
+                  name="is_package"
+                  checked={lessonForm.is_package}
+                  onChange={handlePackageToggle}
+                  disabled={isPackageToggleDisabled}
                 />
               }
-              label="Lezione pagata"
+              label="Parte di un pacchetto"
             />
+            {lessonForm.student_id && availablePackages.length === 0 && (
+              <FormHelperText error>
+                Lo studente non ha pacchetti attivi
+              </FormHelperText>
+            )}
           </Grid>
 
           {lessonForm.is_package && (
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
+              <FormControl fullWidth disabled={isLoadingPackages || submitting}>
                 <InputLabel id="package-label">Pacchetto</InputLabel>
                 <Select
                   labelId="package-label"
@@ -272,17 +406,21 @@ function AddLessonDialog({
                   value={lessonForm.package_id || ''}
                   onChange={(e) => handlePackageChange(e.target.value)}
                   label="Pacchetto"
-                  disabled={studentPackages.length === 0}
-                  error={lessonForm.is_package && studentPackages.length === 0}
+                  disabled={availablePackages.length === 0 || isLoadingPackages || submitting}
+                  error={lessonForm.is_package && availablePackages.length === 0}
                 >
-                  {studentPackages.length === 0 ? (
+                  {isLoadingPackages ? (
+                    <MenuItem disabled>
+                      Caricamento pacchetti...
+                    </MenuItem>
+                  ) : availablePackages.length === 0 ? (
                     <MenuItem disabled>
                       Nessun pacchetto attivo per questo studente
                     </MenuItem>
                   ) : (
-                    studentPackages.map((pkg) => (
+                    availablePackages.map((pkg) => (
                       <MenuItem key={pkg.id} value={pkg.id}>
-                        {`Pacchetto #${pkg.id} - ore rimanenti: ${availableHours.toFixed(1)}`}
+                        {`Pacchetto #${pkg.id} - ${pkg.remaining_hours} ore rimanenti`}
                       </MenuItem>
                     ))
                   )}
@@ -301,6 +439,32 @@ function AddLessonDialog({
             </Grid>
           )}
 
+          <Grid item xs={12}>
+            <FormControlLabel
+              control={
+                <Switch
+                  name="is_paid"
+                  checked={lessonForm.is_paid}
+                  onChange={(e) => {
+                    const isPaid = e.target.checked;
+                    setLessonForm({
+                      ...lessonForm,
+                      is_paid: isPaid,
+                      payment_date: isPaid ? new Date() : null
+                    });
+                  }}
+                  disabled={submitting || (lessonForm.is_package && selectedPackage)}
+                />
+              }
+              label="Lezione pagata"
+            />
+            {lessonForm.is_package && (
+              <FormHelperText>
+                Le lezioni da pacchetto sono automaticamente considerate pagate
+              </FormHelperText>
+            )}
+          </Grid>
+
           {/* Stato del pagamento (solo per lezioni singole) */}
           {!lessonForm.is_package && lessonForm.is_paid && (
             <Grid item xs={12} md={6}>
@@ -312,6 +476,7 @@ function AddLessonDialog({
                   textField: {
                     fullWidth: true,
                     required: true,
+                    disabled: submitting
                   },
                 }}
               />
@@ -323,7 +488,7 @@ function AddLessonDialog({
             <TextField
               fullWidth
               label="Totale lezione"
-              value={`€ ${(lessonForm.duration * lessonForm.hourly_rate).toFixed(2) || '0.00'}`}
+              value={`€ ${((parseFloat(lessonForm.duration) || 0) * (parseFloat(lessonForm.hourly_rate) || 0)).toFixed(2)}`}
               InputProps={{
                 readOnly: true,
               }}
@@ -332,7 +497,12 @@ function AddLessonDialog({
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Annulla</Button>
+        <Button 
+          onClick={onClose} 
+          disabled={submitting}
+        >
+          Annulla
+        </Button>
         <Button
           onClick={handleSubmitLesson}
           color="primary"

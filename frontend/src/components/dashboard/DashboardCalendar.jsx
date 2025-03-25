@@ -39,20 +39,17 @@ function DashboardCalendar({
     end: endOfWeek(currentWeekStart, { weekStartsOn: 1 }),
   });
 
-  // Funzione per gestire il cambio settimana, calcolando le nuove date
+  // Funzione per gestire il cambio settimana
   const handleWeekChange = (action) => {
     if (action === 'prev') {
       // Settimana precedente
-      const newWeekStart = subWeeks(currentWeekStart, 1);
-      handleChangeWeek(newWeekStart);
+      handleChangeWeek(subWeeks(currentWeekStart, 1));
     } else if (action === 'next') {
       // Settimana successiva
-      const newWeekStart = addWeeks(currentWeekStart, 1);
-      handleChangeWeek(newWeekStart);
+      handleChangeWeek(addWeeks(currentWeekStart, 1));
     } else if (action === 'reset') {
       // Settimana corrente
-      const newWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-      handleChangeWeek(newWeekStart);
+      handleChangeWeek(startOfWeek(new Date(), { weekStartsOn: 1 }));
     }
   };
 
@@ -213,7 +210,7 @@ function DashboardCalendar({
                   }}
                   onClick={(e) => {
                     e.stopPropagation(); // Impedisce di aprire il dialogo del giorno
-                    handleAddLessonClick(day, e);
+                    handleAddLessonClick(day);
                   }}
                 >
                   <AddIcon />

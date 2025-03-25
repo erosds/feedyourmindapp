@@ -31,7 +31,7 @@ function StudentAutocomplete({
   // Carica gli studenti se non sono stati forniti come prop
   useEffect(() => {
     const fetchStudents = async () => {
-      if (students) {
+      if (Array.isArray(students)) {
         setOptions(students);
         return;
       }
@@ -39,7 +39,9 @@ function StudentAutocomplete({
       try {
         setLoading(true);
         const response = await studentService.getAll();
-        setOptions(response.data);
+        if (response && response.data) {
+          setOptions(response.data);
+        }
       } catch (err) {
         console.error('Errore nel caricamento degli studenti:', err);
       } finally {
@@ -50,11 +52,15 @@ function StudentAutocomplete({
     fetchStudents();
   }, [students]);
 
-  // Aggiorna lo studente selezionato quando cambia il valore
+  // Aggiorna lo studente selezionato quando cambia il valore o le opzioni
   useEffect(() => {
     if (value && options.length > 0) {
-      const student = options.find(s => s.id === parseInt(value));
-      setSelectedStudent(student || null);
+      if (typeof value === 'object') {
+        setSelectedStudent(value);
+      } else {
+        const student = options.find(s => s.id === parseInt(value));
+        setSelectedStudent(student || null);
+      }
     } else {
       setSelectedStudent(null);
     }
@@ -63,7 +69,9 @@ function StudentAutocomplete({
   // Gestisce il cambio di selezione
   const handleStudentChange = (event, newValue) => {
     setSelectedStudent(newValue);
-    onChange(newValue ? newValue.id : '');
+    if (typeof onChange === 'function') {
+      onChange(newValue ? newValue.id : '');
+    }
   };
 
   return (
