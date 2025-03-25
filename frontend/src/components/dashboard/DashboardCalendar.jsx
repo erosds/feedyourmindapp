@@ -5,7 +5,6 @@ import {
   Button,
   ButtonGroup,
   Grid,
-  IconButton,
   List,
   ListItem,
   Paper,
@@ -56,7 +55,7 @@ function DashboardCalendar({
   // Funzione per ordinare le lezioni per orario di inizio
   const sortLessonsByTime = (lessons) => {
     if (!Array.isArray(lessons)) return [];
-    
+
     return [...lessons].sort((a, b) => {
       // Estrae l'ora dall'attributo start_time (formato "HH:MM:SS")
       const timeA = a && a.start_time ? a.start_time.substring(0, 5) : '00:00';
@@ -129,15 +128,17 @@ function DashboardCalendar({
                   {format(day, "EEEE d", { locale: it })}
                 </Typography>
 
-                {sortedLessons.length === 0 ? (
-                  <Box textAlign="center" py={2} sx={{ flexGrow: 1 }}>
-                    <Typography variant="body2" color={isCurrentDay ? 'primary.contrastText' : 'text.secondary'}>
-                      Nessuna lezione
-                    </Typography>
-                  </Box>
-                ) : (
-                  <List dense disablePadding sx={{ flexGrow: 1 }}>
-                    {sortedLessons.map(lesson => (
+                <List dense disablePadding sx={{ flexGrow: 1 }}>
+                  
+
+                  {sortedLessons.length === 0 ? (
+                    <Box textAlign="center" py={1.5}>
+                      <Typography variant="body2" color={isCurrentDay ? 'primary.contrastText' : 'text.secondary'} fontSize="0.75rem">
+                        Nessuna lezione programmata
+                      </Typography>
+                    </Box>
+                  ) : (
+                    sortedLessons.map(lesson => (
                       <ListItem
                         key={`lesson-${lesson.id}`}
                         divider
@@ -190,31 +191,40 @@ function DashboardCalendar({
                           />
                         )}
                       </ListItem>
-                    ))}
-                  </List>
-                )}
-
-                {/* Pulsante di aggiunta rapida */}
-                <IconButton
-                  size="medium"
-                  color="primary"
-                  sx={{
-                    position: 'absolute',
-                    bottom: 5,
-                    right: 5,
-                    bgcolor: 'background.paper',
-                    '&:hover': { bgcolor: 'primary.light' },
-                    width: 42,
-                    height: 42,
-                    boxShadow: 1
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation(); // Impedisce di aprire il dialogo del giorno
-                    handleAddLessonClick(day);
-                  }}
-                >
-                  <AddIcon />
-                </IconButton>
+                    ))
+                  )}
+                  {/* Add Lesson button at the top of each day */}
+                  <ListItem
+                    button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Impedisce di aprire il dialogo del giorno
+                      handleAddLessonClick(day);
+                    }}
+                    sx={{
+                      mb: 0.5,
+                      py: 0.7,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      minHeight: '28px',
+                      bgcolor: isCurrentDay ? 'primary.dark' : 'primary.light',
+                      color: '#fff',
+                      borderRadius: 1,
+                      border: '1px dashed',
+                      borderColor: 'primary.main',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor: 'primary.main',
+                        transform: 'scale(1.02)',
+                      }
+                    }}
+                  >
+                    <AddIcon fontSize="small" sx={{ mr: 0.5 }} />
+                    <Typography variant="body2" fontWeight="medium" fontSize="0.75rem">
+                      Nuova lezione
+                    </Typography>
+                  </ListItem>
+                </List>
               </Paper>
             </Grid>
           );
