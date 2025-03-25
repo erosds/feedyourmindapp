@@ -128,14 +128,16 @@ function LessonFormPage() {
     // Salva la lezione originale
     setOriginalLesson(lesson);
 
-    // Carica pacchetti e lezioni correlate
-    if (lesson.is_package) {
-      await loadStudentPackages(lesson.student_id);
-      
-      if (lesson.package_id) {
-        await loadPackageLessons(lesson.package_id, lesson.id);
-      }
+    // Carica pacchetti per lo studente (indipendentemente dal tipo di lezione)
+    await loadStudentPackages(lesson.student_id);
+    
+    // Carica lezioni per il pacchetto selezionato se la lezione è parte di un pacchetto
+    if (lesson.is_package && lesson.package_id) {
+      await loadPackageLessons(lesson.package_id, lesson.id);
     }
+
+    // Carica lezioni dello studente per verificare sovrapposizioni
+    await loadStudentLessons(lesson.student_id);
 
     // Imposta i valori iniziali del form
     const lessonDate = new Date(lesson.lesson_date);
