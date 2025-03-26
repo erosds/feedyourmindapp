@@ -206,7 +206,7 @@ function DashboardCalendar({
                       justifyContent: 'center',
                       alignItems: 'center',
                       minHeight: '28px',
-                      bgcolor: isCurrentDay ? 'primary.main' : 'background.paper',
+                      bgcolor: isCurrentDay ? 'primary.dark' : 'background.paper',
                       borderRadius: 1,
 
                       transition: 'all 0.2s ease',
@@ -219,7 +219,6 @@ function DashboardCalendar({
                   >
                     <AddIcon fontSize="small" sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', mr: 0.5 }} />
                     <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
-                      Nuova Lezione
                     </Typography>
                   </ListItem>
                 </List>
