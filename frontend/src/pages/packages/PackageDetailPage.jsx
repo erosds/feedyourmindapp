@@ -485,9 +485,6 @@ function PackageDetailPage() {
                 {/* Date e orari */}
                 <Grid item xs={12}>
                   <Divider sx={{ my: 1 }} />
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Date e Scadenze
-                  </Typography>
                 </Grid>
 
                 <Grid item xs={12} md={4}>
@@ -529,9 +526,6 @@ function PackageDetailPage() {
                 {/* Dettagli economici */}
                 <Grid item xs={12}>
                   <Divider sx={{ my: 1 }} />
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Dettagli Economici
-                  </Typography>
                 </Grid>
 
                 <Grid item xs={12} md={4}>
@@ -560,16 +554,13 @@ function PackageDetailPage() {
                 {/* Dettagli orari */}
                 <Grid item xs={12}>
                   <Divider sx={{ my: 1 }} />
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Ore e Utilizzo
-                  </Typography>
                 </Grid>
 
                 <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
                     Ore totali
                   </Typography>
-                  <Typography variant="body1" fontWeight="medium" gutterBottom>
+                  <Typography variant="h6" fontWeight="medium" gutterBottom>
                     {packageData.total_hours}
                   </Typography>
                 </Grid>
@@ -579,7 +570,7 @@ function PackageDetailPage() {
                     Ore rimanenti
                   </Typography>
                   <Typography
-                    variant="body1"
+                    variant="h6"
                     fontWeight="bold"
                     color={remainingHours > 0 ? 'primary.main' : 'error'}
                   >
@@ -591,18 +582,18 @@ function PackageDetailPage() {
                   <Typography variant="body2" color="text.secondary">
                     Ore utilizzate
                   </Typography>
-                  <Typography variant="body1" fontWeight="medium">
+                  <Typography variant="h6" fontWeight="medium">
                     {usedHours.toFixed(1)}
                   </Typography>
                 </Grid>
 
                 {/* Barra di completamento */}
-                <Grid item xs={12} sx={{ mt: 1 }}>
+                <Grid item xs={12} sx={{ mt: 5 }}>
                   <Box display="flex" justifyContent="space-between" mb={0.5}>
-                    <Typography variant="body2">
-                      Completamento
+                    <Typography variant="body1">
+                      Completamento pacchetto:
                     </Typography>
-                    <Typography variant="body2" fontWeight="medium">
+                    <Typography variant="body1" fontWeight="medium">
                       {completionPercentage.toFixed(0)}%
                     </Typography>
                   </Box>
@@ -610,8 +601,29 @@ function PackageDetailPage() {
                     variant="determinate"
                     value={completionPercentage}
                     color={packageData.status === 'completed' ? 'success' : 'primary'}
-                    sx={{ height: 10, borderRadius: 1 }}
+                    sx={{
+                      height: 15,
+                      borderRadius: 1,
+                      backgroundImage: `repeating-linear-gradient(
+      to right,
+      transparent,
+      transparent 24.5%,
+      #fff 24.5%,
+      #fff 25%,
+      transparent 25%,
+      transparent 49.5%,
+      #fff 49.5%,
+      #fff 50%,
+      transparent 50%,
+      transparent 74.5%,
+      #fff 74.5%,
+      #fff 75%,
+      transparent 75%
+    )`,
+                    }}
                   />
+
+
                 </Grid>
               </Grid>
             </CardContent>
