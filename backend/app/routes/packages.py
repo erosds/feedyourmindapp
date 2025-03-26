@@ -17,15 +17,18 @@ router = APIRouter(
 
 def calculate_expiry_date(start_date: date) -> date:
     """
-    Calculate the expiration date for a package (30 days from start date).
+    Calculate the expiration date for a package.
+    The expiration date is the first Monday after four weeks from the start date.
     
     Args:
         start_date: Package start date
         
     Returns:
-        Expiration date (30 days after start date)
+        Expiration date (first Monday after four weeks)
     """
-    return start_date + timedelta(days=30)
+    four_weeks_later = start_date + timedelta(weeks=4)
+    days_to_monday = (7 - four_weeks_later.weekday()) % 7
+    return four_weeks_later + timedelta(days=days_to_monday)
 
 def update_package_status(db: Session, package_id: int, commit: bool = True):
     """

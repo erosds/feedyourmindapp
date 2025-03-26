@@ -20,7 +20,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
-import { format, parseISO, addDays } from 'date-fns';
+import { format, parseISO, addDays, startOfWeek } from 'date-fns';
 
 import { studentService, packageService, lessonService } from '../../services/api';
 import StudentAutocomplete from '../../components/common/StudentAutocomplete';
@@ -96,8 +96,17 @@ function PackageFormPage() {
   // Calculate expiry date (30 days from start date)
   const calculateExpiryDate = (startDate) => {
     if (!startDate) return null;
-    return addDays(new Date(startDate), 30);
+
+    // Troviamo il lunedì della settimana corrente
+    const currentWeekMonday = startOfWeek(startDate, { weekStartsOn: 1 });
+
+    // Aggiungiamo 4 settimane (28 giorni)
+    const expiryDate = addDays(currentWeekMonday, 28);
+
+    return expiryDate;
   };
+
+  
 
   // Load initial data
   useEffect(() => {
