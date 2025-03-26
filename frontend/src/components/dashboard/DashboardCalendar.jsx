@@ -208,7 +208,7 @@ function DashboardCalendar({
                       bgcolor: isCurrentDay ? 'primary.dark' : 'primary.light',
                       color: '#fff',
                       borderRadius: 1,
-                      border: '1px dashed',
+                      border: '1px',
                       borderColor: 'primary.main',
                       transition: 'all 0.2s ease',
                       '&:hover': {

@@ -1,6 +1,6 @@
 # models.py
 from datetime import date, datetime, time
-from typing import Optional, List
+from typing import Optional, List, Union
 from decimal import Decimal
 
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date, Time, DECIMAL, TIMESTAMP, CheckConstraint
@@ -54,8 +54,8 @@ class Package(Base):
     id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     start_date = Column(Date, nullable=False)
-    total_hours = Column(DECIMAL(5, 2), nullable=False)
-    package_cost = Column(DECIMAL(10, 2), nullable=False)
+    total_hours = Column(DECIMAL(5, 2), nullable=False, default=0)
+    package_cost = Column(DECIMAL(10, 2), nullable=False, default=0)
     status = Column(String, default="in_progress")
     is_paid = Column(Boolean, default=True)
     payment_date = Column(Date, nullable=True)  # Nuovo campo
@@ -66,7 +66,9 @@ class Package(Base):
 
     
     __table_args__ = (
-        CheckConstraint("total_hours > 0", name="positive_hours"),
+        # Modifica questo vincolo per considerare il package_type
+        CheckConstraint("(package_type = 'open' AND total_hours >= 0) OR (package_type = 'fixed' AND total_hours > 0)", 
+                       name="positive_hours"),
         CheckConstraint("package_cost >= 0", name="positive_cost"),
     )
     
@@ -193,45 +195,74 @@ class StudentResponse(StudentBase):
 class PackageBase(BaseModel):
     student_id: int
     start_date: date
-    total_hours: Decimal
-    package_cost: Decimal
+    total_hours: Decimal = Decimal('0')  # Default a zero
+    package_cost: Decimal = Decimal('0')  # Default a zero
     is_paid: bool = False
     payment_date: Optional[date] = None
-    
-    # Nuovi campi
-    package_type: str = "fixed"  # "fixed" o "open"
+    package_type: str = "open"  # Default a 'open'
     expiry_date: Optional[date] = None
-    
-    # Modificare il validator delle ore totali per tenere conto del tipo di pacchetto
+
     @field_validator('total_hours')
     @classmethod
-    def check_positive_hours(cls, v, info):
-        # Per pacchetti aperti, le ore possono essere null o >=0
+    def check_hours(cls, v, info):
+        # Ottieni il tipo di pacchetto
         values = info.data
-        if 'package_type' in values and values['package_type'] == 'open':
-            if v is None:
-                return v
-        # Per pacchetti fissi, le ore devono essere positive
-        if v is not None and v <= 0:
-            raise ValueError('total_hours must be positive')
+        package_type = values.get('package_type', 'open')
+        
+        # Per pacchetti aperti, permetti zero
+        if package_type == 'open':
+            return v if v is not None else Decimal('0')
+        
+        # Per pacchetti fissi, richiedi valore positivo
+        if package_type == 'fixed' and (v is None or v <= 0):
+            raise ValueError('total_hours must be positive for fixed packages')
+        
         return v
     
-    # Stesso discorso per il costo
     @field_validator('package_cost')
     @classmethod
-    def check_positive_cost(cls, v, info):
-        # Per pacchetti aperti, il costo può essere null o >=0
+    def check_cost(cls, v, info):
+        # Ottieni il tipo di pacchetto
         values = info.data
-        if 'package_type' in values and values['package_type'] == 'open':
-            if v is None:
-                return v
-        # Per pacchetti fissi, il costo deve essere >=0
-        if v is not None and v < 0:
-            raise ValueError('package_cost must be non-negative')
+        package_type = values.get('package_type', 'open')
+        
+        # Per pacchetti aperti, permetti zero
+        if package_type == 'open':
+            return v if v is not None else Decimal('0')
+        
+        # Per pacchetti fissi, richiedi non negativo
+        if package_type == 'fixed' and (v is None or v < 0):
+            raise ValueError('package_cost must be non-negative for fixed packages')
+        
         return v
 
-class PackageCreate(PackageBase):
-    pass
+class PackageCreate(BaseModel):
+    student_id: int
+    start_date: date
+    package_type: str
+    is_paid: bool = False
+    
+    # Campi opzionali con valori di default
+    total_hours: Optional[Decimal] = Decimal('0')
+    package_cost: Optional[Decimal] = Decimal('0')
+    payment_date: Optional[date] = None
+    
+    @model_validator(mode='after')
+    def validate_package_fields(self):
+        # Per pacchetti aperti, permetti valori zero o nulli
+        if self.package_type == 'open':
+            self.total_hours = self.total_hours or Decimal('0')
+            self.package_cost = self.package_cost or Decimal('0')
+            return self
+        
+        # Per pacchetti fissi, mantieni la validazione precedente
+        if self.package_type == 'fixed':
+            if self.total_hours is None or self.total_hours <= 0:
+                raise ValueError('total_hours must be positive for fixed packages')
+            if self.package_cost is None or self.package_cost < 0:
+                raise ValueError('package_cost must be non-negative for fixed packages')
+        
+        return self
 
 class PackageUpdate(BaseModel):
     start_date: Optional[date] = None
@@ -246,21 +277,25 @@ class PackageUpdate(BaseModel):
     expiry_date: Optional[date] = None
 
     
-# Modificare il validator delle ore totali per tenere conto del tipo di pacchetto
     @field_validator('total_hours')
     @classmethod
     def check_positive_hours(cls, v, info):
-        # Per pacchetti aperti, le ore possono essere null o >=0
+        # Prima controlla se è un pacchetto aperto
         values = info.data
         if 'package_type' in values and values['package_type'] == 'open':
-            if v is None:
-                return v
-        # Per pacchetti fissi, le ore devono essere positive
-        if v is not None and v <= 0:
+            # Per i pacchetti aperti, accetta null o zero
+            if v is None or v == 0:
+                    return Decimal('0')  # Converti null in zero esplicitamente
+    
+        # Per tutti gli altri casi (pacchetti fissi o se è fornito un valore per pacchetti aperti)
+        if v is None:
+            raise ValueError('total_hours is required')
+    
+        if v <= 0:
             raise ValueError('total_hours must be positive')
+    
         return v
     
-    # Stesso discorso per il costo
     @field_validator('package_cost')
     @classmethod
     def check_positive_cost(cls, v, info):
@@ -274,13 +309,29 @@ class PackageUpdate(BaseModel):
             raise ValueError('package_cost must be non-negative')
         return v
 
+# Classe di risposta specifica per pacchetti aperti (senza validatori)
+class OpenPackageResponse(BaseModel):
+    id: int
+    student_id: int
+    start_date: date
+    total_hours: Decimal  # Senza validatore
+    package_cost: Decimal  # Senza validatore
+    status: str
+    is_paid: bool
+    remaining_hours: Decimal
+    created_at: datetime
+    payment_date: Optional[date] = None
+    package_type: str
+    expiry_date: Optional[date] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
 class PackageResponse(PackageBase):
     id: int
     status: str
     remaining_hours: Decimal
     created_at: datetime
-    payment_date: Optional[date] = None  # Nuovo campo
-
+    payment_date: Optional[date] = None
     
     model_config = ConfigDict(from_attributes=True)
 

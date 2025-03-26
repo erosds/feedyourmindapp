@@ -83,28 +83,40 @@ def calculate_expiry_date(start_date: date) -> date:
 # Modifiche alla route di creazione
 @router.post("/", response_model=models.PackageResponse, status_code=status.HTTP_201_CREATED)
 def create_package(package: models.PackageCreate, db: Session = Depends(get_db)):
-    # Logica esistente per verificare studente e pacchetti attivi
-    # ...
+    # Controlla se lo studente esiste
+    student = db.query(models.Student).filter(models.Student.id == package.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Verifica se ci sono altri pacchetti attivi per lo studente
+    active_package = db.query(models.Package).filter(
+        models.Package.student_id == package.student_id,
+        models.Package.status == "in_progress"
+    ).first()
+    
+    if active_package:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "Lo studente ha già un pacchetto attivo",
+                "active_package_id": active_package.id,
+                "active_package_remaining_hours": float(active_package.remaining_hours)
+            }
+        )
     
     # Determina la data di pagamento
-    payment_date = None
-    if package.is_paid:
-        payment_date = package.payment_date or package.start_date
+    payment_date = package.payment_date or (package.start_date if package.is_paid else None)
     
+    # Gestisci i valori per i pacchetti aperti
+    total_hours = package.total_hours or Decimal('0')
+    package_cost = package.package_cost or Decimal('0')
+
     # Calcola la data di scadenza per pacchetti a durata fissa
     expiry_date = None
     if package.package_type == "fixed":
         expiry_date = calculate_expiry_date(package.start_date)
     
-    # Gestione del total_hours e package_cost per pacchetti aperti
-    total_hours = package.total_hours
-    package_cost = package.package_cost
-    if package.package_type == "open" and not package.is_paid:
-        # Per pacchetti aperti non pagati, possiamo inizializzare a 0
-        total_hours = Decimal('0')
-        package_cost = Decimal('0')
-    
-    # Crea un nuovo pacchetto con i campi aggiornati
+    # Crea un nuovo pacchetto
     db_package = models.Package(
         student_id=package.student_id,
         start_date=package.start_date,
@@ -113,7 +125,7 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
         status="in_progress",
         is_paid=package.is_paid,
         payment_date=payment_date,
-        remaining_hours=total_hours,  # Inizialmente, le ore rimanenti sono uguali al totale
+        remaining_hours=total_hours,  # Le ore rimanenti sono le ore totali
         package_type=package.package_type,
         expiry_date=expiry_date
     )

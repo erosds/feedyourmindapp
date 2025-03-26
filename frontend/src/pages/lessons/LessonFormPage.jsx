@@ -365,23 +365,32 @@ function LessonFormPage() {
   };
 
   // Controlla se la durata supera le ore disponibili nel pacchetto
-  const handlePackageOverflow = async (formattedValues) => {
-    const { hasOverflow, details } = checkPackageOverflow({
-      formValues: formattedValues,
-      packages,
-      packageLessons: lessonsInPackage,
-      originalLesson: isEditMode ? originalLesson : null
-    });
-    
-    if (hasOverflow) {
-      setOverflowLessonData(formattedValues);
-      setOverflowDetails(details);
-      setOverflowDialogOpen(true);
-      return true;
-    }
-    
+  // Nel componente LessonFormPage.jsx
+const handlePackageOverflow = async (formattedValues) => {
+  // Se è un pacchetto aperto, non gestire l'overflow
+  if (formattedValues.is_package && packages.find(p => 
+    p.id === parseInt(formattedValues.package_id) && 
+    p.package_type === 'open')
+  ) {
     return false;
-  };
+  }
+
+  const { hasOverflow, details } = checkPackageOverflow({
+    formValues: formattedValues,
+    packages,
+    packageLessons: lessonsInPackage,
+    originalLesson: isEditMode ? originalLesson : null
+  });
+  
+  if (hasOverflow) {
+    setOverflowLessonData(formattedValues);
+    setOverflowDetails(details);
+    setOverflowDialogOpen(true);
+    return true;
+  }
+  
+  return false;
+};
 
   // Calcola le ore disponibili nel pacchetto selezionato
   const calculatePackageHours = (packageId, totalHours) => {
