@@ -243,7 +243,7 @@ function PackageListPage() {
   // SortableTableCell component for column headers
   const SortableTableCell = ({ id, label, numeric }) => {
     const isActive = orderBy === id;
-    
+
     return (
       <TableCell
         align={numeric ? "right" : "left"}
@@ -293,21 +293,21 @@ function PackageListPage() {
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Packages</Typography>
+        <Typography variant="h4">Pacchetti</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleAddPackage}
         >
-          New Package
+          Nuovo pacchetto
         </Button>
       </Box>
 
       <Box mb={3} display="flex" alignItems="center">
         <TextField
           variant="outlined"
-          label="Search by student name"
+          label="Ricerca per nome studente"
           value={searchTerm}
           onChange={handleSearchChange}
           sx={{ flexGrow: 1, mr: 2 }}
@@ -323,7 +323,7 @@ function PackageListPage() {
               color="primary"
             />
           }
-          label="Only active packages"
+          label="Solo pacchetti in corso"
         />
       </Box>
 
@@ -332,22 +332,22 @@ function PackageListPage() {
           <TableHead>
             <TableRow>
               <SortableTableCell id="id" label="ID" />
-              <SortableTableCell id="student_id" label="Student" />
-              <SortableTableCell id="start_date" label="Start Date" />
-              <SortableTableCell id="expiry_date" label="Expiry Date" />
-              <SortableTableCell id="total_hours" label="Total Hours" />
-              <SortableTableCell id="remaining_hours" label="Remaining Hours" />
-              <SortableTableCell id="package_cost" label="Cost" />
-              <SortableTableCell id="status" label="Status" />
-              <SortableTableCell id="is_paid" label="Payment" />
-              <TableCell align="right">Actions</TableCell>
+              <SortableTableCell id="student_id" label="Studente" />
+              <SortableTableCell id="start_date" label="Data Inizio" />
+              <SortableTableCell id="expiry_date" label="Data Scadenza" />
+              <SortableTableCell id="total_hours" label="Totale Ore" />
+              <SortableTableCell id="remaining_hours" label="Ore Rimanenti" />
+              <SortableTableCell id="package_cost" label="Costo" />
+              <SortableTableCell id="status" label="Stato" />
+              <SortableTableCell id="is_paid" label="Pagamento" />
+              <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredPackages.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} align="center">
-                  No packages found
+                  Nessun pacchetto presente
                 </TableCell>
               </TableRow>
             ) : (
@@ -368,10 +368,10 @@ function PackageListPage() {
                     <TableCell>#{pkg.id}</TableCell>
                     <TableCell>{students[pkg.student_id] || `Student #${pkg.student_id}`}</TableCell>
                     <TableCell>
-                      {format(parseISO(pkg.start_date), 'dd/MM/yyyy', { locale: it })}
+                      {format(parseISO(pkg.start_date), 'EEEE dd/MM/yyyy', { locale: it })}
                     </TableCell>
                     <TableCell>
-                      {format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it })}
+                      {format(parseISO(pkg.expiry_date), 'EEEE dd/MM/yyyy', { locale: it })}
                     </TableCell>
                     <TableCell>{pkg.total_hours}</TableCell>
                     <TableCell>{parseFloat(pkg.remaining_hours).toFixed(1)}</TableCell>
@@ -379,21 +379,23 @@ function PackageListPage() {
                     <TableCell>
                       <Chip
                         label={
-                          pkg.status === 'in_progress' ? 'In Progress' :
-                          pkg.status === 'expired' ? 'Expired' :
-                          'Completed'
+                          pkg.status === 'in_progress' ? 'In corso' :
+                            pkg.status === 'expired' && pkg.is_paid ? 'Terminato' :
+                              pkg.status === 'expired' && !pkg.is_paid ? 'Scaduto' :
+                                'In corso'
                         }
+
                         color={
                           pkg.status === 'in_progress' ? 'primary' :
-                          pkg.status === 'expired' ? 'warning' :
-                          'success'
+                            pkg.status === 'expired' ? 'warning' :
+                              'success'
                         }
                         size="small"
                       />
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={pkg.is_paid ? 'Paid' : 'Not paid'}
+                        label={pkg.is_paid ? 'Saldato' : 'Non saldato'}
                         color={pkg.is_paid ? 'success' : 'error'}
                         size="small"
                         variant="outlined"
@@ -430,7 +432,7 @@ function PackageListPage() {
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Rows per page:"
+          labelRowsPerPage="Righe per pagina:"
           labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
         />
       </TableContainer>

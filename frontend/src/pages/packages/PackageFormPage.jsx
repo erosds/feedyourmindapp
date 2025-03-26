@@ -85,7 +85,7 @@ function PackageFormPage() {
           (!isEditMode || pkg.id !== parseInt(id))
         );
         if (activePackages.length > 0) {
-          setInfoMessage("Warning: the student already has an active package.");
+          setInfoMessage("Attenzione: lo studente ha già un pacchetto all'attivo.");
         } else {
           setInfoMessage('');
         }
@@ -213,7 +213,7 @@ function PackageFormPage() {
       .catch(err => {
         console.error('Error saving package:', err);
         let errorMessage = 'Error during save. ';
-        
+
         if (err.response?.data) {
           try {
             if (Array.isArray(err.response.data)) {
@@ -227,7 +227,7 @@ function PackageFormPage() {
             errorMessage += 'Data validation error.';
           }
         }
-        
+
         setError(errorMessage);
       })
       .finally(() => setSubmitting(false));
@@ -244,21 +244,21 @@ function PackageFormPage() {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        {isEditMode ? 'Edit Package' : 'New Package'}
+        {isEditMode ? 'Modifica Pacchetto' : 'Nuovo Pacchetto'}
       </Typography>
-      
+
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
-      
+
       {infoMessage && (
         <Alert severity="info" sx={{ mb: 3 }}>
           {infoMessage}
         </Alert>
       )}
-      
+
       <Paper sx={{ p: 3 }}>
         <Formik
           initialValues={initialValues}
@@ -278,6 +278,15 @@ function PackageFormPage() {
             <Form>
               <Grid container spacing={3}>
                 {/* ROW 1: Student and Start Date */}
+                <Grid item xs={12}>
+                  <Typography variant="h6">
+                    Dettagli Pacchetto
+                  </Typography>
+                </Grid>
+
+                {/* ROW 2: Package Info */}
+
+
                 <Grid item xs={12} md={6}>
                   <StudentAutocomplete
                     value={values.student_id}
@@ -292,7 +301,7 @@ function PackageFormPage() {
                     students={students}
                   />
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
                   <DatePicker
                     label="Start Date"
@@ -311,27 +320,19 @@ function PackageFormPage() {
                   />
                 </Grid>
 
-                {/* ROW 2: Package Info */}
-                <Grid item xs={12}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Package Details
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" paragraph>
-                    This is a one-month package that expires 30 days after the start date.
-                  </Typography>
-                </Grid>
+
 
                 {/* ROW 3: Expiry Date and Hours */}
                 <Grid item xs={12} md={6}>
                   <DatePicker
-                    label="Expiry Date"
+                    label="Data di Scadenza"
                     value={calculateExpiryDate(values.start_date)}
                     readOnly
                     disabled
                     slotProps={{
                       textField: {
                         fullWidth: true,
-                        helperText: "Package expires 30 days after start date",
+                        helperText: "Il pacchetto scade al termine della 4ᵃ settimana",
                       },
                     }}
                   />
@@ -341,7 +342,7 @@ function PackageFormPage() {
                   <TextField
                     fullWidth
                     name="total_hours"
-                    label="Total Hours"
+                    label="Ore totali pacchetto"
                     type="number"
                     value={values.total_hours}
                     onChange={handleChange}
@@ -364,7 +365,7 @@ function PackageFormPage() {
                   <TextField
                     fullWidth
                     name="package_cost"
-                    label="Package Cost"
+                    label="Costo Pacchetto"
                     type="number"
                     value={values.package_cost}
                     onChange={handleChange}
@@ -385,9 +386,6 @@ function PackageFormPage() {
                 {/* ROW 5: Package Status */}
                 <Grid item xs={12}>
                   <Divider sx={{ my: 2 }} />
-                  <Typography variant="h6" gutterBottom>
-                    Package Status
-                  </Typography>
                 </Grid>
 
                 <Grid item xs={12} md={4}>
@@ -412,14 +410,28 @@ function PackageFormPage() {
                         }}
                       />
                     }
-                    label="Package Paid"
+                    label="Pacchetto Pagato"
                   />
                 </Grid>
 
+                {/* ROW 6: Package Status Info */}
+                <Grid item xs={12} md={8}>
+                  <Alert severity="info">
+                    <Typography variant="body2">
+                      Lo stato del pacchetto verrà aggiornato automaticamente:
+                      <ul>
+                        <li><strong>In corso</strong>: La data odierna è precedente alla data di scadenza e il pacchetto non è pagato.</li>
+                        <li><strong>Scaduto</strong>: La data odierna è successiva alla data di scadenza e il pacchetto non è pagato.</li>
+                        <li><strong>Completato</strong>: Il pacchetto è stato contrassegnato come pagato.</li>
+                      </ul>
+                    </Typography>
+
+                  </Alert>
+                </Grid>
                 {values.is_paid && (
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={4} mt={-10}>
                     <DatePicker
-                      label="Payment Date"
+                      label="Data del Pagamento"
                       value={values.payment_date}
                       onChange={(date) => setFieldValue('payment_date', date)}
                       slotProps={{
@@ -433,29 +445,14 @@ function PackageFormPage() {
                     />
                   </Grid>
                 )}
-
-                {/* ROW 6: Package Status Info */}
-                <Grid item xs={12}>
-                  <Alert severity="info" sx={{ mt: 2 }}>
-                    <Typography variant="body2">
-                      The package status will be automatically updated based on:
-                      <ul>
-                        <li><strong>In Progress</strong>: Current date is before expiry date and not paid</li>
-                        <li><strong>Expired</strong>: Current date is after expiry date and not paid</li>
-                        <li><strong>Completed</strong>: Package is marked as paid</li>
-                      </ul>
-                    </Typography>
-                  </Alert>
-                </Grid>
-
                 {/* ROW 7: Action Buttons */}
                 <Grid item xs={12}>
                   <Box display="flex" justifyContent="flex-end" gap={2}>
                     <Button variant="outlined" onClick={() => navigate('/packages')} disabled={isSubmitting}>
-                      Cancel
+                      Cancella
                     </Button>
                     <Button type="submit" variant="contained" color="primary" disabled={isSubmitting}>
-                      {isSubmitting ? <CircularProgress size={24} /> : isEditMode ? 'Update' : 'Create'}
+                      {isSubmitting ? <CircularProgress size={24} /> : isEditMode ? 'Aggiorna modifiche' : 'Crea Pacchetto'}
                     </Button>
                   </Box>
                 </Grid>
