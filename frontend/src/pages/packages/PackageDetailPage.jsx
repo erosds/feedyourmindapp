@@ -37,6 +37,7 @@ import { format, parseISO, getYear, getMonth, getDaysInMonth, startOfMonth, getD
 import { it } from 'date-fns/locale';
 import { packageService, studentService, lessonService, professorService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import PackageStatusCard from '../../components/packages/PackageStatusCard';
 
 function PackageDetailPage() {
   const { id } = useParams();
@@ -457,6 +458,62 @@ function PackageDetailPage() {
                       {student.first_name} {student.last_name}
                     </Link>
                   </Typography>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body2" color="text.secondary">
+                    Tipo di pacchetto
+                  </Typography>
+                  <Typography variant="body1" gutterBottom>
+                    {packageData.package_type === 'fixed' ? 'Pacchetto 4 settimane' : 'Pacchetto aperto'}
+                  </Typography>
+                </Grid>
+
+                {/* Mostra la data di scadenza solo per pacchetti a durata fissa */}
+                {packageData.package_type === 'fixed' && packageData.expiry_date && (
+                  <Grid item xs={12} md={4}>
+                    <Typography variant="body2" color="text.secondary">
+                      Data di scadenza
+                    </Typography>
+                    <Typography variant="body1" gutterBottom>
+                      {format(parseISO(packageData.expiry_date), 'dd/MM/yyyy', { locale: it })}
+                    </Typography>
+                  </Grid>
+                )}
+                {/* Statistiche e stato pacchetto */}
+                <Grid item xs={12} md={4}>
+                  <PackageStatusCard
+                    packageData={packageData}
+                    usedHours={usedHours}
+                  />
+
+                  {/* Statistiche aggiuntive se necessarie */}
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        Statistiche
+                      </Typography>
+                      <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={6}>
+                          <Box textAlign="center">
+                            <EventIcon color="primary" fontSize="large" />
+                            <Typography variant="h6">{lessons.length}</Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Lezioni registrate
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Box textAlign="center">
+                            <AccessTimeIcon color="primary" fontSize="large" />
+                            <Typography variant="h6">{usedHours.toFixed(1)}</Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Ore effettuate
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                  </Card>
                 </Grid>
                 <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">

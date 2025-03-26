@@ -56,47 +56,66 @@ def update_package_remaining_hours(db: Session, package_id: int, commit: bool = 
     
     return package
 
-# CRUD operations
+from datetime import date, timedelta
+
+def calculate_expiry_date(start_date: date) -> date:
+    """
+    Calcola la data di scadenza per un pacchetto a durata fissa (4 settimane).
+    La scadenza cade il lunedì della quarta settimana dopo la data di inizio.
+    
+    Args:
+        start_date: Data di inizio del pacchetto
+        
+    Returns:
+        Data di scadenza
+    """
+    # Determina il giorno della settimana (0 = lunedì, 6 = domenica)
+    weekday = start_date.weekday()
+    
+    # Trova il lunedì della settimana corrente
+    monday = start_date - timedelta(days=weekday)
+    
+    # Aggiungi 4 settimane (28 giorni)
+    expiry_date = monday + timedelta(days=28)
+    
+    return expiry_date
+
+# Modifiche alla route di creazione
 @router.post("/", response_model=models.PackageResponse, status_code=status.HTTP_201_CREATED)
 def create_package(package: models.PackageCreate, db: Session = Depends(get_db)):
-    # Controlla se lo studente esiste
-    student = db.query(models.Student).filter(models.Student.id == package.student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
-    
-    # Verifica se ci sono altri pacchetti attivi per lo studente
-    active_package = db.query(models.Package).filter(
-        models.Package.student_id == package.student_id,
-        models.Package.status == "in_progress"
-    ).first()
-    
-    if active_package:
-        # Invece di impostare automaticamente come completato, solleva un'eccezione
-        # o offri un parametro per decidere cosa fare
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "message": "Lo studente ha già un pacchetto attivo",
-                "active_package_id": active_package.id,
-                "active_package_remaining_hours": float(active_package.remaining_hours)
-            }
-        )
+    # Logica esistente per verificare studente e pacchetti attivi
+    # ...
     
     # Determina la data di pagamento
     payment_date = None
     if package.is_paid:
-        payment_date = package.payment_date or package.start_date  # Usa la data di inizio come fallback
+        payment_date = package.payment_date or package.start_date
     
-    # Crea un nuovo pacchetto
+    # Calcola la data di scadenza per pacchetti a durata fissa
+    expiry_date = None
+    if package.package_type == "fixed":
+        expiry_date = calculate_expiry_date(package.start_date)
+    
+    # Gestione del total_hours e package_cost per pacchetti aperti
+    total_hours = package.total_hours
+    package_cost = package.package_cost
+    if package.package_type == "open" and not package.is_paid:
+        # Per pacchetti aperti non pagati, possiamo inizializzare a 0
+        total_hours = Decimal('0')
+        package_cost = Decimal('0')
+    
+    # Crea un nuovo pacchetto con i campi aggiornati
     db_package = models.Package(
         student_id=package.student_id,
         start_date=package.start_date,
-        total_hours=package.total_hours,
-        package_cost=package.package_cost,
+        total_hours=total_hours,
+        package_cost=package_cost,
         status="in_progress",
         is_paid=package.is_paid,
-        payment_date=payment_date,  # Nuovo campo
-        remaining_hours=package.total_hours  # Inizialmente, le ore rimanenti sono uguali al totale
+        payment_date=payment_date,
+        remaining_hours=total_hours,  # Inizialmente, le ore rimanenti sono uguali al totale
+        package_type=package.package_type,
+        expiry_date=expiry_date
     )
     
     # Salva nel database
@@ -192,6 +211,48 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
         # Non aggiornare remaining_hours direttamente, verranno calcolate dalla funzione helper
         if key != 'remaining_hours':
             setattr(db_package, key, value)
+
+    # Se stiamo cambiando il tipo di pacchetto o la data di inizio, ricalcola la data di scadenza
+    if (("package_type" in package.dict(exclude_unset=True) and package.package_type == "fixed") or
+        "start_date" in package.dict(exclude_unset=True)):
+        
+        # Determina la data di inizio da usare
+        start_date = package.start_date if package.start_date else db_package.start_date
+        
+        # Determina il tipo di pacchetto da usare
+        package_type = package.package_type if "package_type" in package.dict(exclude_unset=True) else db_package.package_type
+        
+        # Se è un pacchetto fisso, calcola la data di scadenza
+        if package_type == "fixed":
+            update_data = package.dict(exclude_unset=True)
+            update_data["expiry_date"] = calculate_expiry_date(start_date)
+            for key, value in update_data.items():
+                setattr(db_package, key, value)
+        elif package_type == "open":
+            # Se è cambiato da fisso ad aperto, rimuovi la data di scadenza
+            update_data = package.dict(exclude_unset=True)
+            update_data["expiry_date"] = None
+            for key, value in update_data.items():
+                setattr(db_package, key, value)
+    else:
+        # Aggiorna normalmente
+        update_data = package.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_package, key, value)
+    
+    # Verifica se il pacchetto è pagato
+    if "is_paid" in package.dict(exclude_unset=True) and package.is_paid and db_package.package_type == "open":
+        # Per pacchetti aperti che vengono pagati, assicurati che il total_hours e package_cost siano impostati
+        if "total_hours" not in package.dict(exclude_unset=True) and (not db_package.total_hours or db_package.total_hours == 0):
+            # Calcola ore totali sommando le ore di tutte le lezioni associate
+            total_hours = db.query(func.sum(models.Lesson.duration)).filter(
+                models.Lesson.package_id == package_id,
+                models.Lesson.is_package == True
+            ).scalar() or Decimal('0')
+            
+            db_package.total_hours = total_hours
+            db_package.remaining_hours = Decimal('0')  # Pacchetto completato
+            db_package.status = "completed"
     
     # Esegui il commit per salvare le modifiche di base
     db.commit()

@@ -62,17 +62,17 @@ function PackageListPage() {
     if (orderBy === 'start_date') {
       return new Date(b.start_date) - new Date(a.start_date);
     }
-    
+
     // Per i campi numerici
     if (['total_hours', 'remaining_hours', 'package_cost'].includes(orderBy)) {
       return parseFloat(b[orderBy]) - parseFloat(a[orderBy]);
     }
-    
+
     // Per student_id, usa il nome mappato
     if (orderBy === 'student_id') {
       return (students[b.student_id] || '').localeCompare(students[a.student_id] || '');
     }
-    
+
     // Per ordinare in base allo stato
     if (orderBy === 'status') {
       // Prima i pacchetti attivi
@@ -85,14 +85,30 @@ function PackageListPage() {
     if (orderBy === 'is_paid') {
       return (b.is_paid === a.is_paid) ? 0 : b.is_paid ? -1 : 1;
     }
-    
+
     // Per ottenere un ordinamento preciso in base alle ore rimanenti
     if (orderBy === 'remaining_calc') {
       const remainingA = getRemainingHours(a);
       const remainingB = getRemainingHours(b);
       return remainingB - remainingA;
     }
-    
+
+    // Per il tipo di pacchetto
+    if (orderBy === 'package_type') {
+      return (a.package_type === b.package_type) ? 0 :
+        (a.package_type === 'fixed' ? -1 : 1);
+    }
+
+    // Per la data di scadenza
+    if (orderBy === 'expiry_date') {
+      // Gestisci il caso in cui uno o entrambi non abbiano data di scadenza
+      if (!a.expiry_date && !b.expiry_date) return 0;
+      if (!a.expiry_date) return 1;
+      if (!b.expiry_date) return -1;
+
+      return new Date(b.expiry_date) - new Date(a.expiry_date);
+    }
+
     // Per altri campi
     if (b[orderBy] < a[orderBy]) {
       return -1;
@@ -122,14 +138,14 @@ function PackageListPage() {
 
   // Funzione per calcolare le ore utilizzate e rimanenti di ogni pacchetto
   const calculatePackageStats = (packageId, lessons) => {
-    const packageLessons = lessons.filter(lesson => 
+    const packageLessons = lessons.filter(lesson =>
       lesson.package_id === packageId && lesson.is_package
     );
-    
-    const usedHours = packageLessons.reduce((total, lesson) => 
+
+    const usedHours = packageLessons.reduce((total, lesson) =>
       total + parseFloat(lesson.duration), 0
     );
-    
+
     return {
       usedHours,
       lessonsCount: packageLessons.length
@@ -140,11 +156,11 @@ function PackageListPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
+
         // Carica tutti i pacchetti
         const packagesResponse = await packageService.getAll();
         setPackages(packagesResponse.data);
-        
+
         // Carica tutti gli studenti per mostrare i loro nomi
         const studentsResponse = await studentService.getAll();
         const studentsMap = {};
@@ -155,17 +171,17 @@ function PackageListPage() {
 
         // Carica tutte le lezioni per calcolare le ore utilizzate
         const lessonsResponse = await lessonService.getAll();
-        
+
         // Crea una mappa di lezioni per pacchetto
         const lessonsMap = {};
         packagesResponse.data.forEach(pkg => {
           lessonsMap[pkg.id] = calculatePackageStats(
-            pkg.id, 
+            pkg.id,
             lessonsResponse.data
           );
         });
         setLessonsPerPackage(lessonsMap);
-        
+
         // Imposta i pacchetti filtrati
         setFilteredPackages(packagesResponse.data);
       } catch (err) {
@@ -181,7 +197,7 @@ function PackageListPage() {
 
   useEffect(() => {
     let filtered = [...packages];
-    
+
     // Filtra per termine di ricerca (nome studente)
     if (searchTerm.trim() !== '') {
       const lowercaseSearch = searchTerm.toLowerCase();
@@ -190,12 +206,12 @@ function PackageListPage() {
         return studentName.toLowerCase().includes(lowercaseSearch);
       });
     }
-    
+
     // Filtra per stato (attivo o tutti)
     if (showActive) {
       filtered = filtered.filter(pkg => pkg.status === 'in_progress');
     }
-    
+
     // Applica l'ordinamento
     const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
     setFilteredPackages(sortedFiltered);
@@ -234,58 +250,58 @@ function PackageListPage() {
 
   const handleDeletePackage = async (id, event) => {
     event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
-    
+
     try {
       // Prima ottieni le lezioni per questo pacchetto per mostrare all'utente
       const lessonsResponse = await lessonService.getAll();
-      const packageLessons = lessonsResponse.data.filter(lesson => 
+      const packageLessons = lessonsResponse.data.filter(lesson =>
         lesson.package_id === id && lesson.is_package
       );
-      
+
       let confirmMessage = `Sei sicuro di voler eliminare il pacchetto #${id}?`;
-      
+
       // Se ci sono lezioni associate, avvisa l'utente che verranno eliminate anche quelle
       if (packageLessons.length > 0) {
         confirmMessage += `\n\nATTENZIONE: Questo pacchetto contiene ${packageLessons.length} lezioni che verranno eliminate:`;
-        
+
         // Aggiungi informazioni sulle prime 5 lezioni (per non rendere il messaggio troppo lungo)
         const maxLessonsToShow = 5;
         packageLessons.slice(0, maxLessonsToShow).forEach(lesson => {
           const lessonDate = format(parseISO(lesson.lesson_date), 'dd/MM/yyyy', { locale: it });
           confirmMessage += `\n- Lezione #${lesson.id} del ${lessonDate} (${lesson.duration} ore)`;
         });
-        
+
         // Se ci sono più di 5 lezioni, indica che ce ne sono altre
         if (packageLessons.length > maxLessonsToShow) {
           confirmMessage += `\n...e altre ${packageLessons.length - maxLessonsToShow} lezioni`;
         }
       }
-      
+
       confirmMessage += "\n\nQuesta azione non può essere annullata.";
-      
+
       if (window.confirm(confirmMessage)) {
         const response = await packageService.delete(id);
-        
+
         // Mostra messaggio di conferma con dettagli sulle lezioni eliminate
         if (response.data && response.data.deleted_lessons_count > 0) {
           alert(`Pacchetto #${id} eliminato con successo insieme a ${response.data.deleted_lessons_count} lezioni associate.`);
         }
-        
+
         // Aggiorna la lista dopo l'eliminazione
         const packagesResponse = await packageService.getAll();
         setPackages(packagesResponse.data);
-        
+
         // Aggiorna le statistiche delle lezioni
         const updatedLessonsResponse = await lessonService.getAll();
         const lessonsMap = {};
         packagesResponse.data.forEach(pkg => {
           lessonsMap[pkg.id] = calculatePackageStats(
-            pkg.id, 
+            pkg.id,
             updatedLessonsResponse.data
           );
         });
         setLessonsPerPackage(lessonsMap);
-        
+
         // Applica i filtri
         let filtered = [...packagesResponse.data];
         if (searchTerm.trim() !== '') {
@@ -310,7 +326,7 @@ function PackageListPage() {
   const getRemainingHours = (pkg) => {
     const stats = lessonsPerPackage[pkg.id];
     if (!stats) return parseFloat(pkg.remaining_hours);
-    
+
     // Calcola le ore rimanenti come differenza tra ore totali e ore utilizzate
     return parseFloat(pkg.total_hours) - stats.usedHours;
   };
@@ -318,7 +334,7 @@ function PackageListPage() {
   // Componente SortableTableCell per le intestazioni delle colonne
   const SortableTableCell = ({ id, label, numeric }) => {
     const isActive = orderBy === id;
-    
+
     return (
       <TableCell
         align={numeric ? "right" : "left"}
@@ -409,6 +425,9 @@ function PackageListPage() {
               <SortableTableCell id="id" label="ID" />
               <SortableTableCell id="student_id" label="Studente" />
               <SortableTableCell id="start_date" label="Data Inizio" />
+              <SortableTableCell id="package_type" label="Tipo" />  {/* Nuova colonna */}
+              {/* Per i pacchetti a durata fissa */}
+              <SortableTableCell id="expiry_date" label="Scadenza" />  {/* Nuova colonna */}
               <SortableTableCell id="total_hours" label="Ore Totali" />
               <SortableTableCell id="remaining_calc" label="Ore Rimanenti" />
               <SortableTableCell id="package_cost" label="Costo" />
@@ -430,13 +449,13 @@ function PackageListPage() {
                 .map((pkg) => {
                   // Calcola le ore rimanenti in tempo reale
                   const remainingHours = getRemainingHours(pkg);
-                  
+
                   return (
-                    <TableRow 
+                    <TableRow
                       key={pkg.id}
                       hover
                       onClick={() => handleViewPackage(pkg.id)}
-                      sx={{ 
+                      sx={{
                         cursor: 'pointer',
                         '&:hover': {
                           backgroundColor: 'rgba(0, 0, 0, 0.04)'
@@ -447,6 +466,19 @@ function PackageListPage() {
                       <TableCell>{students[pkg.student_id] || `Studente #${pkg.student_id}`}</TableCell>
                       <TableCell>
                         {format(parseISO(pkg.start_date), 'dd/MM/yyyy', { locale: it })}
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={pkg.package_type === 'fixed' ? 'Fisso (4 sett.)' : 'Aperto'}
+                          color={pkg.package_type === 'fixed' ? 'primary' : 'secondary'}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {pkg.package_type === 'fixed' && pkg.expiry_date ?
+                          format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it }) :
+                          '-'}
                       </TableCell>
                       <TableCell>{pkg.total_hours}</TableCell>
                       <TableCell>{remainingHours.toFixed(1)}</TableCell>

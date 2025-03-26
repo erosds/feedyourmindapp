@@ -9,13 +9,12 @@ import {
   Divider,
   FormControl,
   FormControlLabel,
-  FormHelperText,
+  FormLabel,
   Grid,
   InputAdornment,
-  InputLabel,
-  MenuItem,
   Paper,
-  Select,
+  Radio,
+  RadioGroup,
   Switch,
   TextField,
   Typography,
@@ -26,27 +25,38 @@ import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { format, parseISO } from 'date-fns';
 import StudentAutocomplete from '../../components/common/StudentAutocomplete';
-
+import { startOfWeek, addDays } from 'date-fns';
 
 // Schema di validazione
 const PackageSchema = Yup.object().shape({
   student_id: Yup.number().required('Studente obbligatorio'),
   start_date: Yup.date()
     .required('Data inizio obbligatoria'),
+  package_type: Yup.string().required('Tipo di pacchetto obbligatorio'),
   total_hours: Yup.number()
-    .positive('Il numero di ore deve essere positivo')
-    .required('Numero di ore obbligatorio')
-    .test('min-overflow-hours', 'Le ore totali devono essere almeno pari alle ore eccedenti della lezione',
-      function (value) {
-        const { from } = this.options;
-        if (from && from.context && from.context.overflow_hours && value < from.context.overflow_hours) {
-          return false;
-        }
-        return true;
-      }),
+    .when('package_type', {
+      is: 'fixed',
+      then: () => Yup.number()
+        .positive('Il numero di ore deve essere positivo')
+        .required('Numero di ore obbligatorio')
+        .test('min-overflow-hours', 'Le ore totali devono essere almeno pari alle ore eccedenti della lezione',
+          function (value) {
+            const { from } = this.options;
+            if (from && from.context && from.context.overflow_hours && value < from.context.overflow_hours) {
+              return false;
+            }
+            return true;
+          }),
+      otherwise: () => Yup.number().nullable(),
+    }),
   package_cost: Yup.number()
-    .min(0, 'Il costo non può essere negativo')
-    .required('Costo pacchetto obbligatorio'),
+    .when('package_type', {
+      is: 'fixed',
+      then: () => Yup.number()
+        .min(0, 'Il costo non può essere negativo')
+        .required('Costo pacchetto obbligatorio'),
+      otherwise: () => Yup.number().nullable(),
+    }),
   is_paid: Yup.boolean(),
 });
 
@@ -70,7 +80,8 @@ function PackageFormPage() {
     package_cost: '',
     is_paid: false,
     payment_date: null,  // Nuovo campo
-
+    package_type: 'fixed',  // Nuovo campo, default "fixed" (pacchetto 4 settimane)
+    expiry_date: null,  // Nuovo campo
   });
 
   useEffect(() => {
@@ -107,8 +118,11 @@ function PackageFormPage() {
             total_hours: packageData.total_hours,
             package_cost: packageData.package_cost,
             is_paid: packageData.is_paid,
+            package_type: packageData.package_type || 'fixed',
+            expiry_date: packageData.expiry_date ? parseISO(packageData.expiry_date) : null,
           });
         }
+
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Impossibile caricare i dati. Riprova più tardi.');
@@ -156,6 +170,19 @@ function PackageFormPage() {
     }
   };
 
+  // Funzione per calcolare automaticamente la data di scadenza
+  const calculateExpiryDate = (startDate) => {
+    if (!startDate) return null;
+
+    // Troviamo il lunedì della settimana corrente
+    const currentWeekMonday = startOfWeek(startDate, { weekStartsOn: 1 });
+
+    // Aggiungiamo 4 settimane (28 giorni)
+    const expiryDate = addDays(currentWeekMonday, 28);
+
+    return expiryDate;
+  };
+
   const handleSubmit = async (values, { setSubmitting, setFieldError }) => {
     try {
       setError(null);
@@ -179,13 +206,16 @@ function PackageFormPage() {
         paymentDate = format(values.payment_date, 'yyyy-MM-dd');
       }
 
-      // Formatta la data per l'API
       const formattedValues = {
         ...values,
         start_date: format(values.start_date, 'yyyy-MM-dd'),
         status: status,
         remaining_hours: remainingHours,
-        payment_date: paymentDate
+        payment_date: paymentDate,
+        // Calcola la data di scadenza per pacchetti a durata fissa
+        expiry_date: values.package_type === 'fixed'
+          ? format(calculateExpiryDate(values.start_date), 'yyyy-MM-dd')
+          : null,
       };
 
       let newPackageId;
@@ -280,6 +310,100 @@ function PackageFormPage() {
 
             return (
               <Form>
+                <Grid item xs={12}>
+                  <FormControl component="fieldset">
+                    <FormLabel component="legend">Tipo di pacchetto</FormLabel>
+                    <RadioGroup
+                      row
+                      name="package_type"
+                      value={values.package_type}
+                      onChange={(e) => {
+                        const newType = e.target.value;
+                        setFieldValue('package_type', newType);
+
+                        // Se cambiamo da aperto a fisso, calcoliamo la data di scadenza
+                        if (newType === 'fixed') {
+                          setFieldValue('expiry_date', calculateExpiryDate(values.start_date));
+                        } else {
+                          // Se cambiamo da fisso ad aperto, resettiamo alcuni campi
+                          if (!isEditMode) {
+                            setFieldValue('total_hours', '');
+                            setFieldValue('package_cost', '');
+                          }
+                        }
+                      }}
+                    >
+                      <FormControlLabel value="fixed" control={<Radio />} label="Pacchetto 4 settimane" />
+                      <FormControlLabel value="open" control={<Radio />} label="Pacchetto aperto" />
+                    </RadioGroup>
+                  </FormControl>
+                </Grid>
+
+                {/* Campo data di scadenza (solo visibile, calcolato automaticamente) */}
+                {values.package_type === 'fixed' && (
+                  <Grid item xs={12} md={6}>
+                    <DatePicker
+                      label="Data di scadenza (calcolata automaticamente)"
+                      value={calculateExpiryDate(values.start_date)}
+                      readOnly
+                      disabled
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          helperText: "Lunedì della 4ª settimana dalla data di inizio",
+                        },
+                      }}
+                    />
+                  </Grid>
+                )}
+
+                {/* Rendere condizionali i campi di ore totali e costo pacchetto */}
+                {(values.package_type === 'fixed' || isEditMode || (values.package_type === 'open' && values.is_paid)) && (
+                  <>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        name="total_hours"
+                        label={values.package_type === 'open' ? "Ore accumulate" : "Totale ore"}
+                        type="number"
+                        value={values.total_hours}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={touched.total_hours && Boolean(errors.total_hours)}
+                        helperText={
+                          (touched.total_hours && errors.total_hours) ||
+                          (isEditMode ? `Ore già utilizzate: ${hoursUsed}` : '') ||
+                          (!isEditMode && overflowHours > 0 ? `Minimo: ${overflowHours} ore (eccedenti dalla lezione originale)` : '')
+                        }
+                        inputProps={{
+                          min: isEditMode ? hoursUsed : (overflowHours > 0 ? overflowHours : 0.5),
+                          step: 0.5,
+                        }}
+                        required={values.package_type === 'fixed'}
+                        disabled={values.package_type === 'open' && !values.is_paid}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        name="package_cost"
+                        label="Costo pacchetto"
+                        type="number"
+                        value={values.package_cost}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={touched.package_cost && Boolean(errors.package_cost)}
+                        helperText={touched.package_cost && errors.package_cost}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                        }}
+                        required={values.package_type === 'fixed'}
+                        disabled={values.package_type === 'open' && !values.is_paid}
+                      />
+                    </Grid>
+                  </>
+                )}
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={6}>
                     <StudentAutocomplete
