@@ -71,7 +71,7 @@ function StudentDetailPage() {
         setLessons(lessonsResponse.data);
       } catch (err) {
         console.error('Error fetching student data:', err);
-        setError('Impossibile caricare i dati dello studente. Riprova più tardi.');
+        setError('Impossibile caricare i dati dello studente. Prova a riaggiornare la pagina.');
       } finally {
         setLoading(false);
       }

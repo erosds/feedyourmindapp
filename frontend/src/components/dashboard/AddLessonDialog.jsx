@@ -91,7 +91,7 @@ function AddLessonDialog({
       setStudentLessons(response.data || []);
     } catch (err) {
       console.error('Error loading student lessons:', err);
-      setError('Impossibile caricare le lezioni dello studente');
+      setError('Impossibile caricare le lezioni dello studente. Prova a riaggiornare la pagina.');
     }
   };
 
@@ -474,7 +474,7 @@ function AddLessonDialog({
               />
               {lessonForm.is_package && (
                 <FormHelperText>
-                  La lezione viene saldata con il pacchetto stesso
+                  La lezione viene saldata con il pacchetto stesso.
                 </FormHelperText>
               )}
             </Grid>

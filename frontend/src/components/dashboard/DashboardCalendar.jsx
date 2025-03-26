@@ -220,11 +220,15 @@ function DashboardCalendar({
                       }
                     }}
                   >
-                    <AddIcon fontSize="small" sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', mr: 0.5 }} />
-                    <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
-                      Nuova Lezione
+                    <AddIcon fontSize="small" sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', mr: 0.3 }} />
+                    <Box sx={{ width: '100%'}}>
+                    <Typography variant="body1" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
+                      Nuova
                     </Typography>
-
+                    <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
+                      lezione
+                    </Typography>
+                    </Box>
                   </ListItem>
                 </List>
               </Paper>

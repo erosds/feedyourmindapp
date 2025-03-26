@@ -82,7 +82,7 @@ function LessonDetailPage() {
         }
       } catch (err) {
         console.error('Error fetching lesson data:', err);
-        setError('Impossibile caricare i dati della lezione. Riprova più tardi.');
+        setError('Impossibile caricare i dati della lezione. Prova a riaggiornare la pagina.');
       } finally {
         setLoading(false);
       }

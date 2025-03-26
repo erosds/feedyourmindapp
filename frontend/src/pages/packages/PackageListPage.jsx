@@ -186,7 +186,7 @@ function PackageListPage() {
         setFilteredPackages(packagesResponse.data);
       } catch (err) {
         console.error('Error fetching packages:', err);
-        setError('Impossibile caricare la lista dei pacchetti. Riprova più tardi.');
+        setError('Impossibile caricare la lista dei pacchetti. Prova a riaggiornare la pagina.');
       } finally {
         setLoading(false);
       }

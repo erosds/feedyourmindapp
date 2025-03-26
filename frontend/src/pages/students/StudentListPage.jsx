@@ -104,7 +104,7 @@ function StudentListPage() {
         setFilteredStudents(response.data);
       } catch (err) {
         console.error('Error fetching students:', err);
-        setError('Impossibile caricare la lista degli studenti. Riprova più tardi.');
+        setError('Impossibile caricare la lista degli studenti. Prova a riaggiornare la pagina.');
       } finally {
         setLoading(false);
       }

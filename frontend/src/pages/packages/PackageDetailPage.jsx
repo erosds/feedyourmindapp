@@ -116,7 +116,7 @@ function PackageDetailPage() {
         setProfessors(professorsMap);
       } catch (err) {
         console.error('Error fetching package data:', err);
-        setError('Impossibile caricare i dati del pacchetto. Riprova più tardi.');
+        setError('Impossibile caricare i dati del pacchetto. Prova a riaggiornare la pagina.');
       } finally {
         setLoading(false);
       }

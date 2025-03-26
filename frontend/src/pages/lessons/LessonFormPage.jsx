@@ -99,7 +99,7 @@ function LessonFormPage() {
         }
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Impossibile caricare i dati. Riprova più tardi.');
+        setError('Impossibile caricare i dati. Prova a riaggiornare la pagina.');
       } finally {
         setLoading(false);
       }
@@ -258,7 +258,7 @@ function LessonFormPage() {
       return response.data;
     } catch (err) {
       console.error('Error loading student lessons:', err);
-      setError('Impossibile caricare le lezioni dello studente');
+      setError('Impossibile caricare le lezioni dello studente. Prova a riaggiornare la pagina.');
       return [];
     }
   };

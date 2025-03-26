@@ -62,7 +62,7 @@ function AdminDashboardPage() {
         setLessons(lessonsResponse.data);
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Impossibile caricare i dati. Riprova più tardi.');
+        setError('Impossibile caricare i dati. Prova a riaggiornare la pagina.');
       } finally {
         setLoading(false);
       }

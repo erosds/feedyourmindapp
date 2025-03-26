@@ -55,7 +55,7 @@ function AdminResetPasswordPage() {
         setProfessors(sortedProfessors);
       } catch (err) {
         console.error('Errore nel recupero dei professori:', err);
-        setError('Impossibile caricare la lista dei professori');
+        setError('Impossibile caricare la lista dei professori. Prova a riaggiornare la pagina.');
       } finally {
         setFetchingUsers(false);
       }

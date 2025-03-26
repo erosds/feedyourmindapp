@@ -77,7 +77,7 @@ function StudentFormPage() {
       });
     } catch (err) {
       console.error('Error fetching student:', err);
-      setError('Impossibile caricare i dati dello studente. Riprova più tardi.');
+      setError('Impossibile caricare i dati dello studente. Prova a riaggiornare la pagina.');
     } finally {
       setLoading(false);
     }

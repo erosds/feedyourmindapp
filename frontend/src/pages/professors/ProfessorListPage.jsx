@@ -101,7 +101,7 @@ function ProfessorListPage() {
         setFilteredProfessors(response.data);
       } catch (err) {
         console.error('Error fetching professors:', err);
-        setError('Impossibile caricare la lista dei professori. Riprova più tardi.');
+        setError('Impossibile caricare la lista dei professori. Prova a riaggiornare la pagina.');
       } finally {
         setLoading(false);
       }

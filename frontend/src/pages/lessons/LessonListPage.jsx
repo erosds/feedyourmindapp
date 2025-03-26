@@ -168,7 +168,7 @@ function LessonListPage() {
         }
       } catch (err) {
         console.error('Error fetching lessons:', err);
-        setError('Impossibile caricare la lista delle lezioni. Riprova più tardi.');
+        setError('Impossibile caricare la lista delle lezioni. Prova a riaggiornare la pagina.');
       } finally {
         setLoading(false);
       }

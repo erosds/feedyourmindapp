@@ -82,7 +82,7 @@ function ProfessorFormPage() {
           });
         } catch (err) {
           console.error('Error fetching professor:', err);
-          setError('Impossibile caricare i dati del professore. Riprova più tardi.');
+          setError('Impossibile caricare i dati del professore. Prova a riaggiornare la pagina.');
         } finally {
           setLoading(false);
         }
