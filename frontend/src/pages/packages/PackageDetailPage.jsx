@@ -598,8 +598,6 @@ function PackageDetailPage() {
                     {usedHours.toFixed(1)}
                   </Typography>
                 </Grid>
-
-// Modifica la barra di completamento e la sua descrizione
                 <Grid item xs={12} sx={{ mt: 5 }}>
                   <Box display="flex" justifyContent="space-between" mb={0.5}>
                     <Typography variant="body1">

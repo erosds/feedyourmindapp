@@ -1,18 +1,17 @@
 # create_admin.py
 import sys
 import os
+from dotenv import load_dotenv
+
+# Aggiunge il path del progetto al PYTHONPATH
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Aggiungi questo per caricare il file .env
-from dotenv import load_dotenv
+# Carica variabili d'ambiente
 load_dotenv()
 
-from sqlalchemy.orm import Session
 from app import models
 from app.database import SessionLocal, engine
 from app.utils import get_password_hash
-
-# Resto del codice invariato
 
 # Crea le tabelle se non esistono
 models.Base.metadata.create_all(bind=engine)

@@ -1,8 +1,6 @@
 # main.py
 import os
 from dotenv import load_dotenv
-
-# Carica le variabili d'ambiente dal file .env
 load_dotenv()
 
 from fastapi import FastAPI, Depends, HTTPException, status
@@ -11,7 +9,6 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Dict
-
 
 from app import models, database
 from app.database import get_db
@@ -22,55 +19,47 @@ from app.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES, 
     get_current_professor
 )
-
-from app import models, database
 from app.utils import verify_password, get_password_hash
 from app.auth import get_current_admin
 
-# Creazione dell'istanza dell'applicazione FastAPI
+# Creazione dell'app FastAPI
 app = FastAPI(
     title="School Management API",
     description="API per la gestione di una scuola di ripetizioni private",
     version="0.1.0"
 )
 
-# Configurazione CORS aggiornata per risolvere problemi di accesso cross-origin
+# Configurazione CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Consenti tutte le origini per il test
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Consenti tutti i metodi HTTP
-    allow_headers=["*"],  # Consenti tutte le intestazioni
-    expose_headers=["*"],  # Esponi tutte le intestazioni nella risposta
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
-# Crea tutte le tabelle nel database
+# Crea tabelle database
 models.Base.metadata.create_all(bind=database.engine)
 
 # Endpoint per ottenere un token di accesso
 @app.post("/token")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    try:
-        professor = authenticate_professor(db, form_data.username, form_data.password)
-        if not professor:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Username o password non corretti",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": professor.username, "is_admin": professor.is_admin},
-            expires_delta=access_token_expires
+    professor = authenticate_professor(db, form_data.username, form_data.password)
+    if not professor:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Username o password non corretti",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-        
-        return {"access_token": access_token, "token_type": "bearer"}
-    except Exception as e:
-        # Log l'errore specifico
-        print(f"ERRORE IN TOKEN ENDPOINT: {str(e)}")
-        # Rilancia l'eccezione per FastAPI
-        raise
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": professor.username, "is_admin": professor.is_admin},
+        expires_delta=access_token_expires
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
 
 # Endpoint per ottenere i dati dell'utente corrente
 @app.get("/users/me", response_model=models.ProfessorResponse)
@@ -87,30 +76,30 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
-# Includi i router delle varie entità
+# Include i router delle varie entità
 app.include_router(professors.router)
 app.include_router(students.router)
 app.include_router(packages.router)
 app.include_router(lessons.router)
 
-# Endpoint per le statistiche finanziarie (solo per admin)
+# Endpoint per le statistiche
 @app.get("/stats/finance", tags=["statistics"])
 def get_finance_stats(db: Session = Depends(get_db)):
-    # Totale entrate dai pacchetti pagati
+    # Entrate dai pacchetti pagati
     packages_income = db.query(models.Package).filter(
         models.Package.is_paid == True
     ).with_entities(
         db.func.sum(models.Package.package_cost)
     ).scalar() or 0
     
-    # Totale entrate dalle lezioni singole
+    # Entrate dalle lezioni singole
     single_lessons_income = db.query(models.Lesson).filter(
         models.Lesson.is_package == False
     ).with_entities(
         db.func.sum(models.Lesson.total_payment)
     ).scalar() or 0
     
-    # Totale uscite (pagamenti ai professori)
+    # Uscite (pagamenti ai professori)
     expenses = db.query(models.Lesson).with_entities(
         db.func.sum(models.Lesson.total_payment)
     ).scalar() or 0
@@ -127,7 +116,6 @@ def get_finance_stats(db: Session = Depends(get_db)):
         "net_profit": net_profit
     }
 
-# Endpoint per le statistiche degli studenti
 @app.get("/stats/students", tags=["statistics"])
 def get_student_stats(db: Session = Depends(get_db)):
     # Numero totale di studenti
@@ -140,7 +128,7 @@ def get_student_stats(db: Session = Depends(get_db)):
         models.Package.student_id
     ).distinct().count()
     
-    # Studenti più attivi (per numero di lezioni)
+    # Studenti più attivi
     top_students = db.query(
         models.Student.id,
         models.Student.first_name,
@@ -166,13 +154,12 @@ def get_student_stats(db: Session = Depends(get_db)):
         ]
     }
 
-# Endpoint per le statistiche dei professori
 @app.get("/stats/professors", tags=["statistics"])
 def get_professor_stats(db: Session = Depends(get_db)):
     # Numero totale di professori
     total_professors = db.query(models.Professor).count()
     
-    # Professori più attivi (per numero di lezioni)
+    # Professori più attivi
     top_professors = db.query(
         models.Professor.id,
         models.Professor.first_name,
@@ -199,7 +186,7 @@ def get_professor_stats(db: Session = Depends(get_db)):
         ]
     }
 
-# Endpoint per cambiare la password
+# Endpoint per gestione password
 @app.post("/change-password", tags=["auth"])
 async def change_password(
     change_data: Dict[str, str], 
@@ -215,7 +202,6 @@ async def change_password(
             detail="Username, password attuale e nuova password sono richiesti"
         )
     
-    # Trova il professore
     professor = db.query(models.Professor).filter(models.Professor.username == username).first()
     if not professor:
         raise HTTPException(
@@ -223,17 +209,13 @@ async def change_password(
             detail="Utente non trovato"
         )
     
-    # Verifica la password attuale
     if not verify_password(old_password, professor.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Password attuale non corretta"
         )
     
-    # Aggiorna con la nuova password
-    hashed_password = get_password_hash(new_password)
-    professor.password = hashed_password
-    
+    professor.password = get_password_hash(new_password)
     db.commit()
     
     return {"message": "Password aggiornata con successo"}
@@ -253,7 +235,6 @@ async def admin_reset_password(
             detail="Username e nuova password sono richiesti"
         )
     
-    # Verifica che l'username esista
     professor = db.query(models.Professor).filter(models.Professor.username == username).first()
     if not professor:
         raise HTTPException(
@@ -261,18 +242,13 @@ async def admin_reset_password(
             detail=f"Utente con username {username} non trovato"
         )
     
-    # Verifica che la password rispetti i requisiti
     if len(new_password) < 4:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="La nuova password deve essere di almeno 4 caratteri"
         )
     
-    # Hash della nuova password
-    hashed_password = get_password_hash(new_password)
-    
-    # Aggiorna la password
-    professor.password = hashed_password
+    professor.password = get_password_hash(new_password)
     db.commit()
     
     return {"message": "Password resettata con successo"}

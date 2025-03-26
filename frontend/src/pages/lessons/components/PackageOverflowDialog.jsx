@@ -17,22 +17,8 @@ import {
 /**
  * Dialog per gestire il caso in cui le ore della lezione superano le ore rimanenti del pacchetto
  */
-function PackageOverflowDialog({ 
-  open, 
-  onClose, 
-  onAction, 
-  details,
-  loading = false
-}) {
+function PackageOverflowDialog({ open, onClose, onAction, details, loading = false }) {
   const [action, setAction] = useState('use_package');
-
-  const handleActionChange = (event) => {
-    setAction(event.target.value);
-  };
-
-  const handleProceed = () => {
-    onAction(action);
-  };
 
   return (
     <Dialog
@@ -57,7 +43,7 @@ function PackageOverflowDialog({
             aria-label="overflow-action"
             name="overflow-action"
             value={action}
-            onChange={handleActionChange}
+            onChange={(e) => setAction(e.target.value)}
           >
             <FormControlLabel
               value="use_package"
@@ -76,7 +62,12 @@ function PackageOverflowDialog({
         <Button onClick={onClose} color="primary">
           Annulla
         </Button>
-        <Button onClick={handleProceed} color="primary" variant="contained">
+        <Button 
+          onClick={() => onAction(action)} 
+          color="primary" 
+          variant="contained"
+          disabled={loading}
+        >
           {loading ? <CircularProgress size={24} /> : 'Procedi'}
         </Button>
       </DialogActions>
