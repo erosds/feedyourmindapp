@@ -427,12 +427,12 @@ function PackageListPage() {
               <SortableTableCell id="start_date" label="Data Inizio" />
               <SortableTableCell id="package_type" label="Tipo" />  {/* Nuova colonna */}
               {/* Per i pacchetti a durata fissa */}
-              <SortableTableCell id="expiry_date" label="Scadenza" />  {/* Nuova colonna */}
               <SortableTableCell id="total_hours" label="Ore Totali" />
               <SortableTableCell id="remaining_calc" label="Ore Rimanenti" />
               <SortableTableCell id="package_cost" label="Costo" />
               <SortableTableCell id="status" label="Stato" />
               <SortableTableCell id="is_paid" label="Pagamento" />
+              <SortableTableCell id="expiry_date" label="Scadenza" />  {/* Nuova colonna */}
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
@@ -469,17 +469,13 @@ function PackageListPage() {
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={pkg.package_type === 'fixed' ? 'Fisso (4 sett.)' : 'Aperto'}
+                          label={pkg.package_type === 'fixed' ? 'Fisso 4 sett.' : 'Aperto'}
                           color={pkg.package_type === 'fixed' ? 'primary' : 'secondary'}
                           size="small"
                           variant="outlined"
                         />
                       </TableCell>
-                      <TableCell>
-                        {pkg.package_type === 'fixed' && pkg.expiry_date ?
-                          format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it }) :
-                          '-'}
-                      </TableCell>
+                      
                       <TableCell>{pkg.total_hours}</TableCell>
                       <TableCell>{remainingHours.toFixed(1)}</TableCell>
                       <TableCell>€{parseFloat(pkg.package_cost).toFixed(2)}</TableCell>
@@ -497,6 +493,11 @@ function PackageListPage() {
                           size="small"
                           variant="outlined"
                         />
+                      </TableCell>
+                      <TableCell>
+                        {pkg.package_type === 'fixed' && pkg.expiry_date ?
+                          format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it }) :
+                          '-'}
                       </TableCell>
                       <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                         <Tooltip title="Modifica">

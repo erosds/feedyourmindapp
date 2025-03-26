@@ -441,30 +441,61 @@ function PackageDetailPage() {
 
       {/* Dati principali */}
       <Grid container spacing={3}>
-        {/* Informazioni pacchetto */}
+        {/* Intestazione con informazioni di base del pacchetto */}
         <Grid item xs={12} md={8}>
-          <Card sx={{ height: '100%' }}>
+          <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Informazioni Pacchetto
               </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={12} md={3}>
+                {/* Colonna Sinistra */}
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
                     Studente
                   </Typography>
-                  <Typography variant="body1" gutterBottom>
+                  <Typography variant="body1" fontWeight="medium" gutterBottom>
                     <Link to={`/students/${student.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                       {student.first_name} {student.last_name}
                     </Link>
                   </Typography>
                 </Grid>
+
                 <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
                     Tipo di pacchetto
                   </Typography>
-                  <Typography variant="body1" gutterBottom>
+                  <Typography variant="body1" fontWeight="medium" gutterBottom>
                     {packageData.package_type === 'fixed' ? 'Pacchetto 4 settimane' : 'Pacchetto aperto'}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body2" color="text.secondary">
+                    Stato pacchetto
+                  </Typography>
+                  <Chip
+                    label={packageData.status === 'in_progress' ? 'In corso' : 'Terminato'}
+                    color={packageData.status === 'in_progress' ? 'primary' : 'default'}
+                    size="small"
+                    sx={{ mt: 0.5 }}
+                  />
+                </Grid>
+
+                {/* Date e orari */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Date e Scadenze
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body2" color="text.secondary">
+                    Data inizio
+                  </Typography>
+                  <Typography variant="body1" fontWeight="medium" gutterBottom>
+                    {format(parseISO(packageData.start_date), 'dd MMMM yyyy', { locale: it })}
                   </Typography>
                 </Grid>
 
@@ -474,69 +505,47 @@ function PackageDetailPage() {
                     <Typography variant="body2" color="text.secondary">
                       Data di scadenza
                     </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      {format(parseISO(packageData.expiry_date), 'dd/MM/yyyy', { locale: it })}
+                    <Typography variant="body1" fontWeight="medium" color="error" gutterBottom>
+                      {format(parseISO(packageData.expiry_date), 'dd MMMM yyyy', { locale: it })}
                     </Typography>
                   </Grid>
                 )}
-                {/* Statistiche e stato pacchetto */}
-                <Grid item xs={12} md={4}>
-                  <PackageStatusCard
-                    packageData={packageData}
-                    usedHours={usedHours}
-                  />
 
-                  {/* Statistiche aggiuntive se necessarie */}
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        Statistiche
-                      </Typography>
-                      <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid item xs={6}>
-                          <Box textAlign="center">
-                            <EventIcon color="primary" fontSize="large" />
-                            <Typography variant="h6">{lessons.length}</Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Lezioni registrate
-                            </Typography>
-                          </Box>
-                        </Grid>
-                        <Grid item xs={6}>
-                          <Box textAlign="center">
-                            <AccessTimeIcon color="primary" fontSize="large" />
-                            <Typography variant="h6">{usedHours.toFixed(1)}</Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Ore effettuate
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      </Grid>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
-                    Data inizio
+                    Data pagamento
                   </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {format(parseISO(packageData.start_date), 'dd/MM/yyyy', { locale: it })}
+                  {packageData.is_paid && packageData.payment_date ? (
+                    <Typography variant="body1" fontWeight="medium" color="success.main">
+                      {format(parseISO(packageData.payment_date), 'dd MMMM yyyy', { locale: it })}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                      Non inserita
+                    </Typography>
+                  )}
+                </Grid>
+
+                {/* Dettagli economici */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Dettagli Economici
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={3}>
+
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
-                    Stato
+                    Costo totale
                   </Typography>
-                  <Chip
-                    label={packageData.status === 'in_progress' ? 'In corso' : 'Terminato'}
-                    color={packageData.status === 'in_progress' ? 'primary' : 'default'}
-                    size="small"
-                    sx={{ mt: 0.5 }}
-                  />
+                  <Typography variant="h6" color="text.primary">
+                    €{parseFloat(packageData.package_cost).toFixed(2)}
+                  </Typography>
                 </Grid>
-                <Grid item xs={12} md={3}>
+
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
-                    Pagamento
+                    Stato pagamento
                   </Typography>
                   <Chip
                     icon={packageData.is_paid ? <CheckIcon /> : <CancelIcon />}
@@ -547,47 +556,62 @@ function PackageDetailPage() {
                     sx={{ mt: 0.5 }}
                   />
                 </Grid>
-                <Grid item xs={12} md={3}>
+
+                {/* Dettagli orari */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Ore e Utilizzo
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
                     Ore totali
                   </Typography>
-                  <Typography variant="body1" gutterBottom>
+                  <Typography variant="body1" fontWeight="medium" gutterBottom>
                     {packageData.total_hours}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={3}>
+
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
                     Ore rimanenti
                   </Typography>
                   <Typography
                     variant="body1"
-                    color={remainingHours > 0 ? 'primary' : 'text.primary'}
-                    gutterBottom
+                    fontWeight="bold"
+                    color={remainingHours > 0 ? 'primary.main' : 'error'}
                   >
                     {remainingHours.toFixed(1)}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={3}>
+
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
-                    Data pagamento
+                    Ore utilizzate
                   </Typography>
-                  {packageData.is_paid && packageData.payment_date ? (
-                    <Typography variant="h6" color="primary">
-                      {format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it })}
-                    </Typography>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                      Non inserita
-                    </Typography>
-                  )}
+                  <Typography variant="body1" fontWeight="medium">
+                    {usedHours.toFixed(1)}
+                  </Typography>
                 </Grid>
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" color="text.secondary">
-                    Costo totale
-                  </Typography>
-                  <Typography variant="h6" color="text.primary">
-                    €{parseFloat(packageData.package_cost).toFixed(2)}
-                  </Typography>
+
+                {/* Barra di completamento */}
+                <Grid item xs={12} sx={{ mt: 1 }}>
+                  <Box display="flex" justifyContent="space-between" mb={0.5}>
+                    <Typography variant="body2">
+                      Completamento
+                    </Typography>
+                    <Typography variant="body2" fontWeight="medium">
+                      {completionPercentage.toFixed(0)}%
+                    </Typography>
+                  </Box>
+                  <LinearProgress
+                    variant="determinate"
+                    value={completionPercentage}
+                    color={packageData.status === 'completed' ? 'success' : 'primary'}
+                    sx={{ height: 10, borderRadius: 1 }}
+                  />
                 </Grid>
               </Grid>
             </CardContent>
@@ -601,11 +625,11 @@ function PackageDetailPage() {
               <Typography variant="h6" gutterBottom>
                 Statistiche
               </Typography>
-              <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid container spacing={3} sx={{ mt: 1 }}>
                 <Grid item xs={6}>
                   <Box textAlign="center">
                     <EventIcon color="primary" fontSize="large" />
-                    <Typography variant="h6">{lessons.length}</Typography>
+                    <Typography variant="h5" fontWeight="medium">{lessons.length}</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Lezioni registrate
                     </Typography>
@@ -614,34 +638,52 @@ function PackageDetailPage() {
                 <Grid item xs={6}>
                   <Box textAlign="center">
                     <AccessTimeIcon color="primary" fontSize="large" />
-                    <Typography variant="h6">{usedHours.toFixed(1)}</Typography>
+                    <Typography variant="h5" fontWeight="medium">{usedHours.toFixed(1)}</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Ore effettuate
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid item xs={12} sx={{ mt: 2 }}>
-                  <Typography variant="body2" gutterBottom>
-                    Completamento: {completionPercentage.toFixed(0)}%
+
+                {/* Calendario lezioni in miniatura */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="subtitle2" gutterBottom>
+                    Calendario Lezioni
                   </Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={completionPercentage}
-                    color={packageData.status === 'completed' ? 'success' : 'primary'}
-                    sx={{ height: 10, borderRadius: 1 }}
-                  />
+
+                  {lessons.length === 0 ? (
+                    <Typography align="center" color="text.secondary" sx={{ py: 2 }}>
+                      Nessuna lezione registrata
+                    </Typography>
+                  ) : (
+                    generateCalendar()
+                  )}
                 </Grid>
               </Grid>
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Lezioni */}
-        <Grid item xs={12} md={8}>
+        {/* Tabella Lezioni */}
+        <Grid item xs={12}>
           <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Lezioni
-            </Typography>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6">
+                Lezioni associate al pacchetto
+              </Typography>
+              {packageData.status === 'in_progress' && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddLessonIcon />}
+                  onClick={handleAddLesson}
+                  size="small"
+                >
+                  Aggiungi Lezione
+                </Button>
+              )}
+            </Box>
 
             {lessons.length === 0 ? (
               <Typography align="center" color="text.secondary" sx={{ py: 3 }}>
@@ -702,23 +744,6 @@ function PackageDetailPage() {
                   labelDisplayedRows={({ from, to, count }) => `${from}-${to} di ${count}`}
                 />
               </>
-            )}
-          </Paper>
-        </Grid>
-
-        {/* Calendario lezioni */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Calendario Lezioni
-            </Typography>
-
-            {lessons.length === 0 ? (
-              <Typography align="center" color="text.secondary" sx={{ py: 3 }}>
-                Nessuna lezione registrata per questo pacchetto
-              </Typography>
-            ) : (
-              generateCalendar()
             )}
           </Paper>
         </Grid>

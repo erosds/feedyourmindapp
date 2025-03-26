@@ -309,102 +309,17 @@ function PackageFormPage() {
             const remainingHours = calculateRemainingHours(values.total_hours || 0);
 
             return (
+              // Parte di visualizzazione ristrutturata - form della pagina PackageFormPage.jsx
               <Form>
-                <Grid item xs={12}>
-                  <FormControl component="fieldset">
-                    <FormLabel component="legend">Tipo di pacchetto</FormLabel>
-                    <RadioGroup
-                      row
-                      name="package_type"
-                      value={values.package_type}
-                      onChange={(e) => {
-                        const newType = e.target.value;
-                        setFieldValue('package_type', newType);
-
-                        // Se cambiamo da aperto a fisso, calcoliamo la data di scadenza
-                        if (newType === 'fixed') {
-                          setFieldValue('expiry_date', calculateExpiryDate(values.start_date));
-                        } else {
-                          // Se cambiamo da fisso ad aperto, resettiamo alcuni campi
-                          if (!isEditMode) {
-                            setFieldValue('total_hours', '');
-                            setFieldValue('package_cost', '');
-                          }
-                        }
-                      }}
-                    >
-                      <FormControlLabel value="fixed" control={<Radio />} label="Pacchetto 4 settimane" />
-                      <FormControlLabel value="open" control={<Radio />} label="Pacchetto aperto" />
-                    </RadioGroup>
-                  </FormControl>
-                </Grid>
-
-                {/* Campo data di scadenza (solo visibile, calcolato automaticamente) */}
-                {values.package_type === 'fixed' && (
-                  <Grid item xs={12} md={6}>
-                    <DatePicker
-                      label="Data di scadenza (calcolata automaticamente)"
-                      value={calculateExpiryDate(values.start_date)}
-                      readOnly
-                      disabled
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          helperText: "Lunedì della 4ª settimana dalla data di inizio",
-                        },
-                      }}
-                    />
-                  </Grid>
-                )}
-
-                {/* Rendere condizionali i campi di ore totali e costo pacchetto */}
-                {(values.package_type === 'fixed' || isEditMode || (values.package_type === 'open' && values.is_paid)) && (
-                  <>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        name="total_hours"
-                        label={values.package_type === 'open' ? "Ore accumulate" : "Totale ore"}
-                        type="number"
-                        value={values.total_hours}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={touched.total_hours && Boolean(errors.total_hours)}
-                        helperText={
-                          (touched.total_hours && errors.total_hours) ||
-                          (isEditMode ? `Ore già utilizzate: ${hoursUsed}` : '') ||
-                          (!isEditMode && overflowHours > 0 ? `Minimo: ${overflowHours} ore (eccedenti dalla lezione originale)` : '')
-                        }
-                        inputProps={{
-                          min: isEditMode ? hoursUsed : (overflowHours > 0 ? overflowHours : 0.5),
-                          step: 0.5,
-                        }}
-                        required={values.package_type === 'fixed'}
-                        disabled={values.package_type === 'open' && !values.is_paid}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        name="package_cost"
-                        label="Costo pacchetto"
-                        type="number"
-                        value={values.package_cost}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={touched.package_cost && Boolean(errors.package_cost)}
-                        helperText={touched.package_cost && errors.package_cost}
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                        }}
-                        required={values.package_type === 'fixed'}
-                        disabled={values.package_type === 'open' && !values.is_paid}
-                      />
-                    </Grid>
-                  </>
-                )}
                 <Grid container spacing={3}>
+                  {/* Informazioni di base del pacchetto */}
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom>
+                      Informazioni di base
+                    </Typography>
+                  </Grid>
+
+                  {/* Selezione dello studente */}
                   <Grid item xs={12} md={6}>
                     <StudentAutocomplete
                       value={values.student_id}
@@ -419,6 +334,7 @@ function PackageFormPage() {
                     />
                   </Grid>
 
+                  {/* Data inizio */}
                   <Grid item xs={12} md={6}>
                     <DatePicker
                       label="Data inizio"
@@ -435,11 +351,60 @@ function PackageFormPage() {
                     />
                   </Grid>
 
+                  {/* Tipo di pacchetto (radio group) */}
+                  <Grid item xs={12}>
+                    <FormControl component="fieldset">
+                      <FormLabel component="legend">Tipo di pacchetto</FormLabel>
+                      <RadioGroup
+                        row
+                        name="package_type"
+                        value={values.package_type}
+                        onChange={(e) => {
+                          const newType = e.target.value;
+                          setFieldValue('package_type', newType);
+
+                          // Se cambiamo da aperto a fisso, calcoliamo la data di scadenza
+                          if (newType === 'fixed') {
+                            setFieldValue('expiry_date', calculateExpiryDate(values.start_date));
+                          } else {
+                            // Se cambiamo da fisso ad aperto, resettiamo alcuni campi
+                            if (!isEditMode) {
+                              setFieldValue('total_hours', '');
+                              setFieldValue('package_cost', '');
+                            }
+                          }
+                        }}
+                      >
+                        <FormControlLabel value="fixed" control={<Radio />} label="Pacchetto 4 settimane" />
+                        <FormControlLabel value="open" control={<Radio />} label="Pacchetto aperto" />
+                      </RadioGroup>
+                    </FormControl>
+                  </Grid>
+
+                  {/* Data di scadenza (solo per pacchetti a termine fisso) */}
+                  {values.package_type === 'fixed' && (
+                    <Grid item xs={12} md={6}>
+                      <DatePicker
+                        label="Data di scadenza (calcolata automaticamente)"
+                        value={calculateExpiryDate(values.start_date)}
+                        readOnly
+                        disabled
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            helperText: "Lunedì della 4ª settimana dalla data di inizio",
+                          },
+                        }}
+                      />
+                    </Grid>
+                  )}
+
+                  {/* Totale ore */}
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       name="total_hours"
-                      label="Totale ore"
+                      label={values.package_type === 'open' ? "Ore accumulate" : "Totale ore"}
                       type="number"
                       value={values.total_hours}
                       onChange={handleChange}
@@ -454,10 +419,12 @@ function PackageFormPage() {
                         min: isEditMode ? hoursUsed : (overflowHours > 0 ? overflowHours : 0.5),
                         step: 0.5,
                       }}
-                      required
+                      required={values.package_type === 'fixed'}
+                      disabled={values.package_type === 'open' && !values.is_paid && !isEditMode}
                     />
                   </Grid>
 
+                  {/* Costo del pacchetto */}
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
@@ -472,10 +439,12 @@ function PackageFormPage() {
                       InputProps={{
                         startAdornment: <InputAdornment position="start">€</InputAdornment>,
                       }}
-                      required
+                      required={values.package_type === 'fixed'}
+                      disabled={values.package_type === 'open' && !values.is_paid && !isEditMode}
                     />
                   </Grid>
 
+                  {/* Divisore per lo stato del pacchetto */}
                   <Grid item xs={12}>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="h6" gutterBottom>
@@ -483,8 +452,8 @@ function PackageFormPage() {
                     </Typography>
                   </Grid>
 
-                  {/* Mostra lo stato come campo di sola lettura */}
-                  <Grid item xs={12} md={6}>
+                  {/* Stato del pacchetto (campo di sola lettura) */}
+                  <Grid item xs={12} md={3}>
                     <TextField
                       fullWidth
                       label="Stato"
@@ -496,7 +465,21 @@ function PackageFormPage() {
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  {/* Ore rimanenti (campo di sola lettura) */}
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Ore rimanenti"
+                      value={isNaN(remainingHours) ? '' : remainingHours.toFixed(1)}
+                      InputProps={{
+                        readOnly: true,
+                      }}
+                      helperText="Le ore rimanenti sono calcolate automaticamente"
+                    />
+                  </Grid>
+
+                  {/* Switch per il pagamento */}
+                  <Grid item xs={12} md={3}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -509,20 +492,9 @@ function PackageFormPage() {
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Ore rimanenti"
-                      value={isNaN(remainingHours) ? '' : remainingHours.toFixed(1)}
-                      InputProps={{
-                        readOnly: true,
-                      }}
-                      helperText="Le ore rimanenti sono calcolate automaticamente come differenza tra ore totali e ore utilizzate"
-                    />
-                  </Grid>
-
+                  {/* Data di pagamento (solo se il pacchetto è pagato) */}
                   {values.is_paid && (
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} md={3}>
                       <DatePicker
                         label="Data pagamento"
                         value={values.payment_date}
@@ -538,6 +510,7 @@ function PackageFormPage() {
                     </Grid>
                   )}
 
+                  {/* Pulsanti di azione */}
                   <Grid item xs={12}>
                     <Box display="flex" justifyContent="flex-end" gap={2}>
                       <Button
