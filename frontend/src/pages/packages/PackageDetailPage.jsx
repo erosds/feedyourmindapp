@@ -494,7 +494,7 @@ function PackageDetailPage() {
                   <Typography variant="body2" color="text.secondary">
                     Ore totali
                   </Typography>
-                  <Typography variant="body1" gutterBottom>
+                  <Typography variant="h6" gutterBottom>
                     {packageData.total_hours}
                   </Typography>
                 </Grid>
@@ -503,7 +503,7 @@ function PackageDetailPage() {
                     Ore rimanenti
                   </Typography>
                   <Typography
-                    variant="body1"
+                    variant="h6"
                     color={remainingHours > 0 ? 'primary' : 'text.primary'}
                     gutterBottom
                   >
@@ -532,46 +532,34 @@ function PackageDetailPage() {
                     €{parseFloat(packageData.package_cost).toFixed(2)}
                   </Typography>
                 </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Statistiche */}
-        <Grid item xs={12} md={4}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Statistiche
-              </Typography>
-              <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={6}>
-                  <Box textAlign="center">
-                    <EventIcon color="primary" fontSize="large" />
-                    <Typography variant="h6">{lessons.length}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Lezioni registrate
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={6}>
-                  <Box textAlign="center">
-                    <AccessTimeIcon color="primary" fontSize="large" />
-                    <Typography variant="h6">{usedHours.toFixed(1)}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Ore effettuate
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sx={{ mt: 2 }}>
-                  <Typography variant="body2" gutterBottom>
-                    Completamento: {completionPercentage.toFixed(0)}%
+                <Grid item xs={12} sx={{ mt: 5 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Completamento per settimane: {completionPercentage.toFixed(0)}%
                   </Typography>
                   <LinearProgress
                     variant="determinate"
                     value={completionPercentage}
                     color={packageData.status === 'completed' ? 'success' : 'primary'}
-                    sx={{ height: 10, borderRadius: 1 }}
+                    sx={{
+                      height: 15,
+                      borderRadius: 1,
+                      backgroundImage: `repeating-linear-gradient(
+      to right,
+      transparent,
+      transparent 24.5%,
+      #fff 24.5%,
+      #fff 25%,
+      transparent 25%,
+      transparent 49.5%,
+      #fff 49.5%,
+      #fff 50%,
+      transparent 50%,
+      transparent 74.5%,
+      #fff 74.5%,
+      #fff 75%,
+      transparent 75%
+    )`,
+                    }}
                   />
                 </Grid>
               </Grid>
@@ -579,6 +567,22 @@ function PackageDetailPage() {
           </Card>
         </Grid>
 
+       {/* Calendario lezioni */}
+       <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Calendario Lezioni
+            </Typography>
+
+            {lessons.length === 0 ? (
+              <Typography align="center" color="text.secondary" sx={{ py: 3 }}>
+                Nessuna lezione registrata per questo pacchetto
+              </Typography>
+            ) : (
+              generateCalendar()
+            )}
+          </Paper>
+        </Grid> 
         {/* Lezioni */}
         <Grid item xs={12} md={8}>
           <Paper sx={{ p: 2 }}>
@@ -649,22 +653,39 @@ function PackageDetailPage() {
           </Paper>
         </Grid>
 
-        {/* Calendario lezioni */}
+        
+        {/* Statistiche */}
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Calendario Lezioni
-            </Typography>
-
-            {lessons.length === 0 ? (
-              <Typography align="center" color="text.secondary" sx={{ py: 3 }}>
-                Nessuna lezione registrata per questo pacchetto
+          <Card sx={{ height: '100%' }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Statistiche
               </Typography>
-            ) : (
-              generateCalendar()
-            )}
-          </Paper>
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid item xs={6}>
+                  <Box textAlign="center">
+                    <EventIcon color="primary" fontSize="large" />
+                    <Typography variant="h6">{lessons.length}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Lezioni registrate
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={6}>
+                  <Box textAlign="center">
+                    <AccessTimeIcon color="primary" fontSize="large" />
+                    <Typography variant="h6">{usedHours.toFixed(1)}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Ore effettuate
+                    </Typography>
+                  </Box>
+                </Grid>
+                
+              </Grid>
+            </CardContent>
+          </Card>
         </Grid>
+
       </Grid>
     </Box>
   );

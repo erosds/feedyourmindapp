@@ -149,7 +149,7 @@ function DashboardCalendar({
                           mb: 0.5,
                           py: 0.2, // Rimuove il padding verticale
                           minHeight: '28px', // Imposta un'altezza minima più compatta
-                          bgcolor: isCurrentDay ? 'primary.main' : 'background.paper',
+                          bgcolor: isCurrentDay ? 'primary.dark' : 'background.paper',
                           borderRadius: 1,
                           color: 'text.primary',
                           '&:hover': {
@@ -193,6 +193,7 @@ function DashboardCalendar({
                   )}
                   {/* Add Lesson button at the top of each day */}
                   <ListItem
+                  divider
                     button
                     onClick={(e) => {
                       e.stopPropagation(); // Impedisce di aprire il dialogo del giorno
@@ -205,21 +206,20 @@ function DashboardCalendar({
                       justifyContent: 'center',
                       alignItems: 'center',
                       minHeight: '28px',
-                      bgcolor: isCurrentDay ? 'primary.dark' : 'primary.light',
-                      color: '#fff',
+                      bgcolor: isCurrentDay ? 'primary.main' : 'background.paper',
                       borderRadius: 1,
-                      border: '1px dashed',
-                      borderColor: 'primary.main',
+
                       transition: 'all 0.2s ease',
+                      color: 'text.primary',
                       '&:hover': {
-                        bgcolor: 'primary.main',
+                        bgcolor: 'action.hover',
                         transform: 'scale(1.05)',
                       }
                     }}
                   >
-                    <AddIcon fontSize="small" sx={{ mr: 0.5 }} />
-                    <Typography variant="body2" fontWeight="medium" fontSize="0.75rem">
-                      Nuova lezione
+                    <AddIcon fontSize="small" sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', mr: 0.5 }} />
+                    <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
+                      Nuova Lezione
                     </Typography>
                   </ListItem>
                 </List>
