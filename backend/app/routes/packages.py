@@ -17,18 +17,25 @@ router = APIRouter(
 
 def calculate_expiry_date(start_date: date) -> date:
     """
-    Calculate the expiration date for a package.
-    The expiration date is the first Monday after four weeks from the start date.
+    Calcola la data di scadenza per un pacchetto a durata fissa (4 settimane).
+    La scadenza cade il lunedì della quarta settimana dopo la data di inizio.
     
     Args:
-        start_date: Package start date
+        start_date: Data di inizio del pacchetto
         
     Returns:
-        Expiration date (first Monday after four weeks)
+        Data di scadenza
     """
-    four_weeks_later = start_date + timedelta(weeks=4)
-    days_to_monday = (7 - four_weeks_later.weekday()) % 7
-    return four_weeks_later + timedelta(days=days_to_monday)
+    # Determina il giorno della settimana (0 = lunedì, 6 = domenica)
+    weekday = start_date.weekday()
+    
+    # Trova il lunedì della settimana corrente
+    monday = start_date - timedelta(days=weekday)
+    
+    # Aggiungi 4 settimane (28 giorni)
+    expiry_date = monday + timedelta(days=28)
+    
+    return expiry_date
 
 def update_package_status(db: Session, package_id: int, commit: bool = True):
     """
