@@ -476,7 +476,7 @@ function LessonFormPage() {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        {isEditMode ? 'Edit Lesson' : 'New Lesson'}
+        {isEditMode ? 'Modifica Lezione' : 'Nuova Lezione'}
       </Typography>
 
       {error && (
