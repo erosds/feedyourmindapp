@@ -57,32 +57,20 @@ class Package(Base):
     total_hours = Column(DECIMAL(5, 2), nullable=False, default=0)
     package_cost = Column(DECIMAL(10, 2), nullable=False, default=0)
     status = Column(String, default="in_progress")
-    is_paid = Column(Boolean, default=True)
-    payment_date = Column(Date, nullable=True)  # Nuovo campo
+    is_paid = Column(Boolean, default=False)  # Cambiato default a False
+    payment_date = Column(Date, nullable=True)
     remaining_hours = Column(DECIMAL(5, 2))
-    package_type = Column(String, default="open")  # "fixed" per 4 settimane, "open" per aperto
-    expiry_date = Column(Date, nullable=True)  # Data di scadenza per pacchetti a durata fissa
+    package_type = Column(String, default="open")  # Default a "open" invece di "fixed"
+    expiry_date = Column(Date, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    
+    # Rimuovere il vincolo positivo per le ore totali nei pacchetti aperti
     __table_args__ = (
-        # Modifica questo vincolo per considerare il package_type
-        CheckConstraint("(package_type = 'open' AND total_hours >= 0) OR (package_type = 'fixed' AND total_hours > 0)", 
-                       name="positive_hours"),
         CheckConstraint("package_cost >= 0", name="positive_cost"),
     )
     
     student = relationship("Student", back_populates="packages")
     lessons = relationship("Lesson", back_populates="package")
-    
-    """
-    Nota sul modello di business:
-    - Un pacchetto marcato come pagato (is_paid=True) indica che il cliente ha pagato 
-      l'intero pacchetto anticipatamente.
-    - Le lezioni all'interno di un pacchetto pagato saranno automaticamente marcate 
-      come pagate (is_paid=True).
-    - Le lezioni singole hanno il loro stato di pagamento indipendente.
-    """
 
 class Lesson(Base):
     __tablename__ = "lessons"
@@ -195,12 +183,19 @@ class StudentResponse(StudentBase):
 class PackageBase(BaseModel):
     student_id: int
     start_date: date
-    total_hours: Decimal = Decimal('0')  # Default a zero
-    package_cost: Decimal = Decimal('0')  # Default a zero
+    total_hours: Decimal = Decimal('0')
+    package_cost: Decimal = Decimal('0')
     is_paid: bool = False
     payment_date: Optional[date] = None
-    package_type: str = "open"  # Default a 'open'
+    package_type: str = "open"
     expiry_date: Optional[date] = None
+
+    @field_validator('package_type')
+    @classmethod
+    def validate_package_type(cls, v):
+        if v not in ["fixed", "open"]:
+            raise ValueError("package_type must be either 'fixed' or 'open'")
+        return v
 
     @field_validator('total_hours')
     @classmethod
@@ -208,10 +203,18 @@ class PackageBase(BaseModel):
         # Ottieni il tipo di pacchetto
         values = info.data
         package_type = values.get('package_type', 'open')
+        is_paid = values.get('is_paid', False)
         
         # Per pacchetti aperti, permetti zero
         if package_type == 'open':
-            return v if v is not None else Decimal('0')
+            # Se non è pagato, deve essere 0
+            if not is_paid:
+                return Decimal('0')
+            # Se è pagato, deve essere > 0
+            elif v is not None and v > 0:
+                return v
+            else:
+                raise ValueError('total_hours must be positive for paid open packages')
         
         # Per pacchetti fissi, richiedi valore positivo
         if package_type == 'fixed' and (v is None or v <= 0):
@@ -225,45 +228,61 @@ class PackageBase(BaseModel):
         # Ottieni il tipo di pacchetto
         values = info.data
         package_type = values.get('package_type', 'open')
+        is_paid = values.get('is_paid', False)
         
-        # Per pacchetti aperti, permetti zero
-        if package_type == 'open':
-            return v if v is not None else Decimal('0')
+        # Per pacchetti aperti non pagati, costo deve essere 0
+        if package_type == 'open' and not is_paid:
+            return Decimal('0')
         
-        # Per pacchetti fissi, richiedi non negativo
-        if package_type == 'fixed' and (v is None or v < 0):
-            raise ValueError('package_cost must be non-negative for fixed packages')
+        # Per pacchetti aperti pagati o fissi, costo deve essere >= 0
+        if v is None or v < 0:
+            raise ValueError('package_cost must be non-negative')
+        
+        return v
+    
+    @field_validator('payment_date')
+    @classmethod
+    def check_payment_date(cls, v, info):
+        values = info.data
+        is_paid = values.get('is_paid', False)
+        
+        # Se è pagato, la data di pagamento è obbligatoria
+        if is_paid and v is None:
+            raise ValueError('payment_date is required for paid packages')
+        
+        # Se non è pagato, la data di pagamento deve essere None
+        if not is_paid and v is not None:
+            return None
         
         return v
 
-class PackageCreate(BaseModel):
-    student_id: int
-    start_date: date
-    package_type: str
-    is_paid: bool = False
-    
-    # Campi opzionali con valori di default
-    total_hours: Optional[Decimal] = Decimal('0')
-    package_cost: Optional[Decimal] = Decimal('0')
-    payment_date: Optional[date] = None
-    
+class PackageCreate(PackageBase):
     @model_validator(mode='after')
     def validate_package_fields(self):
-    # Per pacchetti aperti, inizializza sempre a zero (indipendentemente dai valori forniti)
-        if self.package_type == 'open':
-            # Non sovrascriviamo i valori se è pagato
-            if not self.is_paid:
-                self.total_hours = Decimal('0')
-                self.package_cost = Decimal('0')
+        # Per pacchetti aperti non pagati, forza a zero
+        if self.package_type == 'open' and not self.is_paid:
+            self.total_hours = Decimal('0')
+            self.package_cost = Decimal('0')
+            self.payment_date = None
             return self
-    
-    # Per pacchetti fissi, mantieni la validazione precedente
+        
+        # Per pacchetti aperti pagati
+        if self.package_type == 'open' and self.is_paid:
+            if self.total_hours <= 0:
+                self.total_hours = Decimal('1')  # Default a 1 per evitare errori
+            if self.package_cost < 0:
+                self.package_cost = Decimal('0')
+            if self.payment_date is None:
+                # Imposta data pagamento a oggi se non specificata
+                self.payment_date = date.today()
+        
+        # Per pacchetti fissi
         if self.package_type == 'fixed':
-            if self.total_hours is None or self.total_hours <= 0:
-                raise ValueError('total_hours must be positive for fixed packages')
-            if self.package_cost is None or self.package_cost < 0:
-                raise ValueError('package_cost must be non-negative for fixed packages')
-    
+            if self.total_hours <= 0:
+                self.total_hours = Decimal('1')  # Default a 1 per evitare errori
+            if self.package_cost < 0:
+                self.package_cost = Decimal('0')
+        
         return self
 
 class PackageUpdate(BaseModel):
@@ -273,43 +292,70 @@ class PackageUpdate(BaseModel):
     status: Optional[str] = None
     is_paid: Optional[bool] = None
     payment_date: Optional[date] = None
-    
-    # Nuovi campi
     package_type: Optional[str] = None
     expiry_date: Optional[date] = None
-
+    
+    @field_validator('package_type')
+    @classmethod
+    def validate_package_type(cls, v):
+        if v is not None and v not in ["fixed", "open"]:
+            raise ValueError("package_type must be either 'fixed' or 'open'")
+        return v
     
     @field_validator('total_hours')
     @classmethod
     def check_positive_hours(cls, v, info):
-        # Prima controlla se è un pacchetto aperto
-        values = info.data
-        if 'package_type' in values and values['package_type'] == 'open':
-            # Per i pacchetti aperti, accetta null o zero
-            if v is None or v == 0:
-                    return Decimal('0')  # Converti null in zero esplicitamente
-    
-        # Per tutti gli altri casi (pacchetti fissi o se è fornito un valore per pacchetti aperti)
         if v is None:
-            raise ValueError('total_hours is required')
-    
+            return v
+            
+        # Verifica se è un pacchetto aperto
+        values = info.data
+        package_type = values.get('package_type')
+        is_paid = values.get('is_paid')
+        
+        # Se è specificato che è un pacchetto aperto non pagato
+        if package_type == 'open' and is_paid is False:
+            return Decimal('0')
+            
+        # Per tutti gli altri casi, veifica che ore > 0
         if v <= 0:
-            raise ValueError('total_hours must be positive')
-    
+            raise ValueError('total_hours must be positive when specified')
+            
         return v
     
     @field_validator('package_cost')
     @classmethod
     def check_positive_cost(cls, v, info):
-        # Per pacchetti aperti, il costo può essere null o >=0
+        if v is None:
+            return v
+            
         values = info.data
-        if 'package_type' in values and values['package_type'] == 'open':
-            if v is None:
-                return v
-        # Per pacchetti fissi, il costo deve essere >=0
-        if v is not None and v < 0:
+        package_type = values.get('package_type')
+        is_paid = values.get('is_paid')
+        
+        # Se è specificato che è un pacchetto aperto non pagato
+        if package_type == 'open' and is_paid is False:
+            return Decimal('0')
+            
+        # Per tutti gli altri casi, verifica che costo >= 0
+        if v < 0:
             raise ValueError('package_cost must be non-negative')
+            
         return v
+        
+    @model_validator(mode='after')
+    def validate_payment_fields(self):
+        # Se is_paid è True, payment_date dovrebbe essere specificato
+        if self.is_paid is True and self.payment_date is None:
+            # Non solleviamo un errore, perché possiamo impostarlo automaticamente
+            # nel controller, ma possiamo dare un avviso nei log
+            pass
+            
+        # Se is_paid è False, payment_date dovrebbe essere None
+        if self.is_paid is False and self.payment_date is not None:
+            self.payment_date = None
+            
+        return self
 
 # Classe di risposta specifica per pacchetti aperti (senza validatori)
 class OpenPackageResponse(BaseModel):

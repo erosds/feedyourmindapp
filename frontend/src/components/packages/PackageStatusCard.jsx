@@ -1,6 +1,7 @@
 // src/components/packages/PackageStatusCard.jsx
 import React from 'react';
 import {
+  Alert,
   Box,
   Card,
   CardContent,
@@ -14,13 +15,16 @@ import {
   AccessTime as AccessTimeIcon,
   Timer as TimerIcon,
   CheckCircle as CheckIcon,
-  Cancel as CancelIcon
+  Cancel as CancelIcon,
+  Euro as EuroIcon
 } from '@mui/icons-material';
 import { format, parseISO, differenceInDays, isAfter } from 'date-fns';
 import { it } from 'date-fns/locale';
 
+
 /**
  * Componente che mostra lo stato di un pacchetto, inclusi i dettagli di scadenza per pacchetti a durata fissa
+ * e le ore accumulate per pacchetti aperti
  */
 function PackageStatusCard({ packageData, usedHours }) {
   if (!packageData) return null;
@@ -30,12 +34,31 @@ function PackageStatusCard({ packageData, usedHours }) {
   
   // Calcola percentuale di completamento in modo diverso in base al tipo di pacchetto
   let completionPercentage;
+  let statusText;
+  let progressVariant = "determinate";
+  let progressColor = "primary";
+  
   if (packageData.package_type === 'fixed') {
     // Per pacchetti fissi, la percentuale è data dalle ore utilizzate rispetto al totale
     completionPercentage = totalHours > 0 ? (usedHours / totalHours) * 100 : 0;
+    statusText = `${remainingHours.toFixed(1)} ore rimanenti`;
+    
+    // Se il pacchetto è completato, cambia colore
+    if (packageData.status === 'completed') {
+      progressColor = "success";
+    }
   } else {
-    // Per pacchetti aperti, la percentuale è sempre 100% delle ore accumulate
-    completionPercentage = 100;
+    // Per pacchetti aperti
+    if (packageData.is_paid) {
+      // Se pagato, mostra percentuale utilizzata rispetto al totale fissato
+      completionPercentage = 100; // Sempre 100% perché il pacchetto è pagato
+      statusText = `${totalHours.toFixed(1)} ore fissate`;
+      progressColor = "success";
+    } else {
+      // Se non pagato, è in accumulazione - usa barra indeterminata
+      progressVariant = "indeterminate";
+      statusText = `${usedHours.toFixed(1)} ore accumulate`;
+    }
   }
   
   // Calcola se il pacchetto è scaduto (solo per pacchetti a durata fissa)
@@ -57,11 +80,10 @@ function PackageStatusCard({ packageData, usedHours }) {
           Stato Pacchetto
         </Typography>
         
-        <Box display="flex" alignItems="center" mb={2}>
+        <Box display="flex" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
           <Chip
             label={packageData.status === 'in_progress' ? 'In corso' : 'Completato'}
             color={packageData.status === 'in_progress' ? 'primary' : 'default'}
-            sx={{ mr: 1 }}
           />
           
           <Chip
@@ -71,23 +93,11 @@ function PackageStatusCard({ packageData, usedHours }) {
             variant="outlined"
           />
           
-          {packageData.package_type === 'fixed' && (
-            <Chip
-              label="Pacchetto 4 settimane"
-              color="secondary"
-              variant="outlined"
-              sx={{ ml: 1 }}
-            />
-          )}
-          
-          {packageData.package_type === 'open' && (
-            <Chip
-              label="Pacchetto aperto"
-              color="info"
-              variant="outlined"
-              sx={{ ml: 1 }}
-            />
-          )}
+          <Chip
+            label={packageData.package_type === 'fixed' ? 'Pacchetto 4 settimane' : 'Pacchetto aperto'}
+            color={packageData.package_type === 'fixed' ? 'primary' : 'info'}
+            variant="outlined"
+          />
         </Box>
         
         <Divider sx={{ my: 2 }} />
@@ -102,6 +112,19 @@ function PackageStatusCard({ packageData, usedHours }) {
           </Typography>
         </Box>
         
+        {packageData.is_paid && packageData.payment_date && (
+          <Box display="flex" alignItems="center" mb={2}>
+            <EuroIcon sx={{ mr: 1, color: 'success.main' }} />
+            <Typography variant="body2" color="text.secondary">
+              Data pagamento:
+            </Typography>
+            <Typography variant="body1" sx={{ ml: 1 }}>
+              {format(parseISO(packageData.payment_date), "dd MMMM yyyy", { locale: it })}
+            </Typography>
+          </Box>
+        )}
+        
+        {/* Mostra data di scadenza solo per pacchetti fissi */}
         {packageData.package_type === 'fixed' && packageData.expiry_date && (
           <Box display="flex" alignItems="center" mb={2}>
             <TimerIcon sx={{ mr: 1, color: isExpired ? 'error.main' : 'text.secondary' }} />
@@ -131,70 +154,94 @@ function PackageStatusCard({ packageData, usedHours }) {
           </Box>
         )}
         
+        {/* Visualizzazione ore diverse per tipo di pacchetto */}
         <Box display="flex" alignItems="center" mb={2}>
           <AccessTimeIcon sx={{ mr: 1, color: 'text.secondary' }} />
-          {packageData.package_type === 'fixed' ? (
-            // Per pacchetti fissi, mostra ore utilizzate/totali
-            <>
-              <Typography variant="body2" color="text.secondary">
-                Ore utilizzate/totali:
-              </Typography>
-              <Typography variant="body1" sx={{ ml: 1 }}>
-                {usedHours.toFixed(1)} / {totalHours.toFixed(1)} ({completionPercentage.toFixed(0)}%)
-              </Typography>
-            </>
-          ) : (
-            // Per pacchetti aperti, mostra ore accumulate
-            <>
-              <Typography variant="body2" color="text.secondary">
-                Ore accumulate:
-              </Typography>
-              <Typography variant="body1" sx={{ ml: 1 }}>
-                {usedHours.toFixed(1)} {packageData.is_paid && `(fissate a ${totalHours.toFixed(1)} al pagamento)`}
-              </Typography>
-            </>
-          )}
+          <Typography variant="body2" color="text.secondary">
+            {packageData.package_type === 'fixed' ? 'Ore utilizzate/totali:' : 
+             (packageData.is_paid ? 'Ore utilizzate/fissate:' : 'Ore accumulate:')}
+          </Typography>
+          <Typography variant="body1" sx={{ ml: 1 }}>
+            {packageData.package_type === 'fixed' ? 
+              `${usedHours.toFixed(1)} / ${totalHours.toFixed(1)} (${completionPercentage.toFixed(0)}%)` :
+              (packageData.is_paid ? 
+                `${usedHours.toFixed(1)} / ${totalHours.toFixed(1)}` :
+                `${usedHours.toFixed(1)}`)}
+          </Typography>
         </Box>
         
-        {packageData.package_type === 'fixed' ? (
-          // Barra di progresso per pacchetti fissi (mostra consumo)
-          <LinearProgress
-            variant="determinate"
-            value={Math.min(completionPercentage, 100)}
-            color={packageData.status === 'completed' ? 'success' : 'primary'}
-            sx={{ height: 10, borderRadius: 1, mb: 1 }}
-          />
-        ) : packageData.is_paid ? (
-          // Per pacchetti aperti pagati, mostra barra verde piena
-          <LinearProgress
-            variant="determinate"
-            value={100}
-            color="success"
-            sx={{ height: 10, borderRadius: 1, mb: 1 }}
-          />
-        ) : (
-          // Per pacchetti aperti non pagati, mostra barra pulsante
-          <LinearProgress
-            sx={{ height: 10, borderRadius: 1, mb: 1 }}
-          />
-        )}
-        
-        {packageData.package_type === 'open' && !packageData.is_paid && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
-            Pacchetto aperto in corso di registrazione. Il totale ore e il costo verranno confermati al pagamento.
-          </Typography>
-        )}
-        
-        {packageData.is_paid && packageData.payment_date && (
-          <Box display="flex" alignItems="center" mt={2}>
-            <EventIcon sx={{ mr: 1, color: 'success.main' }} />
+        {/* Mostra costo solo se il pacchetto è pagato o è fisso */}
+        {(packageData.is_paid || packageData.package_type === 'fixed') && (
+          <Box display="flex" alignItems="center" mb={2}>
+            <EuroIcon sx={{ mr: 1, color: 'text.secondary' }} />
             <Typography variant="body2" color="text.secondary">
-              Data pagamento:
+              Costo pacchetto:
             </Typography>
-            <Typography variant="body1" sx={{ ml: 1 }}>
-              {format(parseISO(packageData.payment_date), "dd MMMM yyyy", { locale: it })}
+            <Typography variant="body1" fontWeight="bold" sx={{ ml: 1 }}>
+              €{parseFloat(packageData.package_cost).toFixed(2)}
             </Typography>
           </Box>
+        )}
+        
+        {/* Barra di progresso per pacchetti aperti e fissi */}
+        <Box mt={2}>
+          <Box display="flex" justifyContent="space-between" mb={0.5}>
+            <Typography variant="body2">
+              {packageData.package_type === 'fixed' ?
+                "Completamento pacchetto:" :
+                (packageData.is_paid ? "Stato pagamento:" : "Accumulo ore:")}
+            </Typography>
+            <Typography variant="body2" fontWeight="medium">
+              {packageData.package_type === 'fixed' ?
+                `${completionPercentage.toFixed(0)}%` :
+                (packageData.is_paid ? "Completato" : "In corso")}
+            </Typography>
+          </Box>
+          
+          <LinearProgress
+            variant={progressVariant}
+            value={Math.min(completionPercentage, 100)}
+            color={progressColor}
+            sx={{ 
+              height: 10, 
+              borderRadius: 1, 
+              mb: 1,
+              backgroundImage: packageData.package_type === 'fixed' ?
+                `repeating-linear-gradient(
+                  to right,
+                  transparent,
+                  transparent 24.5%,
+                  rgba(255,255,255,0.3) 24.5%,
+                  rgba(255,255,255,0.3) 25%,
+                  transparent 25%,
+                  transparent 49.5%,
+                  rgba(255,255,255,0.3) 49.5%,
+                  rgba(255,255,255,0.3) 50%,
+                  transparent 50%,
+                  transparent 74.5%,
+                  rgba(255,255,255,0.3) 74.5%,
+                  rgba(255,255,255,0.3) 75%,
+                  transparent 75%
+                )` : 'none'
+            }}
+          />
+        </Box>
+        
+        {/* Messaggio informativo basato sul tipo di pacchetto e stato */}
+        {packageData.package_type === 'open' && !packageData.is_paid && (
+          <Alert severity="info" variant="outlined" sx={{ mt: 2 }}>
+            <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+              Pacchetto aperto in corso di registrazione. Il totale ore e il costo verranno confermati al pagamento.
+            </Typography>
+          </Alert>
+        )}
+        
+        {packageData.package_type === 'fixed' && isExpired && (
+          <Alert severity="warning" variant="outlined" sx={{ mt: 2 }}>
+            <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+              Questo pacchetto è scaduto. Si consiglia di creare un nuovo pacchetto se necessario.
+            </Typography>
+          </Alert>
         )}
       </CardContent>
     </Card>

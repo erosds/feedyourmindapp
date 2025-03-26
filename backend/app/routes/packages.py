@@ -46,7 +46,10 @@ def update_package_remaining_hours(db: Session, package_id: int, commit: bool = 
     else:
         # Per pacchetti aperti, le ore accumulate sono uguali alle ore utilizzate
         package.remaining_hours = hours_used
-        package.total_hours = hours_used
+        
+        # Se il pacchetto è pagato, le ore totali sono fissate
+        if not package.is_paid:
+            package.total_hours = hours_used
         
         # Un pacchetto aperto è sempre "in_progress" a meno che non sia esplicitamente completato
         if package.status != "completed":
@@ -84,7 +87,6 @@ def calculate_expiry_date(start_date: date) -> date:
     return expiry_date
 
 # Modifiche alla route di creazione
-# Modifiche alla route di creazione
 @router.post("/", response_model=models.PackageResponse, status_code=status.HTTP_201_CREATED)
 def create_package(package: models.PackageCreate, db: Session = Depends(get_db)):
     # Controlla se lo studente esiste
@@ -108,34 +110,30 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
             }
         )
     
-    # Determina la data di pagamento
-    payment_date = package.payment_date or (package.start_date if package.is_paid else None)
-    
     # Gestione differenziata per pacchetti fissi e aperti
     if package.package_type == "fixed":
-        # Pacchetto fisso: i valori devono essere definiti
-        total_hours = package.total_hours if package.total_hours > 0 else Decimal('1.0')  # Default a 1 ora
-        package_cost = package.package_cost if package.package_cost >= 0 else Decimal('0')
-        remaining_hours = total_hours  # Le ore rimanenti sono inizialmente uguali alle ore totali
+        # Pacchetto fisso: assicurati che ore totali e costo siano positivi
+        total_hours = max(Decimal('0.5'), package.total_hours)
+        package_cost = max(Decimal('0'), package.package_cost)
+        remaining_hours = total_hours
+        expiry_date = calculate_expiry_date(package.start_date)
     else:
-        # Pacchetto aperto: le ore accumulate partono da zero
-        # Forza i valori a zero per pacchetti aperti non pagati
+        # Pacchetto aperto
         if not package.is_paid:
             total_hours = Decimal('0')
             package_cost = Decimal('0')
             remaining_hours = Decimal('0')
+            expiry_date = None
         else:
-            # Se pagato, usa i valori forniti o default a zero
-            total_hours = package.total_hours if package.total_hours > 0 else Decimal('0')
-            package_cost = package.package_cost if package.package_cost >= 0 else Decimal('0')
+            total_hours = max(Decimal('0.5'), package.total_hours)
+            package_cost = max(Decimal('0'), package.package_cost)
             remaining_hours = total_hours
+            expiry_date = None
     
-    # Calcola la data di scadenza per pacchetti a durata fissa
-    expiry_date = None
-    if package.package_type == "fixed":
-        expiry_date = calculate_expiry_date(package.start_date)
+    # Determina la data di pagamento
+    payment_date = package.payment_date if package.is_paid else None
     
-    # Crea un nuovo pacchetto
+    # Crea un nuovo pacchetto con valori sicuri
     db_package = models.Package(
         student_id=package.student_id,
         start_date=package.start_date,
@@ -208,77 +206,65 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
         models.Lesson.is_package == True
     ).scalar() or Decimal('0')
     
-    # Gestisce il cambio di tipo di pacchetto
-    type_changed = "package_type" in package.dict(exclude_unset=True) and package.package_type != db_package.package_type
-    
-    # Se stiamo cambiando da fisso ad aperto
-    if type_changed and package.package_type == "open":
-        # Per pacchetti aperti, le ore totali sono le ore utilizzate
-        update_data = package.dict(exclude_unset=True)
-        update_data["total_hours"] = hours_used
-        update_data["remaining_hours"] = hours_used
-        update_data["expiry_date"] = None
-        update_data["is_paid"] = False  # Reset dello stato di pagamento
-        
-        for key, value in update_data.items():
-            setattr(db_package, key, value)
-    
-    # Se stiamo cambiando da aperto a fisso
-    elif type_changed and package.package_type == "fixed":
-        # Per pacchetti fissi, verifica che total_hours sia definito e sufficiente
-        if "total_hours" not in package.dict(exclude_unset=True) or package.total_hours < hours_used:
-            # Se non specificato, usa le ore accumulate come ore totali
-            update_data = package.dict(exclude_unset=True)
-            update_data["total_hours"] = max(hours_used, Decimal('1.0'))  # Almeno 1 ora
-            update_data["remaining_hours"] = update_data["total_hours"] - hours_used
-            update_data["expiry_date"] = calculate_expiry_date(db_package.start_date)
-            
-            for key, value in update_data.items():
-                setattr(db_package, key, value)
-        else:
-            # Aggiorna le ore rimanenti in base alle nuove ore totali
-            update_data = package.dict(exclude_unset=True)
-            update_data["remaining_hours"] = package.total_hours - hours_used
-            update_data["expiry_date"] = calculate_expiry_date(db_package.start_date)
-            
-            for key, value in update_data.items():
-                setattr(db_package, key, value)
-    
-    # Gestione dello stato di pagamento
-    if "is_paid" in package.dict(exclude_unset=True) and package.is_paid and not db_package.is_paid:
-        # Se passa da non pagato a pagato
-        if "payment_date" not in package.dict(exclude_unset=True) or package.payment_date is None:
-            db_package.payment_date = date.today()
-        
-        # Per pacchetti aperti che vengono pagati, verifica che ci siano ore ed un costo
-        if db_package.package_type == "open" and (db_package.total_hours == 0 or db_package.package_cost == 0):
-            if "total_hours" not in package.dict(exclude_unset=True) or not package.total_hours:
-                db_package.total_hours = hours_used or Decimal('1.0')  # Default a 1 ora se non ci sono lezioni
-                
-            if "package_cost" not in package.dict(exclude_unset=True) or not package.package_cost:
-                # Se non è specificato un costo, calcola un costo basato sulle ore
-                default_hourly_rate = Decimal('20.0')
-                db_package.package_cost = db_package.total_hours * default_hourly_rate
-    
-    # Aggiorna i campi rimanenti
+    # Crea una copia dei dati per l'aggiornamento
     update_data = package.dict(exclude_unset=True)
-    for key, value in update_data.items():
-        if key not in ["remaining_hours", "total_hours", "package_type", "expiry_date"] or not type_changed:
-            setattr(db_package, key, value)
     
-    # Se total_hours è stato aggiornato, verifica che sia sufficiente per le ore già utilizzate
-    if "total_hours" in package.dict(exclude_unset=True) and db_package.package_type == "fixed":
-        if package.total_hours < hours_used:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Le ore totali non possono essere inferiori alle ore già utilizzate ({hours_used})"
+    # Gestione del cambio di tipo di pacchetto
+    type_changed = "package_type" in update_data and update_data["package_type"] != db_package.package_type
+    
+    # Gestione speciale per il cambio di tipo di pacchetto
+    if type_changed:
+        if update_data["package_type"] == "open":
+            # Cambio da fisso ad aperto
+            update_data["remaining_hours"] = hours_used
+            if not db_package.is_paid:
+                update_data["total_hours"] = hours_used
+                update_data["package_cost"] = Decimal('0')
+            update_data["expiry_date"] = None
+        else:  # Cambio da aperto a fisso
+            # Verifica ore totali sufficienti
+            if "total_hours" not in update_data or update_data["total_hours"] is None:
+                update_data["total_hours"] = max(hours_used, Decimal('1.0'))
+            elif update_data["total_hours"] < hours_used:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Le ore totali non possono essere inferiori alle ore già utilizzate ({hours_used})"
+                )
+            # Calcola la scadenza
+            update_data["expiry_date"] = calculate_expiry_date(
+                update_data.get("start_date", db_package.start_date)
             )
+            # Calcola le ore rimanenti
+            update_data["remaining_hours"] = update_data["total_hours"] - hours_used
     
-    # Commit e aggiornamento ore rimanenti
+    # Gestione del cambio di stato pagamento
+    if "is_paid" in update_data and update_data["is_paid"] and not db_package.is_paid:
+        # Se passa da non pagato a pagato
+        if "payment_date" not in update_data or update_data["payment_date"] is None:
+            update_data["payment_date"] = date.today()
+        
+        # Per pacchetti aperti che vengono pagati, fissiamo le ore accumulate e il costo
+        if db_package.package_type == "open":
+            # Se non è specificato un totale ore, usa le ore accumulate
+            if "total_hours" not in update_data:
+                update_data["total_hours"] = hours_used or Decimal('1.0')
+            
+            # Se non è specificato un costo, calcola in base alle ore
+            if "package_cost" not in update_data:
+                hourly_rate = Decimal('20.0')  # Tariffa oraria predefinita
+                update_data["package_cost"] = update_data["total_hours"] * hourly_rate
+    
+    # Aggiorna tutti i campi
+    for key, value in update_data.items():
+        setattr(db_package, key, value)
+    
+    # Salva le modifiche
     db.commit()
+    
+    # Aggiorna le ore rimanenti/accumulate
     update_package_remaining_hours(db, package_id)
     
-    # Refresh per ottenere tutti i campi aggiornati
+    # Aggiorna il pacchetto
     db.refresh(db_package)
     return db_package
 
