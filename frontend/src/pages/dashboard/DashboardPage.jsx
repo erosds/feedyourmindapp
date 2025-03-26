@@ -56,11 +56,12 @@ function DashboardPage() {
   const [packageLessons, setPackageLessons] = useState({});
 
   // Stato per il form di aggiunta lezione
+  // Stato per il form di aggiunta lezione
   const [lessonForm, setLessonForm] = useState({
-    professor_id: currentUser ? currentUser.id : '',
+    professor_id: selectedProfessor || (currentUser ? currentUser.id : ''), // Usa selectedProfessor se disponibile
     student_id: '',
     lesson_date: new Date(),
-    start_time: new Date(new Date().setHours(9, 0, 0, 0)), // Default alle 9:00
+    start_time: new Date(new Date().setHours(14, 0, 0, 0)), // Default alle 14:00
     duration: 1,
     is_package: false,
     package_id: null,
@@ -69,7 +70,8 @@ function DashboardPage() {
     payment_date: new Date(), // Default oggi
   });
 
-  // Caricamento iniziale dei dati
+  // Aggiorna lessonForm quando cambia selectedProfessor
+  // Add this useEffect in DashboardPage.jsx
   useEffect(() => {
     if (currentUser && selectedProfessor) {
       fetchData(selectedProfessor);
@@ -206,7 +208,7 @@ function DashboardPage() {
 
   const handlePackageChange = async (packageId) => {
     const parsedPackageId = parseInt(packageId);
-    
+
     setLessonForm({
       ...lessonForm,
       package_id: parsedPackageId,
@@ -225,7 +227,7 @@ function DashboardPage() {
       // Carica le lezioni associate a questo pacchetto
       const lessonsResponse = await lessonService.getByPackage(parsedPackageId);
       const packageLessonsData = lessonsResponse.data || [];
-      
+
       // Salva le lezioni nel dizionario packageLessons
       setPackageLessons(prev => ({
         ...prev,
@@ -239,25 +241,25 @@ function DashboardPage() {
   // Calcola le ore disponibili per un pacchetto
   const calculatePackageHours = (packageId, totalHours) => {
     if (!packageId || !totalHours) return { usedHours: 0, availableHours: 0 };
-    
+
     // Ottiene le lezioni associate al pacchetto
     const packageLessonsList = packageLessons[packageId] || [];
-    
+
     // Calcola le ore utilizzate
     const usedHours = packageLessonsList.reduce((total, lesson) => {
       return total + parseFloat(lesson.duration);
     }, 0);
-    
+
     // Calcola le ore disponibili
     const availableHours = parseFloat(totalHours) - usedHours;
-    
+
     return { usedHours, availableHours };
   };
 
   // Funzione per ottenere le lezioni nel periodo selezionato
   const getLessonsForPeriod = () => {
     if (!Array.isArray(lessons)) return [];
-    
+
     let startDate, endDate;
 
     switch (periodFilter) {
@@ -280,7 +282,7 @@ function DashboardPage() {
 
     return lessons.filter(lesson => {
       if (!lesson || !lesson.lesson_date) return false;
-      
+
       try {
         const lessonDate = parseISO(lesson.lesson_date);
         return isWithinInterval(lessonDate, { start: startDate, end: endDate });
@@ -294,7 +296,7 @@ function DashboardPage() {
   // Calcola le lezioni della settimana corrente
   const currentWeekLessons = lessons.filter(lesson => {
     if (!lesson || !lesson.lesson_date) return false;
-    
+
     try {
       const lessonDate = parseISO(lesson.lesson_date);
       return isWithinInterval(lessonDate, {
@@ -313,11 +315,11 @@ function DashboardPage() {
 
     return lessonsArray.reduce((total, lesson) => {
       if (!lesson) return total;
-      
+
       // Assicuriamoci che total_payment sia un numero
       const payment = parseFloat(lesson.total_payment);
       if (isNaN(payment)) return total;
-      
+
       return total + payment;
     }, 0);
   };
@@ -451,7 +453,9 @@ function DashboardPage() {
         handlePackageChange={handlePackageChange}
         calculatePackageHours={calculatePackageHours}
         currentUser={currentUser}
+        selectedProfessor={selectedProfessor} // Aggiungi questa riga
         updateLessons={() => fetchData(selectedProfessor)}
+        lessons={lessons}
       />
     </Box>
   );

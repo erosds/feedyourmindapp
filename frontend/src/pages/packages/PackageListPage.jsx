@@ -470,7 +470,7 @@ function PackageListPage() {
                       <TableCell>#{pkg.id}</TableCell>
                       <TableCell>{students[pkg.student_id] || `Studente #${pkg.student_id}`}</TableCell>
                       <TableCell>
-                        {format(parseISO(pkg.start_date), 'dd/MM/yyyy', { locale: it })}
+                        {format(parseISO(pkg.start_date), 'EEEE dd/MM/yyyy', { locale: it })}
                       </TableCell>
                       <TableCell>
                         <Chip
@@ -522,7 +522,7 @@ function PackageListPage() {
                       </TableCell>
                       <TableCell>
                         {pkg.package_type === 'fixed' && pkg.expiry_date ?
-                          format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it }) :
+                          format(parseISO(pkg.expiry_date), 'EEEE dd/MM/yyyy', { locale: it }) :
                           '-'}
                       </TableCell>
                       <TableCell align="right" onClick={(e) => e.stopPropagation()}>
