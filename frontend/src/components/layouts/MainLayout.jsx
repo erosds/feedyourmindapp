@@ -73,10 +73,10 @@ function MainLayout() {
     menuItems = [
       { text: 'AdminDashboard', icon: <AdminDashboardIcon />, path: '/admin-dashboard' },
       { text: 'MyDashboard', icon: <DashboardIcon />, path: '/dashboard' },
-      { text: 'Professori', icon: <PeopleIcon />, path: '/professors' },
-      { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
       { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
+      { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
+      { text: 'Professori', icon: <PeopleIcon />, path: '/professors' },
       { text: 'Reset Password', icon: <LockResetIcon />, path: '/admin/reset-password' }, // Aggiungi questa linea
 
     ];
@@ -84,8 +84,9 @@ function MainLayout() {
     // Per gli utenti normali, mostra solo le opzioni standard
     menuItems = [
       { text: 'MyDashboard', icon: <DashboardIcon />, path: '/dashboard' },
-      { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
+      { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
+      { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
     ];
   }
 

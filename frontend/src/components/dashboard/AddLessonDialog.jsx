@@ -1,14 +1,12 @@
 // src/components/dashboard/AddLessonDialog.jsx
 import React, { useState, useEffect } from 'react';
 import {
-  Alert,
   Button,
   Box,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
   FormControl,
   FormControlLabel,
@@ -46,7 +44,11 @@ function AddLessonDialog({
   currentUser,
   selectedProfessor,
   updateLessons,
-  lessons = []
+  lessons = [],
+  // Nuova prop per definire il contesto e bloccare campi specifici
+  context = 'dashboard', // Valori possibili: 'dashboard', 'packageDetail'
+  // Prop opzionale per forzare un pacchetto specifico
+  fixedPackageId = null
 }) {
   // Stati locali
   const [submitting, setSubmitting] = useState(false);
@@ -310,23 +312,38 @@ function AddLessonDialog({
   useEffect(() => {
     if (open) {
       setError('');
-      const activePackages = Array.isArray(studentPackages)
-        ? studentPackages.filter(pkg => pkg && pkg.status === 'in_progress')
-        : [];
-      console.log("Setting local packages:", activePackages.length);
-      setLocalPackages(activePackages);
-      if (selectedPackage) {
-        setLocalSelectedPackage(selectedPackage);
-      } else {
-        setLocalSelectedPackage(null);
-      }
+      // Se stiamo usando il dialogo dal dettaglio pacchetto, imposta alcuni valori di default
+      if (context === 'packageDetail' && fixedPackageId) {
+        // Forza sempre l'utilizzo del pacchetto corrente
+        setLessonForm(prev => ({
+          ...prev,
+          is_package: true,
+          package_id: fixedPackageId
+        }));
 
-      // If student_id is already set, load their lessons
-      if (lessonForm.student_id) {
-        loadStudentLessons(lessonForm.student_id);
+        // Trova il pacchetto corrente nella lista
+        const currentPackage = studentPackages.find(pkg => pkg.id === fixedPackageId);
+        if (currentPackage) {
+          setLocalSelectedPackage(currentPackage);
+        }
+      } else {
+        const activePackages = Array.isArray(studentPackages)
+          ? studentPackages.filter(pkg => pkg && pkg.status === 'in_progress')
+          : [];
+        console.log("Setting local packages:", activePackages.length);
+        setLocalPackages(activePackages);
+        if (selectedPackage) {
+          setLocalSelectedPackage(selectedPackage);
+        } else {
+          setLocalSelectedPackage(null);
+        }
       }
-    }
-  }, [open, studentPackages, selectedPackage, lessonForm.student_id]);
+        // If student_id is already set, load their lessons
+        if (lessonForm.student_id) {
+          loadStudentLessons(lessonForm.student_id);
+        }
+      }
+    }, [open, studentPackages, selectedPackage, lessonForm.student_id, context, fixedPackageId]);
 
   return (
     <>
@@ -335,22 +352,16 @@ function AddLessonDialog({
           Aggiungi Lezione per {selectedDay ? format(selectedDay, "EEEE d MMMM yyyy", { locale: it }) : ""}
         </DialogTitle>
         <DialogContent>
-          <DialogContentText paragraph>
-            Inserisci i dettagli della lezione
-          </DialogContentText>
-          {(formError || error) && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {formError || error}
-            </Alert>
-          )}
+          {/* ...codice esistente... */}
+
           <Grid container spacing={3} sx={{ mt: 1 }}>
-            {/* Selezione studente */}
+            {/* Selezione studente - nascondi o disabilita nel contesto del pacchetto */}
             <Grid item xs={12} md={6}>
               <StudentAutocomplete
                 students={students}
                 value={lessonForm.student_id}
                 onChange={handleStudentAutocomplete}
-                disabled={submitting}
+                disabled={submitting || context === 'packageDetail'}
                 required
                 error={!lessonForm.student_id}
                 helperText={!lessonForm.student_id ? "Seleziona uno studente" : ""}
@@ -426,32 +437,34 @@ function AddLessonDialog({
                 InputProps={{ readOnly: true }}
               />
             </Grid>
-            {/* Toggle per pacchetto */}
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    name="is_package"
-                    checked={lessonForm.is_package}
-                    onChange={handlePackageToggle}
-                    disabled={isPackageToggleDisabled}
-                  />
-                }
-                label="Parte di un pacchetto"
-              />
-              <Box ml={2} display="inline">
-                {isPackageToggleDisabled && lessonForm.student_id && localPackages.length === 0 && (
-                  <FormHelperText error>
-                    Lo studente non ha pacchetti attivi
-                  </FormHelperText>
-                )}
-                {lessonForm.student_id && localPackages.length > 0 && (
-                  <FormHelperText sx={{ color: 'red' }}>
-                    {localPackages.length} pacchetto disponibile
-                  </FormHelperText>
-                )}
-              </Box>
-            </Grid>
+            {/* Toggle per pacchetto - nascondi nel contesto del pacchetto */}
+            {context !== 'packageDetail' && (
+              <Grid item xs={12} md={6}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      name="is_package"
+                      checked={lessonForm.is_package}
+                      onChange={handlePackageToggle}
+                      disabled={isPackageToggleDisabled}
+                    />
+                  }
+                  label="Parte di un pacchetto"
+                />
+                <Box ml={2} display="inline">
+                  {isPackageToggleDisabled && lessonForm.student_id && localPackages.length === 0 && (
+                    <FormHelperText error>
+                      Lo studente non ha pacchetti attivi
+                    </FormHelperText>
+                  )}
+                  {lessonForm.student_id && localPackages.length > 0 && (
+                    <FormHelperText sx={{ color: 'red' }}>
+                      {localPackages.length} pacchetto disponibile
+                    </FormHelperText>
+                  )}
+                </Box>
+              </Grid>
+            )}
             {/* Toggle pagamento (disabilitato per lezioni da pacchetto) */}
             <Grid item xs={12} md={6}>
               <FormControlLabel
@@ -478,8 +491,8 @@ function AddLessonDialog({
                 </FormHelperText>
               )}
             </Grid>
-            {/* Selezione pacchetto (solo se is_package è true) */}
-            {lessonForm.is_package && (
+            {/* Selezione pacchetto - nascondi nel contesto del pacchetto */}
+            {lessonForm.is_package && context !== 'packageDetail' && (
               <Grid item xs={12}>
                 <FormControl fullWidth disabled={isLoadingPackages || submitting}>
                   <InputLabel id="package-label">Pacchetto</InputLabel>
@@ -508,7 +521,7 @@ function AddLessonDialog({
                       ))
                     )}
                   </Select>
-                  
+
                 </FormControl>
               </Grid>
             )}

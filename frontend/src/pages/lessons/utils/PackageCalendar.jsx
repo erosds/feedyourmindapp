@@ -1,11 +1,12 @@
 // src/pages/lessons/utils/PackageCalendar.jsx
 import React, { useState } from 'react';
-import { Box, Grid, IconButton, Typography } from '@mui/material';
+import { Box, Grid, IconButton, Typography, Tooltip } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { format, getYear, getMonth, getDaysInMonth, getDay, startOfMonth, parseISO, addMonths, subMonths } from 'date-fns';
+import TodayIcon from '@mui/icons-material/Today';
+import { format, getYear, getMonth, getDaysInMonth, getDay, startOfMonth, parseISO, addMonths, subMonths, isSameDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 
-const PackageCalendar = ({ lessons, professors }) => {
+const PackageCalendar = ({ lessons, professors, onDayClick }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const changeMonth = (offset) => {
@@ -14,6 +15,10 @@ const PackageCalendar = ({ lessons, professors }) => {
     } else {
       setCurrentMonth(prevMonth => subMonths(prevMonth, 1));
     }
+  };
+
+  const resetToCurrentMonth = () => {
+    setCurrentMonth(new Date());
   };
 
   const year = getYear(currentMonth);
@@ -71,9 +76,15 @@ const PackageCalendar = ({ lessons, professors }) => {
         <Typography variant="subtitle1" align="center">
           {format(currentMonth, 'MMMM yyyy', { locale: it })}
         </Typography>
-        <IconButton size="small" onClick={() => changeMonth(1)}>
-          <ArrowBackIcon fontSize="small" sx={{ transform: 'rotate(180deg)' }} />
-        </IconButton>
+        <Box>
+          {/* Aggiungiamo un pulsante per tornare al mese corrente */}
+          <IconButton size="small" onClick={resetToCurrentMonth} sx={{ mr: 0.5 }}>
+            <TodayIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={() => changeMonth(1)}>
+            <ArrowBackIcon fontSize="small" sx={{ transform: 'rotate(180deg)' }} />
+          </IconButton>
+        </Box>
       </Box>
 
       <Grid container spacing={0.5}>
@@ -101,9 +112,16 @@ const PackageCalendar = ({ lessons, professors }) => {
           }
 
           // Check if this day has lessons
-          const dateKey = format(new Date(year, month, day), 'yyyy-MM-dd');
+          const dateObj = new Date(year, month, day);
+          const dateKey = format(dateObj, 'yyyy-MM-dd');
           const hasLesson = lessonsByDay[dateKey] && lessonsByDay[dateKey].length > 0;
           const dayLessons = hasLesson ? lessonsByDay[dateKey] : [];
+          const isToday = isSameDay(dateObj, new Date());
+
+          // Calculate total hours for this day
+          const totalHours = hasLesson 
+            ? dayLessons.reduce((sum, lesson) => sum + lesson.duration, 0)
+            : 0;
 
           return (
             <Grid item xs={12 / 7} key={`day-${index}`}>
@@ -124,19 +142,26 @@ const PackageCalendar = ({ lessons, professors }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    bgcolor: hasLesson ? 'primary.main' : 'transparent',
-                    color: hasLesson ? 'primary.contrastText' : 'text.primary',
-                    fontWeight: hasLesson ? 'bold' : 'normal',
-                    cursor: 'default',
-                    transition: 'all 0.3s ease',
-                    '&:hover': hasLesson ? {
+                    bgcolor: hasLesson ? 'primary.main' : (isToday ? 'primary.light' : 'transparent'),
+                    color: hasLesson || isToday ? 'primary.contrastText' : 'text.primary',
+                    fontWeight: hasLesson || isToday ? 'bold' : 'normal',
+                    // Modificato il cursore per indicare che è cliccabile se esiste onDayClick
+                    cursor: onDayClick ? 'pointer' : 'default',
+                    // Effetto hover migliorato per indicare che è cliccabile
+                    '&:hover': {
+                      ...(onDayClick && {
+                        transform: 'scale(1.1)',
+                        boxShadow: '0 0 5px rgba(0,0,0,0.2)',
+                      }),
                       '& .lessons-tooltip': {
                         opacity: 1,
-                        top: -5 - (dayLessons.length * 20),
+                        top: -3 - (dayLessons.length * 20),
                         visibility: 'visible'
                       }
-                    } : {},
+                    },
                   }}
+                  // Aggiunto onClick che usa onDayClick se la prop è stata fornita
+                  onClick={() => onDayClick && onDayClick(dateObj)}
                 >
                   {day}
                   {hasLesson && (

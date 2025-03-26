@@ -114,14 +114,14 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
 
     if package.is_paid:
         if date.today() < expiry_date:
-            status = "in_progress"
+            package.status = "in_progress"
         elif date.today() >= expiry_date:
-            status = "completed"
+            package.status = "completed"
     else:
         if date.today() < expiry_date:
-            status = "in_progress"
+            package.status = "in_progress"
         elif date.today() >= expiry_date:
-            status = "expired"
+            package.status = "expired"
     
     # Create new package
     db_package = models.Package(
@@ -129,7 +129,7 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
         start_date=package.start_date,
         total_hours=total_hours,
         package_cost=package_cost,
-        status=status,
+        status=package.status,
         is_paid=package.is_paid,
         payment_date=payment_date,
         remaining_hours=total_hours,  # Initially, remaining = total

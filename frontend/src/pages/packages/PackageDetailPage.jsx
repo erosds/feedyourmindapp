@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  Alert,
   Box,
   Button,
   Card,
@@ -30,13 +29,10 @@ import {
   Edit as EditIcon,
   ArrowBack as ArrowBackIcon,
   Event as EventIcon,
-  AccessTime as AccessTimeIcon,
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
   AddTask as AddLessonIcon,
   Delete as DeleteIcon,
-  Timer as TimerIcon,
-  Euro as EuroIcon,
   EventNote as ListItemIcon,
   EventNote as ListItemText
 } from '@mui/icons-material';
@@ -44,9 +40,14 @@ import { format, parseISO, isAfter, differenceInDays } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { packageService, studentService, lessonService, professorService } from '../../services/api';
 import PackageCalendar from '../lessons/utils/PackageCalendar';
+import AddLessonDialog from '../../components/dashboard/AddLessonDialog';
+import { useAuth } from '../../context/AuthContext'; // Assicurati di importare useAuth
+
 
 function PackageDetailPage() {
   const { id } = useParams();
+  const { currentUser } = useAuth();
+
   const navigate = useNavigate();
   const [packageData, setPackageData] = useState(null);
   const [student, setStudent] = useState(null);
@@ -57,6 +58,24 @@ function PackageDetailPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  // Aggiungi questi stati
+  const [addLessonDialogOpen, setAddLessonDialogOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [students, setStudents] = useState([]);
+  const [studentLessons, setStudentLessons] = useState([]);
+  // Stato per il form della lezione
+  const [lessonForm, setLessonForm] = useState({
+    professor_id: currentUser?.id || '',
+    student_id: '',
+    lesson_date: new Date(),
+    start_time: new Date(new Date().setHours(14, 0, 0, 0)), // Default alle 14:00
+    duration: 1,
+    is_package: true,
+    package_id: null,
+    hourly_rate: '',
+    is_paid: true,
+    payment_date: new Date(), // Default oggi
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,12 +90,28 @@ function PackageDetailPage() {
         const studentResponse = await studentService.getById(packageResponse.data.student_id);
         setStudent(studentResponse.data);
 
+        // Imposta lo student_id nel form
+        setLessonForm(prev => ({
+          ...prev,
+          student_id: packageResponse.data.student_id,
+          package_id: parseInt(id),
+          is_package: true
+        }));
+
+        // Carica tutti gli studenti per il componente StudentAutocomplete
+        const studentsResponse = await studentService.getAll();
+        setStudents(studentsResponse.data);
+
         // Load lessons related to the package
         const lessonsResponse = await lessonService.getAll();
         const packageLessons = lessonsResponse.data.filter(
           lesson => lesson.package_id === parseInt(id) && lesson.is_package
         );
         setLessons(packageLessons);
+
+        // Load student lessons for overlap checks
+        const studentLessonsResponse = await lessonService.getByStudent(packageResponse.data.student_id);
+        setStudentLessons(studentLessonsResponse.data);
 
         // Set current month to the month of the first lesson or today if no lessons
         if (packageLessons.length > 0) {
@@ -100,6 +135,54 @@ function PackageDetailPage() {
 
     fetchData();
   }, [id]);
+
+  // Funzione per gestire il click su un giorno del calendario
+  const handleDayClick = (day) => {
+    setSelectedDay(day);
+    setLessonForm(prev => ({
+      ...prev,
+      lesson_date: day,
+      professor_id: currentUser?.id || '',
+      student_id: packageData.student_id,
+      package_id: parseInt(id),
+      is_package: true
+    }));
+    setAddLessonDialogOpen(true);
+  };
+
+  // Funzione per calcolare le ore disponibili nel pacchetto
+  const calculatePackageHours = (packageId, totalHours) => {
+    if (!packageId || !totalHours) return { usedHours: 0, availableHours: 0 };
+
+    // Calcola la somma delle ore di lezione già usate in questo pacchetto
+    const usedHours = lessons.reduce((total, lesson) =>
+      total + parseFloat(lesson.duration), 0);
+
+    // Calcola le ore disponibili
+    const availableHours = parseFloat(totalHours) - usedHours;
+
+    return {
+      usedHours,
+      availableHours
+    };
+  };
+
+  // Funzione per aggiornare le lezioni dopo un'aggiunta
+  const updateLessons = async () => {
+    try {
+      const lessonsResponse = await lessonService.getAll();
+      const packageLessons = lessonsResponse.data.filter(
+        lesson => lesson.package_id === parseInt(id) && lesson.is_package
+      );
+      setLessons(packageLessons);
+
+      // Aggiorna anche i dati del pacchetto per riflettere le ore aggiornate
+      const packageResponse = await packageService.getById(id);
+      setPackageData(packageResponse.data);
+    } catch (err) {
+      console.error('Error updating lessons:', err);
+    }
+  };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -261,22 +344,11 @@ function PackageDetailPage() {
             </IconButton>
           </Tooltip>
           <Typography variant="h4">
-            Package Details #{packageData.id}
+            Dettagli Pacchetto #{packageData.id}
           </Typography>
         </Box>
 
         <Box>
-          {packageData.status === 'in_progress' && (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AddLessonIcon />}
-              onClick={handleAddLesson}
-              sx={{ mr: 1 }}
-            >
-              Aggiungi Lezione al Pacchetto
-            </Button>
-          )}
           <Button
             variant="outlined"
             color="secondary"
@@ -380,7 +452,7 @@ function PackageDetailPage() {
                   >
                     {format(parseISO(packageData.expiry_date), 'dd MMMM yyyy', { locale: it })}
                   </Typography>
-                  
+
                 </Grid>
 
                 <Grid item xs={12} md={4}>
@@ -400,7 +472,7 @@ function PackageDetailPage() {
 
                 {/* Financial details */}
                 <Grid item xs={12}>
-                  <Divider/>
+                  <Divider />
                 </Grid>
 
                 <Grid item xs={12} md={4}>
@@ -436,14 +508,18 @@ function PackageDetailPage() {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Box display="flex" justifyContent="space-between" mt={3}>
-                    <Typography variant="body1">
-                      Completamento Settimanale:
-                    </Typography>
-                    <Typography variant="body1" fontWeight="medium">
-                      {completionPercentage.toFixed(0)}%
-                    </Typography>
-                  </Box>
+                <Box display="flex" flexDirection="column" mt={3}>
+  <Box display="flex" justifyContent="space-between">
+    <Typography variant="h6">Completamento:</Typography>
+    <Typography variant="h5" fontWeight="medium">
+      {completionPercentage.toFixed(0)}%
+    </Typography>
+  </Box>
+  <Typography variant="caption">
+    I divisori rappresentano le 4 settimane in cui va completato il pacchetto
+  </Typography>
+</Box>
+
                   <LinearProgress
                     variant="determinate"
                     value={completionPercentage}
@@ -484,21 +560,36 @@ function PackageDetailPage() {
               <Typography variant="h6" gutterBottom mb={3.3} >
                 Calendario Lezioni
               </Typography>
-              <PackageCalendar lessons={lessons} professors={professors}/>
-            
+              <PackageCalendar
+                lessons={lessons}
+                professors={professors}
+                onDayClick={handleDayClick} // Aggiungi questa prop al componente PackageCalendar
+              />
+
             </CardContent>
           </Card>
         </Grid>
-      
+
 
         {/* Lesson Table */}
         <Grid item xs={12}>
           <Paper sx={{ p: 2 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="h6">
-                Lessons in this package
+                Lezioni del pacchetto
               </Typography>
-
+              {packageData.status === 'in_progress' && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddLessonIcon />}
+              onClick={handleAddLesson}
+              sx={{ mr: 1 }}
+              size='small'
+            >
+              Aggiungi Lezioni al Pacchetto
+            </Button>
+          )}
             </Box>
 
             {lessons.length === 0 ? (
@@ -512,11 +603,11 @@ function PackageDetailPage() {
                     <TableHead>
                       <TableRow>
                         <TableCell>ID</TableCell>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Professor</TableCell>
-                        <TableCell>Duration (hours)</TableCell>
-                        <TableCell>Hourly rate</TableCell>
-                        <TableCell align="right">Total</TableCell>
+                        <TableCell>Data</TableCell>
+                        <TableCell>Professore</TableCell>
+                        <TableCell>Durata (ore)</TableCell>
+                        <TableCell>Tariffa Oraria</TableCell>
+                        <TableCell align="right">Totale</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -535,7 +626,7 @@ function PackageDetailPage() {
                           >
                             <TableCell>#{lesson.id}</TableCell>
                             <TableCell>
-                              {format(parseISO(lesson.lesson_date), 'dd/MM/yyyy', { locale: it })}
+                              {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                             </TableCell>
                             <TableCell>
                               {professors[lesson.professor_id] || `Prof. #${lesson.professor_id}`}
@@ -564,6 +655,27 @@ function PackageDetailPage() {
           </Paper>
         </Grid>
       </Grid>
+      <AddLessonDialog
+        open={addLessonDialogOpen}
+        onClose={() => setAddLessonDialogOpen(false)}
+        selectedDay={selectedDay}
+        lessonForm={lessonForm}
+        setLessonForm={setLessonForm}
+        students={students}
+        studentPackages={[packageData]} // Passa solo il pacchetto corrente
+        selectedPackage={packageData}
+        formError={null}
+        formSubmitting={false}
+        handleStudentChange={() => { }} // Funzione vuota perché lo studente è fisso
+        handlePackageChange={() => { }} // Funzione vuota perché il pacchetto è fisso
+        calculatePackageHours={calculatePackageHours}
+        currentUser={currentUser}
+        selectedProfessor={null}
+        updateLessons={updateLessons}
+        lessons={studentLessons}
+        context="packageDetail" // Specifica il contesto
+        fixedPackageId={parseInt(id)} // Passa l'ID del pacchetto fisso
+      />
     </Box>
   );
 }
