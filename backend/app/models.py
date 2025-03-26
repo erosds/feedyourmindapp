@@ -249,19 +249,21 @@ class PackageCreate(BaseModel):
     
     @model_validator(mode='after')
     def validate_package_fields(self):
-        # Per pacchetti aperti, permetti valori zero o nulli
+    # Per pacchetti aperti, inizializza sempre a zero (indipendentemente dai valori forniti)
         if self.package_type == 'open':
-            self.total_hours = self.total_hours or Decimal('0')
-            self.package_cost = self.package_cost or Decimal('0')
+            # Non sovrascriviamo i valori se è pagato
+            if not self.is_paid:
+                self.total_hours = Decimal('0')
+                self.package_cost = Decimal('0')
             return self
-        
-        # Per pacchetti fissi, mantieni la validazione precedente
+    
+    # Per pacchetti fissi, mantieni la validazione precedente
         if self.package_type == 'fixed':
             if self.total_hours is None or self.total_hours <= 0:
                 raise ValueError('total_hours must be positive for fixed packages')
             if self.package_cost is None or self.package_cost < 0:
                 raise ValueError('package_cost must be non-negative for fixed packages')
-        
+    
         return self
 
 class PackageUpdate(BaseModel):

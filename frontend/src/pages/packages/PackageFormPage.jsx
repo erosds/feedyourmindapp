@@ -1,3 +1,4 @@
+// src/pages/packages/PackageFormPage.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
@@ -42,7 +43,7 @@ function PackageFormPage() {
 
   // Calcola le ore utilizzate
   const hoursUsed = useMemo(() =>
-    packageLessons.reduce((total, lesson) => total + parseFloat(lesson.duration), 0),
+    packageLessons.reduce((total, lesson) => total + parseFloat(lesson.duration || 0), 0),
     [packageLessons]
   );
 
@@ -58,11 +59,6 @@ function PackageFormPage() {
     expiry_date: null,
   });
 
-  // Funzione per trasformare le stringhe vuote in null
-  const transformEmptyToNull = (value, originalValue) => {
-    return originalValue === '' ? null : value;
-  };
-
   // Schema di validazione più flessibile
   const createPackageSchema = (packageType = 'fixed', isPaid = false) => {
     return Yup.object().shape({
@@ -73,35 +69,37 @@ function PackageFormPage() {
       // Campi condizionali basati su tipo di pacchetto e stato di pagamento
       total_hours: packageType === 'fixed'
         ? Yup.number()
-          .transform(transformEmptyToNull)
+          .transform((value, originalValue) => originalValue === '' ? null : value)
           .positive('Il numero di ore deve essere positivo')
           .required('Numero di ore obbligatorio')
         : Yup.number()
-          .transform(transformEmptyToNull)
+          .transform((value, originalValue) => originalValue === '' ? null : value)
           .nullable()
-          .when('is_paid', (isPaid, schema) => {
-            return isPaid
-              ? schema.positive('Il numero di ore deve essere positivo').required('Numero di ore obbligatorio')
-              : schema.notRequired();
+          .when('is_paid', {
+            is: true,
+            then: () => Yup.number().positive('Il numero di ore deve essere positivo').required('Numero di ore obbligatorio'),
+            otherwise: () => Yup.number().notRequired(),
           }),
 
       package_cost: packageType === 'fixed'
         ? Yup.number()
-          .transform(transformEmptyToNull)
-          .positive('Il costo deve essere positivo')
+          .transform((value, originalValue) => originalValue === '' ? null : value)
+          .min(0, 'Il costo non può essere negativo')
           .required('Costo pacchetto obbligatorio')
         : Yup.number()
-          .transform(transformEmptyToNull)
+          .transform((value, originalValue) => originalValue === '' ? null : value)
           .nullable()
-          .when('is_paid', (isPaid, schema) => {
-            return isPaid
-              ? schema.positive('Il costo deve essere positivo').required('Costo pacchetto obbligatorio')
-              : schema.notRequired();
+          .when('is_paid', {
+            is: true,
+            then: () => Yup.number().min(0, 'Il costo non può essere negativo').required('Costo pacchetto obbligatorio'),
+            otherwise: () => Yup.number().notRequired(),
           }),
 
-
       is_paid: Yup.boolean(),
-      payment_date: Yup.date().nullable(),
+      payment_date: Yup.date().nullable().when('is_paid', {
+        is: true,
+        then: () => Yup.date().nullable().required('Data di pagamento obbligatoria')
+      }),
     });
   };
 
@@ -132,8 +130,13 @@ function PackageFormPage() {
           setInitialValues({
             student_id: packageData.student_id,
             start_date: parseISO(packageData.start_date),
-            total_hours: packageData.total_hours || '',
-            package_cost: packageData.package_cost || '',
+            // Per pacchetti aperti, mostra solo le ore accumulate se ce ne sono
+            total_hours: packageData.package_type === 'open' && !packageData.is_paid
+              ? ''
+              : packageData.total_hours || '',
+            package_cost: packageData.package_type === 'open' && !packageData.is_paid
+              ? ''
+              : packageData.package_cost || '',
             is_paid: packageData.is_paid,
             payment_date: packageData.payment_date ? parseISO(packageData.payment_date) : null,
             package_type: packageData.package_type || 'fixed',
@@ -192,8 +195,8 @@ function PackageFormPage() {
     try {
       setError(null);
 
-      // Validazione ore utilizzate
-      if (isEditMode && parseFloat(values.total_hours) < hoursUsed) {
+      // Validazione ore utilizzate per pacchetti fissi
+      if (isEditMode && values.package_type === 'fixed' && parseFloat(values.total_hours) < hoursUsed) {
         setFieldError('total_hours', `Non puoi impostare meno di ${hoursUsed} ore (ore già utilizzate)`);
         setSubmitting(false);
         return;
@@ -203,23 +206,21 @@ function PackageFormPage() {
       const packageData = {
         ...values,
         start_date: format(values.start_date, 'yyyy-MM-dd'),
+        // Per pacchetti fissi, usa i valori inseriti
+        // Per pacchetti aperti, usa 0 a meno che non sia pagato
         total_hours: values.package_type === 'fixed'
           ? parseFloat(values.total_hours)
-          : (values.is_paid ? parseFloat(values.total_hours || 0) : 0),
+          : (values.is_paid && values.total_hours ? parseFloat(values.total_hours) : 0),
         package_cost: values.package_type === 'fixed'
           ? parseFloat(values.package_cost)
-          : (values.is_paid ? parseFloat(values.package_cost || 0) : 0),
+          : (values.is_paid && values.package_cost ? parseFloat(values.package_cost) : 0),
         payment_date: values.is_paid && values.payment_date
           ? format(values.payment_date, 'yyyy-MM-dd')
           : null,
-        expiry_date: values.package_type === 'fixed'
-          ? format(calculateExpiryDate(values.start_date), 'yyyy-MM-dd')
-          : null,
-        status: 'in_progress', // Lo stato verrà gestito dal backend se necessario
-        remaining_hours: values.package_type === 'fixed'
-          ? parseFloat(values.total_hours)
-          : 0
+        status: 'in_progress',
       };
+
+      console.log("Invio pacchetto con dati:", packageData);
 
       // Salvataggio pacchetto
       if (isEditMode) {
@@ -288,8 +289,8 @@ function PackageFormPage() {
         <Formik
           initialValues={initialValues}
           validationSchema={(values) => {
-            const pkgType = (values && values.package_type) ? values.package_type : initialValues.package_type;
-            const isPaid = (values && typeof values.is_paid !== "undefined") ? values.is_paid : initialValues.is_paid;
+            const pkgType = values?.package_type || initialValues.package_type;
+            const isPaid = values?.is_paid !== undefined ? values.is_paid : initialValues.is_paid;
             return createPackageSchema(pkgType, isPaid);
           }}
           onSubmit={handleSubmit}
@@ -303,241 +304,312 @@ function PackageFormPage() {
             handleBlur,
             setFieldValue,
             isSubmitting,
-          }) => (
-            <Form>
-              <Grid container spacing={3}>
-                {/* Studente */}
-                <Grid item xs={12} md={6}>
-                  <StudentAutocomplete
-                    value={values.student_id}
-                    onChange={(studentId) => setFieldValue('student_id', studentId)}
-                    error={touched.student_id && Boolean(errors.student_id)}
-                    helperText={touched.student_id && errors.student_id}
-                    disabled={isEditMode}
-                    required
-                    students={students}
-                  />
-                </Grid>
+          }) => {
+            // Determina se disabilitare lo switch di pagamento
+            // Per pacchetti aperti nuovi, lo disabilitiamo sempre
+            const disablePaymentSwitch = !isEditMode && values.package_type === 'open';
 
-                {/* Data inizio */}
-                <Grid item xs={12} md={6}>
-                  <DatePicker
-                    label="Data inizio"
-                    value={values.start_date}
-                    onChange={(date) => {
-                      setFieldValue('start_date', date);
-                      // Aggiorna data scadenza per pacchetti fissi
-                      if (values.package_type === 'fixed') {
-                        setFieldValue('expiry_date', calculateExpiryDate(date));
-                      }
-                    }}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        required: true,
-                        error: touched.start_date && Boolean(errors.start_date),
-                        helperText: touched.start_date && errors.start_date,
-                      },
-                    }}
-                  />
-                </Grid>
+            return (
+              <Form>
+                <Grid container spacing={3}>
+                  {/* Studente */}
+                  <Grid item xs={12} md={6}>
+                    <StudentAutocomplete
+                      value={values.student_id}
+                      onChange={(studentId) => setFieldValue('student_id', studentId)}
+                      error={touched.student_id && Boolean(errors.student_id)}
+                      helperText={touched.student_id && errors.student_id}
+                      disabled={isEditMode}
+                      required
+                      students={students}
+                    />
+                  </Grid>
 
-                {/* Tipo di pacchetto */}
-                <Grid item xs={12}>
-                  <FormControl component="fieldset">
-                    <RadioGroup
-                      row
-                      name="package_type"
-                      value={values.package_type}
-                      onChange={(e) => {
-                        const newType = e.target.value;
-                        setFieldValue('package_type', newType);
-
-                        // Reset campi per pacchetti aperti
-                        if (newType === 'open') {
-                          if (!isEditMode) {
-                            setFieldValue('total_hours', '');
-                            setFieldValue('package_cost', '');
-                          }
-                          setFieldValue('expiry_date', null);
-                        } else {
-                          // Per pacchetti fissi, calcola data scadenza
-                          setFieldValue('expiry_date', calculateExpiryDate(values.start_date));
-                        }
-                      }}
-                    >
-                      <FormControlLabel
-                        value="fixed"
-                        control={<Radio />}
-                        label="Pacchetto 4 settimane"
-                      />
-                      <FormControlLabel
-                        value="open"
-                        control={<Radio />}
-                        label="Pacchetto aperto"
-                      />
-                    </RadioGroup>
-                  </FormControl>
-                </Grid>
-
-                {/* Data scadenza (solo pacchetti fissi) */}
-                {values.package_type === 'fixed' && (
+                  {/* Data inizio */}
                   <Grid item xs={12} md={6}>
                     <DatePicker
-                      label="Data di scadenza"
-                      value={calculateExpiryDate(values.start_date)}
-                      readOnly
-                      disabled
+                      label="Data inizio"
+                      value={values.start_date}
+                      onChange={(date) => {
+                        setFieldValue('start_date', date);
+                        // Aggiorna la data di scadenza per pacchetti fissi
+                        if (values.package_type === 'fixed') {
+                          setFieldValue('expiry_date', calculateExpiryDate(date));
+                        }
+                      }}
                       slotProps={{
                         textField: {
                           fullWidth: true,
-                          helperText: "Lunedì della 4ª settimana dalla data di inizio",
+                          required: true,
+                          error: touched.start_date && Boolean(errors.start_date),
+                          helperText: touched.start_date && errors.start_date,
                         },
                       }}
                     />
                   </Grid>
-                )}
 
-                {/* Ore totali (condizionale) */}
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    name="total_hours"
-                    label={values.package_type === 'open' ? "Ore accumulate" : "Totale ore"}
-                    type="number"
-                    value={values.total_hours}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    error={touched.total_hours && Boolean(errors.total_hours)}
-                    helperText={
-                      (touched.total_hours && errors.total_hours) ||
-                      (isEditMode ? `Ore già utilizzate: ${hoursUsed}` : '')
-                    }
-                    inputProps={{
-                      min: values.package_type === 'fixed' ? 0.5 : 0,
-                      step: 0.5,
-                    }}
-                    required={values.package_type === 'fixed'}
-                    disabled={values.package_type === 'open' && !values.is_paid && !isEditMode}
-                  />
-                </Grid>
-
-                {/* Costo pacchetto (condizionale) */}
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    name="package_cost"
-                    label="Costo pacchetto"
-                    type="number"
-                    value={values.package_cost}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    error={touched.package_cost && Boolean(errors.package_cost)}
-                    helperText={touched.package_cost && errors.package_cost}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                    }}
-                    inputProps={{
-                      min: 0,
-                      step: 0.5,
-                    }}
-                    required={values.package_type === 'fixed' || (values.package_type === 'open' && values.is_paid)}
-                    disabled={values.package_type === 'open' && !values.is_paid && !isEditMode}
-                  />
-                </Grid>
-
-                {/* Divisore stato pacchetto */}
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 2 }} />
-                  <Typography variant="h6" gutterBottom>
-                    Stato del Pacchetto
-                  </Typography>
-                </Grid>
-
-                {/* Switch pagamento */}
-                <Grid item xs={12} md={4}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        name="is_paid"
-                        checked={values.is_paid}
+                  {/* Tipo di pacchetto */}
+                  <Grid item xs={12}>
+                    <FormControl component="fieldset">
+                      <RadioGroup
+                        row
+                        name="package_type"
+                        value={values.package_type}
                         onChange={(e) => {
-                          const isPaid = e.target.checked;
-                          setFieldValue('is_paid', isPaid);
+                          const newType = e.target.value;
+                          setFieldValue('package_type', newType);
 
-                          // Per pacchetti aperti, abilita l'inserimento di ore e costo
-                          if (values.package_type === 'open' && isPaid) {
-                            // Se non ci sono valori, imposta a zero
-                            setFieldValue('total_hours', values.total_hours || 0);
-                            setFieldValue('package_cost', values.package_cost || 0);
+                          // Se cambia da fisso ad aperto
+                          if (newType === 'open') {
+                            // Per pacchetti aperti, disattiva sempre il pagamento
+                            if (!isEditMode) {
+                              setFieldValue('is_paid', false);
+                              setFieldValue('payment_date', null);
+                              // Solo in modalità creazione, reset dei campi
+                              setFieldValue('total_hours', '');
+                              setFieldValue('package_cost', '');
+                            } else if (hoursUsed > 0) {
+                              // In modalità modifica, se ci sono ore utilizzate le mostriamo
+                              setFieldValue('total_hours', hoursUsed);
+                            }
+                            // Reset della data di scadenza
+                            setFieldValue('expiry_date', null);
+                          } else {
+                            // Se cambia da aperto a fisso
+                            // Imposta la data di scadenza
+                            setFieldValue('expiry_date', calculateExpiryDate(values.start_date));
+                            // Se ci sono ore utilizzate, imposta total_hours almeno a quelle ore
+                            if (hoursUsed > 0 && (!values.total_hours || parseFloat(values.total_hours) < hoursUsed)) {
+                              setFieldValue('total_hours', hoursUsed);
+                            }
                           }
                         }}
-                      />
-                    }
-                    label="Pacchetto pagato"
-                  />
-                </Grid>
+                      >
+                        <FormControlLabel
+                          value="fixed"
+                          control={<Radio />}
+                          label="Pacchetto 4 settimane"
+                        />
+                        <FormControlLabel
+                          value="open"
+                          control={<Radio />}
+                          label="Pacchetto aperto"
+                        />
+                      </RadioGroup>
+                    </FormControl>
+                  </Grid>
 
-                {/* Data pagamento */}
-                {values.is_paid && (
-                  <Grid item xs={12} md={4}>
-                    <DatePicker
-                      label="Data pagamento"
-                      value={values.payment_date}
-                      onChange={(date) => setFieldValue('payment_date', date)}
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          error: touched.payment_date && Boolean(errors.payment_date),
-                          helperText: touched.payment_date && errors.payment_date,
-                        },
+                  {/* Data scadenza (solo pacchetti fissi) */}
+                  {values.package_type === 'fixed' && (
+                    <Grid item xs={12} md={6}>
+                      <DatePicker
+                        label="Data di scadenza"
+                        value={calculateExpiryDate(values.start_date)}
+                        readOnly
+                        disabled
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            helperText: "Lunedì della 4ª settimana dalla data di inizio",
+                          },
+                        }}
+                      />
+                    </Grid>
+                  )}
+
+                  {/* Ore totali/accumulate (condizionale) */}
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      name="total_hours"
+                      label={values.package_type === 'open' ? "Ore accumulate" : "Totale ore"}
+                      type="number"
+                      value={values.total_hours}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.total_hours && Boolean(errors.total_hours)}
+                      helperText={
+                        (touched.total_hours && errors.total_hours) ||
+                        (isEditMode && values.package_type === 'fixed' ? `Ore già utilizzate: ${hoursUsed}` :
+                          values.package_type === 'open' && !values.is_paid ? 'Le ore si accumulano automaticamente con l\'uso' : '')
+                      }
+                      inputProps={{
+                        min: values.package_type === 'fixed' ? 0.5 : 0,
+                        step: 0.5,
                       }}
+                      required={values.package_type === 'fixed' || (values.package_type === 'open' && values.is_paid)}
+                      disabled={values.package_type === 'open' && !values.is_paid}
+                    />
+
+                    <TextField
+                      fullWidth
+                      name="package_cost"
+                      label="Costo pacchetto"
+                      type="number"
+                      value={values.package_cost}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.package_cost && Boolean(errors.package_cost)}
+                      helperText={
+                        (touched.package_cost && errors.package_cost) ||
+                        (values.package_type === 'open' && !values.is_paid
+                          ? 'Il costo va indicato solo al momento del pagamento' : '')
+                      }
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                      }}
+                      inputProps={{
+                        min: 0,
+                        step: 0.5,
+                      }}
+                      required={values.package_type === 'fixed' || (values.package_type === 'open' && values.is_paid)}
+                      disabled={values.package_type === 'open' && !values.is_paid}
                     />
                   </Grid>
-                )}
 
-                {/* Dettagli aggiuntivi pacchetti aperti */}
-                {values.package_type === 'open' && (
-                  <Grid item xs={12}>
-                    <Alert severity="info">
-                      <Typography variant="body2">
-                        Un pacchetto aperto permette di accumulare ore di lezione senza una
-                        scadenza predefinita. Puoi aggiungere ore e modificare il costo in
-                        qualsiasi momento dopo aver contrassegnato il pacchetto come pagato.
-                      </Typography>
-                    </Alert>
+                  {/* Costo pacchetto (condizionale) */}
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      name="package_cost"
+                      label="Costo pacchetto"
+                      type="number"
+                      value={values.package_cost}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.package_cost && Boolean(errors.package_cost)}
+                      helperText={
+                        (touched.package_cost && errors.package_cost) ||
+                        (values.package_type === 'open' && !values.is_paid
+                          ? 'Il costo va indicato solo al momento del pagamento' : '')
+                      }
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                      }}
+                      inputProps={{
+                        min: 0,
+                        step: 0.5,
+                      }}
+                      required={values.package_type === 'fixed' || (values.package_type === 'open' && values.is_paid)}
+                      disabled={values.package_type === 'open' && !values.is_paid}
+                    />
                   </Grid>
-                )}
 
-                {/* Pulsanti di azione */}
-                <Grid item xs={12}>
-                  <Box display="flex" justifyContent="flex-end" gap={2}>
-                    <Button
-                      variant="outlined"
-                      onClick={() => navigate('/packages')}
-                      disabled={isSubmitting}
-                    >
-                      Annulla
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      color="primary"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <CircularProgress size={24} />
-                      ) : isEditMode ? (
-                        'Aggiorna'
-                      ) : (
-                        'Crea'
-                      )}
-                    </Button>
-                  </Box>
+                  {/* Divisore stato pacchetto */}
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="h6" gutterBottom>
+                      Stato del Pacchetto
+                    </Typography>
+                  </Grid>
+
+                  {/* Switch pagamento */}
+                  <Grid item xs={12} md={4}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          name="is_paid"
+                          checked={values.is_paid}
+                          onChange={(e) => {
+                            const isPaid = e.target.checked;
+                            setFieldValue('is_paid', isPaid);
+
+                            // Se viene abilitato il pagamento, imposta la data di pagamento a oggi
+                            if (isPaid && !values.payment_date) {
+                              setFieldValue('payment_date', new Date());
+                            }
+
+                            // Per pacchetti aperti che diventano pagati
+                            if (values.package_type === 'open' && isPaid) {
+                              // Se non c'è un valore per ore accumulate, imposta il valore delle ore utilizzate
+                              if (!values.total_hours) {
+                                setFieldValue('total_hours', hoursUsed || 0);
+                              }
+                              // Se non c'è un valore per il costo, imposta un costo proporzionale alle ore
+                              if (!values.package_cost) {
+                                const hourlyRate = 20; // Tariffa oraria di default
+                                setFieldValue('package_cost', (hoursUsed || 0) * hourlyRate);
+                              }
+                            }
+                          }}
+                          disabled={disablePaymentSwitch}
+                        />
+                      }
+                      label="Pacchetto pagato"
+                    />
+                    {disablePaymentSwitch && (
+                      <FormHelperText>
+                        In un pacchetto aperto, il pagamento si registra dopo aver accumulato ore
+                      </FormHelperText>
+                    )}
+                  </Grid>
+
+                  {/* Data pagamento */}
+                  {values.is_paid && (
+                    <Grid item xs={12} md={4}>
+                      <DatePicker
+                        label="Data pagamento"
+                        value={values.payment_date}
+                        onChange={(date) => setFieldValue('payment_date', date)}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            required: true,
+                            error: touched.payment_date && Boolean(errors.payment_date),
+                            helperText: touched.payment_date && errors.payment_date,
+                          },
+                        }}
+                      />
+                    </Grid>
+                  )}
+
+                  {/* Dettagli aggiuntivi pacchetti aperti */}
+                  {values.package_type === 'open' && (
+                    <Grid item xs={12}>
+                      <Alert severity="info">
+                        <Typography variant="body2">
+                          {!values.is_paid ?
+                            "Un pacchetto aperto permette di accumulare ore di lezione senza una scadenza predefinita. " +
+                            "Le ore si accumulano automaticamente aggiungendo lezioni al pacchetto. " +
+                            "Al momento del pagamento, dovrai confermare le ore accumulate e impostare il costo totale." :
+                            "Questo pacchetto aperto è stato pagato. Le ore accumulate e il costo sono stati fissati, " +
+                            "ma è comunque possibile aggiungere ulteriori lezioni in futuro."
+                          }
+                        </Typography>
+                      </Alert>
+                    </Grid>
+                  )}
+
+                  {/* Pulsanti di azione */}
+                  <Grid item xs={12}>
+                    <Box display="flex" justifyContent="flex-end" gap={2}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => navigate('/packages')}
+                        disabled={isSubmitting}
+                      >
+                        Annulla
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? (
+                          <CircularProgress size={24} />
+                        ) : isEditMode ? (
+                          'Aggiorna'
+                        ) : (
+                          'Crea'
+                        )}
+                      </Button>
+                    </Box>
+                  </Grid>
                 </Grid>
-              </Grid>
-            </Form>
-          )}
+              </Form>
+            );
+          }}
         </Formik>
       </Paper>
     </Box>

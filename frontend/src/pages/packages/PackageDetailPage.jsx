@@ -60,11 +60,20 @@ function PackageDetailPage() {
     // Calcola ore utilizzate dalle lezioni
     const usedHours = packageLessons.reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
 
-    // Calcola ore rimanenti
-    const remainingHours = parseFloat(packageData.total_hours) - usedHours;
+    // Calcola ore rimanenti o accumulate in base al tipo di pacchetto
+    let remainingHours, completionPercentage;
 
-    // Calcola percentuale di completamento
-    const completionPercentage = (usedHours / parseFloat(packageData.total_hours)) * 100;
+    if (packageData.package_type === 'fixed') {
+      // Per pacchetti fissi, le ore rimanenti sono la differenza tra totale e utilizzate
+      remainingHours = parseFloat(packageData.total_hours) - usedHours;
+      // La percentuale completata è data dalle ore utilizzate sul totale
+      completionPercentage = (usedHours / parseFloat(packageData.total_hours)) * 100;
+    } else {
+      // Per pacchetti aperti, le ore "rimanenti" sono in realtà le ore accumulate
+      remainingHours = usedHours;
+      // Per un pacchetto aperto, la percentuale è sempre 100% delle ore accumulate
+      completionPercentage = 100;
+    }
 
     return {
       usedHours,
@@ -551,14 +560,9 @@ function PackageDetailPage() {
                   />
                 </Grid>
 
-                {/* Dettagli orari */}
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 1 }} />
-                </Grid>
-
                 <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
-                    Ore totali
+                    {packageData.package_type === 'fixed' ? "Ore totali" : "Ore accumulate"}
                   </Typography>
                   <Typography variant="h6" fontWeight="medium" gutterBottom>
                     {packageData.total_hours}
@@ -567,14 +571,22 @@ function PackageDetailPage() {
 
                 <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
-                    Ore rimanenti
+                    {packageData.package_type === 'fixed' ? "Ore rimanenti" : packageData.is_paid ? "Ore fissate al pagamento" : "Stato"}
                   </Typography>
                   <Typography
                     variant="h6"
                     fontWeight="bold"
-                    color={remainingHours > 0 ? 'primary.main' : 'error'}
+                    color={packageData.package_type === 'fixed' ?
+                      (remainingHours > 0 ? 'primary.main' : 'error') :
+                      'success.main'
+                    }
                   >
-                    {remainingHours.toFixed(1)}
+                    {packageData.package_type === 'fixed' ?
+                      remainingHours.toFixed(1) :
+                      packageData.is_paid ?
+                        packageData.total_hours :
+                        "In registrazione"
+                    }
                   </Typography>
                 </Grid>
 
@@ -587,43 +599,48 @@ function PackageDetailPage() {
                   </Typography>
                 </Grid>
 
-                {/* Barra di completamento */}
+// Modifica la barra di completamento e la sua descrizione
                 <Grid item xs={12} sx={{ mt: 5 }}>
                   <Box display="flex" justifyContent="space-between" mb={0.5}>
                     <Typography variant="body1">
-                      Completamento pacchetto:
+                      {packageData.package_type === 'fixed' ?
+                        "Completamento pacchetto:" :
+                        packageData.is_paid ? "Stato pagamento:" : "Accumulo ore:"}
                     </Typography>
                     <Typography variant="body1" fontWeight="medium">
-                      {completionPercentage.toFixed(0)}%
+                      {packageData.package_type === 'fixed' ?
+                        `${completionPercentage.toFixed(0)}%` :
+                        packageData.is_paid ? "Completato" : "In corso"}
                     </Typography>
                   </Box>
                   <LinearProgress
-                    variant="determinate"
-                    value={completionPercentage}
-                    color={packageData.status === 'completed' ? 'success' : 'primary'}
+                    variant={packageData.package_type === 'open' && !packageData.is_paid ? "indeterminate" : "determinate"}
+                    value={packageData.package_type === 'fixed' ?
+                      completionPercentage :
+                      packageData.is_paid ? 100 : 50}
+                    color={packageData.status === 'completed' || packageData.is_paid ? 'success' : 'primary'}
                     sx={{
                       height: 15,
                       borderRadius: 1,
-                      backgroundImage: `repeating-linear-gradient(
-      to right,
-      transparent,
-      transparent 24.5%,
-      #fff 24.5%,
-      #fff 25%,
-      transparent 25%,
-      transparent 49.5%,
-      #fff 49.5%,
-      #fff 50%,
-      transparent 50%,
-      transparent 74.5%,
-      #fff 74.5%,
-      #fff 75%,
-      transparent 75%
-    )`,
+                      backgroundImage: packageData.package_type === 'fixed' ?
+                        `repeating-linear-gradient(
+          to right,
+          transparent,
+          transparent 24.5%,
+          #fff 24.5%,
+          #fff 25%,
+          transparent 25%,
+          transparent 49.5%,
+          #fff 49.5%,
+          #fff 50%,
+          transparent 50%,
+          transparent 74.5%,
+          #fff 74.5%,
+          #fff 75%,
+          transparent 75%
+        )` : 'none'
                     }}
                   />
-
-
                 </Grid>
               </Grid>
             </CardContent>

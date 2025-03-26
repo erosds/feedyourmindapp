@@ -327,8 +327,13 @@ function PackageListPage() {
     const stats = lessonsPerPackage[pkg.id];
     if (!stats) return parseFloat(pkg.remaining_hours);
 
-    // Calcola le ore rimanenti come differenza tra ore totali e ore utilizzate
-    return parseFloat(pkg.total_hours) - stats.usedHours;
+    if (pkg.package_type === 'fixed') {
+      // Per pacchetti fissi, le ore rimanenti sono la differenza tra ore totali e ore utilizzate
+      return parseFloat(pkg.total_hours) - stats.usedHours;
+    } else {
+      // Per pacchetti aperti, le ore rimanenti sono in realtà le ore accumulate
+      return stats.usedHours;
+    }
   };
 
   // Componente SortableTableCell per le intestazioni delle colonne
@@ -475,14 +480,35 @@ function PackageListPage() {
                           variant="outlined"
                         />
                       </TableCell>
-                      
-                      <TableCell>{pkg.total_hours}</TableCell>
-                      <TableCell>{remainingHours.toFixed(1)}</TableCell>
-                      <TableCell>€{parseFloat(pkg.package_cost).toFixed(2)}</TableCell>
+
+                      <TableCell>
+                        {/* Per pacchetti aperti non pagati, mostra "In registrazione" invece del totale ore */}
+                        {pkg.package_type === 'open' && !pkg.is_paid
+                          ? <Typography variant="body2" fontStyle="italic">In registrazione</Typography>
+                          : pkg.total_hours
+                        }
+                      </TableCell>
+                      <TableCell>
+                        {/* Per pacchetti aperti, visualizza "Ore accumulate" invece di "Ore rimanenti" */}
+                        {pkg.package_type === 'open'
+                          ? <Typography fontWeight="medium" color="primary">
+                            {getRemainingHours(pkg).toFixed(1)} ore accumulate
+                          </Typography>
+                          : getRemainingHours(pkg).toFixed(1)
+                        }
+                      </TableCell>
+                      <TableCell>
+                        {pkg.package_type === 'open' && !pkg.is_paid
+                          ? <Typography variant="body2" fontStyle="italic">Da definire</Typography>
+                          : `€${parseFloat(pkg.package_cost).toFixed(2)}`
+                        }
+                      </TableCell>
                       <TableCell>
                         <Chip
-                          label={remainingHours > 0 ? 'In corso' : 'Terminato'}
-                          color={remainingHours > 0 ? 'primary' : 'default'}
+                          label={pkg.package_type === 'fixed'
+                            ? (getRemainingHours(pkg) > 0 ? 'In corso' : 'Terminato')
+                            : 'In corso'}
+                          color={pkg.status === 'in_progress' ? 'primary' : 'default'}
                           size="small"
                         />
                       </TableCell>

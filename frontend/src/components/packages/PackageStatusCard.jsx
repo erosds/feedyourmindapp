@@ -27,7 +27,16 @@ function PackageStatusCard({ packageData, usedHours }) {
 
   const remainingHours = parseFloat(packageData.remaining_hours);
   const totalHours = parseFloat(packageData.total_hours);
-  const completionPercentage = totalHours > 0 ? (usedHours / totalHours) * 100 : 0;
+  
+  // Calcola percentuale di completamento in modo diverso in base al tipo di pacchetto
+  let completionPercentage;
+  if (packageData.package_type === 'fixed') {
+    // Per pacchetti fissi, la percentuale è data dalle ore utilizzate rispetto al totale
+    completionPercentage = totalHours > 0 ? (usedHours / totalHours) * 100 : 0;
+  } else {
+    // Per pacchetti aperti, la percentuale è sempre 100% delle ore accumulate
+    completionPercentage = 100;
+  }
   
   // Calcola se il pacchetto è scaduto (solo per pacchetti a durata fissa)
   const isExpired = packageData.package_type === 'fixed' && 
@@ -124,22 +133,53 @@ function PackageStatusCard({ packageData, usedHours }) {
         
         <Box display="flex" alignItems="center" mb={2}>
           <AccessTimeIcon sx={{ mr: 1, color: 'text.secondary' }} />
-          <Typography variant="body2" color="text.secondary">
-            Ore utilizzate/totali:
-          </Typography>
-          <Typography variant="body1" sx={{ ml: 1 }}>
-            {usedHours.toFixed(1)} / {totalHours.toFixed(1)} ({completionPercentage.toFixed(0)}%)
-          </Typography>
+          {packageData.package_type === 'fixed' ? (
+            // Per pacchetti fissi, mostra ore utilizzate/totali
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Ore utilizzate/totali:
+              </Typography>
+              <Typography variant="body1" sx={{ ml: 1 }}>
+                {usedHours.toFixed(1)} / {totalHours.toFixed(1)} ({completionPercentage.toFixed(0)}%)
+              </Typography>
+            </>
+          ) : (
+            // Per pacchetti aperti, mostra ore accumulate
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Ore accumulate:
+              </Typography>
+              <Typography variant="body1" sx={{ ml: 1 }}>
+                {usedHours.toFixed(1)} {packageData.is_paid && `(fissate a ${totalHours.toFixed(1)} al pagamento)`}
+              </Typography>
+            </>
+          )}
         </Box>
         
-        <LinearProgress
-          variant="determinate"
-          value={Math.min(completionPercentage, 100)}
-          color={packageData.status === 'completed' ? 'success' : 'primary'}
-          sx={{ height: 10, borderRadius: 1, mb: 1 }}
-        />
+        {packageData.package_type === 'fixed' ? (
+          // Barra di progresso per pacchetti fissi (mostra consumo)
+          <LinearProgress
+            variant="determinate"
+            value={Math.min(completionPercentage, 100)}
+            color={packageData.status === 'completed' ? 'success' : 'primary'}
+            sx={{ height: 10, borderRadius: 1, mb: 1 }}
+          />
+        ) : packageData.is_paid ? (
+          // Per pacchetti aperti pagati, mostra barra verde piena
+          <LinearProgress
+            variant="determinate"
+            value={100}
+            color="success"
+            sx={{ height: 10, borderRadius: 1, mb: 1 }}
+          />
+        ) : (
+          // Per pacchetti aperti non pagati, mostra barra pulsante
+          <LinearProgress
+            sx={{ height: 10, borderRadius: 1, mb: 1 }}
+          />
+        )}
         
-        {packageData.package_type === 'open' && packageData.status === 'in_progress' && !packageData.is_paid && (
+        {packageData.package_type === 'open' && !packageData.is_paid && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
             Pacchetto aperto in corso di registrazione. Il totale ore e il costo verranno confermati al pagamento.
           </Typography>

@@ -149,7 +149,7 @@ function DashboardCalendar({
                         }}
                         sx={{
                           mb: 0.5,
-                          py: 0.2, // Rimuove il padding verticale
+                          py: 0.5, // Rimuove il padding verticale
                           minHeight: '28px', // Imposta un'altezza minima più compatta
                           bgcolor: isCurrentDay ? 'primary.dark' : 'background.paper',
                           borderRadius: 1,
@@ -180,8 +180,8 @@ function DashboardCalendar({
                             color="primary"
                             sx={{
                               position: 'absolute',
-                              top: 2,
-                              right: 2,
+                              top: 3,
+                              right: 3,
                               borderRadius: 1,
                               width: 'auto',
                               height: 16,

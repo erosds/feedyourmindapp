@@ -19,18 +19,11 @@ from sqlalchemy import func
 
 def update_package_remaining_hours(db: Session, package_id: int, commit: bool = True):
     """
-    Calcola e aggiorna le ore rimanenti di un pacchetto in base alle lezioni associate.
-    
-    Args:
-        db: Sessione del database
-        package_id: ID del pacchetto da aggiornare
-        commit: Se True, esegue il commit delle modifiche
-        
-    Returns:
-        Il pacchetto aggiornato
+    Calcola e aggiorna le ore rimanenti o accumulate di un pacchetto in base alle lezioni associate.
+    Gestisce diversamente i pacchetti fissi e aperti.
     """
     # Recupera il pacchetto
-    package = db.query(models.Package).filter(models.Package.id == package_id).with_for_update().first()  # Aggiunge un blocco a livello di database
+    package = db.query(models.Package).filter(models.Package.id == package_id).with_for_update().first()
     if not package:
         return None
     
@@ -40,14 +33,24 @@ def update_package_remaining_hours(db: Session, package_id: int, commit: bool = 
         models.Lesson.is_package == True
     ).scalar() or Decimal('0')
     
-    # Aggiorna le ore rimanenti
-    package.remaining_hours = package.total_hours - hours_used
-    
-    # Aggiorna lo stato del pacchetto in base alle ore rimanenti
-    if package.remaining_hours <= 0:
-        package.status = "completed"
+    # Gestione differenziata in base al tipo di pacchetto
+    if package.package_type == "fixed":
+        # Per pacchetti fissi, le ore rimanenti sono la differenza tra ore totali e ore utilizzate
+        package.remaining_hours = package.total_hours - hours_used
+        
+        # Aggiorna lo stato del pacchetto in base alle ore rimanenti
+        if package.remaining_hours <= 0:
+            package.status = "completed"
+        else:
+            package.status = "in_progress"
     else:
-        package.status = "in_progress"
+        # Per pacchetti aperti, le ore accumulate sono uguali alle ore utilizzate
+        package.remaining_hours = hours_used
+        package.total_hours = hours_used
+        
+        # Un pacchetto aperto è sempre "in_progress" a meno che non sia esplicitamente completato
+        if package.status != "completed":
+            package.status = "in_progress"
     
     # Commit se richiesto
     if commit:
@@ -81,6 +84,7 @@ def calculate_expiry_date(start_date: date) -> date:
     return expiry_date
 
 # Modifiche alla route di creazione
+# Modifiche alla route di creazione
 @router.post("/", response_model=models.PackageResponse, status_code=status.HTTP_201_CREATED)
 def create_package(package: models.PackageCreate, db: Session = Depends(get_db)):
     # Controlla se lo studente esiste
@@ -107,10 +111,25 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
     # Determina la data di pagamento
     payment_date = package.payment_date or (package.start_date if package.is_paid else None)
     
-    # Gestisci i valori per i pacchetti aperti
-    total_hours = package.total_hours or Decimal('0')
-    package_cost = package.package_cost or Decimal('0')
-
+    # Gestione differenziata per pacchetti fissi e aperti
+    if package.package_type == "fixed":
+        # Pacchetto fisso: i valori devono essere definiti
+        total_hours = package.total_hours if package.total_hours > 0 else Decimal('1.0')  # Default a 1 ora
+        package_cost = package.package_cost if package.package_cost >= 0 else Decimal('0')
+        remaining_hours = total_hours  # Le ore rimanenti sono inizialmente uguali alle ore totali
+    else:
+        # Pacchetto aperto: le ore accumulate partono da zero
+        # Forza i valori a zero per pacchetti aperti non pagati
+        if not package.is_paid:
+            total_hours = Decimal('0')
+            package_cost = Decimal('0')
+            remaining_hours = Decimal('0')
+        else:
+            # Se pagato, usa i valori forniti o default a zero
+            total_hours = package.total_hours if package.total_hours > 0 else Decimal('0')
+            package_cost = package.package_cost if package.package_cost >= 0 else Decimal('0')
+            remaining_hours = total_hours
+    
     # Calcola la data di scadenza per pacchetti a durata fissa
     expiry_date = None
     if package.package_type == "fixed":
@@ -125,7 +144,7 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
         status="in_progress",
         is_paid=package.is_paid,
         payment_date=payment_date,
-        remaining_hours=total_hours,  # Le ore rimanenti sono le ore totali
+        remaining_hours=remaining_hours,
         package_type=package.package_type,
         expiry_date=expiry_date
     )
@@ -183,93 +202,80 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
     
-    # Se is_paid cambia da False a True e non c'è una data di pagamento, imposta la data corrente
-    if "is_paid" in package.dict(exclude_unset=True) and package.is_paid and not db_package.is_paid:
-        if "payment_date" not in package.dict(exclude_unset=True) or package.payment_date is None:
-            update_data = package.dict(exclude_unset=True)
-            update_data["payment_date"] = date.today()
-            for key, value in update_data.items():
-                setattr(db_package, key, value)
-        else:
-            # Aggiorna normalmente
-            update_data = package.dict(exclude_unset=True)
-            for key, value in update_data.items():
-                setattr(db_package, key, value)
-    else:
-        # Aggiorna normalmente
+    # Calcola le ore già utilizzate in questo pacchetto
+    hours_used = db.query(func.sum(models.Lesson.duration)).filter(
+        models.Lesson.package_id == package_id,
+        models.Lesson.is_package == True
+    ).scalar() or Decimal('0')
+    
+    # Gestisce il cambio di tipo di pacchetto
+    type_changed = "package_type" in package.dict(exclude_unset=True) and package.package_type != db_package.package_type
+    
+    # Se stiamo cambiando da fisso ad aperto
+    if type_changed and package.package_type == "open":
+        # Per pacchetti aperti, le ore totali sono le ore utilizzate
         update_data = package.dict(exclude_unset=True)
+        update_data["total_hours"] = hours_used
+        update_data["remaining_hours"] = hours_used
+        update_data["expiry_date"] = None
+        update_data["is_paid"] = False  # Reset dello stato di pagamento
+        
         for key, value in update_data.items():
             setattr(db_package, key, value)
     
-    # Se stiamo aggiornando le ore totali, dobbiamo verificare che non siano inferiori 
-    # alle ore già utilizzate
-    if package.total_hours is not None:
-        # Calcola le ore già utilizzate in questo pacchetto
-        hours_used = db.query(func.sum(models.Lesson.duration)).filter(
-            models.Lesson.package_id == package_id,
-            models.Lesson.is_package == True
-        ).scalar() or Decimal('0')
+    # Se stiamo cambiando da aperto a fisso
+    elif type_changed and package.package_type == "fixed":
+        # Per pacchetti fissi, verifica che total_hours sia definito e sufficiente
+        if "total_hours" not in package.dict(exclude_unset=True) or package.total_hours < hours_used:
+            # Se non specificato, usa le ore accumulate come ore totali
+            update_data = package.dict(exclude_unset=True)
+            update_data["total_hours"] = max(hours_used, Decimal('1.0'))  # Almeno 1 ora
+            update_data["remaining_hours"] = update_data["total_hours"] - hours_used
+            update_data["expiry_date"] = calculate_expiry_date(db_package.start_date)
+            
+            for key, value in update_data.items():
+                setattr(db_package, key, value)
+        else:
+            # Aggiorna le ore rimanenti in base alle nuove ore totali
+            update_data = package.dict(exclude_unset=True)
+            update_data["remaining_hours"] = package.total_hours - hours_used
+            update_data["expiry_date"] = calculate_expiry_date(db_package.start_date)
+            
+            for key, value in update_data.items():
+                setattr(db_package, key, value)
+    
+    # Gestione dello stato di pagamento
+    if "is_paid" in package.dict(exclude_unset=True) and package.is_paid and not db_package.is_paid:
+        # Se passa da non pagato a pagato
+        if "payment_date" not in package.dict(exclude_unset=True) or package.payment_date is None:
+            db_package.payment_date = date.today()
         
-        # Controlla che le nuove ore totali non siano inferiori alle ore già utilizzate
+        # Per pacchetti aperti che vengono pagati, verifica che ci siano ore ed un costo
+        if db_package.package_type == "open" and (db_package.total_hours == 0 or db_package.package_cost == 0):
+            if "total_hours" not in package.dict(exclude_unset=True) or not package.total_hours:
+                db_package.total_hours = hours_used or Decimal('1.0')  # Default a 1 ora se non ci sono lezioni
+                
+            if "package_cost" not in package.dict(exclude_unset=True) or not package.package_cost:
+                # Se non è specificato un costo, calcola un costo basato sulle ore
+                default_hourly_rate = Decimal('20.0')
+                db_package.package_cost = db_package.total_hours * default_hourly_rate
+    
+    # Aggiorna i campi rimanenti
+    update_data = package.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        if key not in ["remaining_hours", "total_hours", "package_type", "expiry_date"] or not type_changed:
+            setattr(db_package, key, value)
+    
+    # Se total_hours è stato aggiornato, verifica che sia sufficiente per le ore già utilizzate
+    if "total_hours" in package.dict(exclude_unset=True) and db_package.package_type == "fixed":
         if package.total_hours < hours_used:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Le ore totali non possono essere inferiori alle ore già utilizzate ({hours_used})"
             )
     
-    # Aggiorna i campi se presenti
-    update_data = package.dict(exclude_unset=True)
-    for key, value in update_data.items():
-        # Non aggiornare remaining_hours direttamente, verranno calcolate dalla funzione helper
-        if key != 'remaining_hours':
-            setattr(db_package, key, value)
-
-    # Se stiamo cambiando il tipo di pacchetto o la data di inizio, ricalcola la data di scadenza
-    if (("package_type" in package.dict(exclude_unset=True) and package.package_type == "fixed") or
-        "start_date" in package.dict(exclude_unset=True)):
-        
-        # Determina la data di inizio da usare
-        start_date = package.start_date if package.start_date else db_package.start_date
-        
-        # Determina il tipo di pacchetto da usare
-        package_type = package.package_type if "package_type" in package.dict(exclude_unset=True) else db_package.package_type
-        
-        # Se è un pacchetto fisso, calcola la data di scadenza
-        if package_type == "fixed":
-            update_data = package.dict(exclude_unset=True)
-            update_data["expiry_date"] = calculate_expiry_date(start_date)
-            for key, value in update_data.items():
-                setattr(db_package, key, value)
-        elif package_type == "open":
-            # Se è cambiato da fisso ad aperto, rimuovi la data di scadenza
-            update_data = package.dict(exclude_unset=True)
-            update_data["expiry_date"] = None
-            for key, value in update_data.items():
-                setattr(db_package, key, value)
-    else:
-        # Aggiorna normalmente
-        update_data = package.dict(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(db_package, key, value)
-    
-    # Verifica se il pacchetto è pagato
-    if "is_paid" in package.dict(exclude_unset=True) and package.is_paid and db_package.package_type == "open":
-        # Per pacchetti aperti che vengono pagati, assicurati che il total_hours e package_cost siano impostati
-        if "total_hours" not in package.dict(exclude_unset=True) and (not db_package.total_hours or db_package.total_hours == 0):
-            # Calcola ore totali sommando le ore di tutte le lezioni associate
-            total_hours = db.query(func.sum(models.Lesson.duration)).filter(
-                models.Lesson.package_id == package_id,
-                models.Lesson.is_package == True
-            ).scalar() or Decimal('0')
-            
-            db_package.total_hours = total_hours
-            db_package.remaining_hours = Decimal('0')  # Pacchetto completato
-            db_package.status = "completed"
-    
-    # Esegui il commit per salvare le modifiche di base
+    # Commit e aggiornamento ore rimanenti
     db.commit()
-    
-    # Ricalcola e aggiorna le ore rimanenti
     update_package_remaining_hours(db, package_id)
     
     # Refresh per ottenere tutti i campi aggiornati
