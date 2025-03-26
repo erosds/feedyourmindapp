@@ -246,54 +246,6 @@ function PackageDetailPage() {
     }
   };
 
-
-  // Function to generate calendar
-  const generateCalendar = () => {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'];
-
-    // Group lessons by date
-    const lessonsByDate = {};
-    lessons.forEach(lesson => {
-      const dateKey = lesson.lesson_date;
-      if (!lessonsByDate[dateKey]) {
-        lessonsByDate[dateKey] = [];
-      }
-      lessonsByDate[dateKey].push(lesson);
-    });
-
-    // Get all dates with lessons
-    const dates = Object.keys(lessonsByDate).sort();
-
-    return (
-      <Box>
-        <Typography variant="subtitle1" gutterBottom>
-          Lessons Calendar
-        </Typography>
-
-        {dates.length === 0 ? (
-          <Typography align="center" color="text.secondary" sx={{ py: 2 }}>
-            No lessons recorded
-          </Typography>
-        ) : (
-          <List>
-            {dates.map(date => (
-              <ListItem key={date} divider>
-                <ListItemIcon>
-                  <EventIcon color="primary" />
-                </ListItemIcon>
-                <ListItemText
-                  primary={format(parseISO(date), 'EEEE, MMMM d, yyyy', { locale: it })}
-                  secondary={`${lessonsByDate[date].length} lessons, ${lessonsByDate[date].reduce((sum, l) => sum + parseFloat(l.duration), 0)} hours`}
-                />
-              </ListItem>
-            ))}
-          </List>
-        )}
-      </Box>
-    );
-  };
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
