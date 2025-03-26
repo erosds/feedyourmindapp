@@ -28,7 +28,7 @@ class PackageOverflowError(HTTPException):
 def _handle_use_package_option(db, values, lesson_data, package_id, lesson_hours_in_package, overflow_hours):
     """Gestisce l'opzione di usare un pacchetto esistente con una lezione singola aggiuntiva per le ore in eccesso."""
     from .. import models
-    from app.routes.packages import update_package_remaining_hours
+    from app.routes.packages import update_package_status
     from ..utils import parse_time_string, determine_payment_date
     from decimal import Decimal
     
@@ -83,7 +83,7 @@ def _handle_use_package_option(db, values, lesson_data, package_id, lesson_hours
     db.flush()
     
     # Aggiorna le ore rimanenti del pacchetto
-    update_package_remaining_hours(db, package_id, commit=False)
+    update_package_status(db, package_id, commit=False)
     package = db.query(models.Package).filter(models.Package.id == package_id).first()
     
     # Prepara i risultati
@@ -111,7 +111,7 @@ def _handle_use_package_option(db, values, lesson_data, package_id, lesson_hours
 def _handle_create_new_package_option(db, values, lesson_data, package_id, lesson_hours_in_package, overflow_hours):
     """Gestisce l'opzione di creare un nuovo pacchetto per le ore in eccesso."""
     from .. import models
-    from app.routes.packages import update_package_remaining_hours
+    from app.routes.packages import update_package_status
     from ..utils import parse_time_string, determine_payment_date
     from decimal import Decimal
     
@@ -186,8 +186,8 @@ def _handle_create_new_package_option(db, values, lesson_data, package_id, lesso
     db.flush()
     
     # Aggiorna le ore rimanenti di entrambi i pacchetti
-    update_package_remaining_hours(db, package_id, commit=False)
-    update_package_remaining_hours(db, new_package.id, commit=False)
+    update_package_status(db, package_id, commit=False)
+    update_package_status(db, new_package.id, commit=False)
     
     # Aggiorna le referenze per la risposta
     package = db.query(models.Package).filter(models.Package.id == package_id).first()
@@ -229,7 +229,7 @@ def create_lesson(
     db: Session = Depends(get_db)
 ):
     # Importa la funzione update_package_remaining_hours
-    from app.routes.packages import update_package_remaining_hours
+    from app.routes.packages import update_package_status
     
     # Controlla se il professore esiste
     professor = db.query(models.Professor).filter(models.Professor.id == lesson.professor_id).first()
@@ -319,7 +319,7 @@ def create_lesson(
         db.refresh(db_lesson)
         
         # Aggiorna le ore rimanenti del pacchetto usando la nostra funzione helper
-        update_package_remaining_hours(db, package_id)
+        update_package_status(db, package_id)
         
         return db_lesson
     
@@ -484,7 +484,7 @@ def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Dep
     Gestisce correttamente la modifica della durata della lezione, anche per le lezioni di pacchetti.
     """
     # Importa la funzione update_package_remaining_hours
-    from app.routes.packages import update_package_remaining_hours
+    from app.routes.packages import update_package_status
     
     db_lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
     if db_lesson is None:
@@ -545,7 +545,7 @@ def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Dep
     
     # Aggiorna tutti i pacchetti coinvolti
     for package_id in packages_to_update:
-        update_package_remaining_hours(db, package_id)
+        update_package_status(db, package_id)
     
     # Refresh della lezione per ottenere tutti i campi aggiornati
     db.refresh(db_lesson)
@@ -554,7 +554,7 @@ def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Dep
 @router.delete("/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_lesson(lesson_id: int, db: Session = Depends(get_db)):
     # Importa la funzione update_package_remaining_hours
-    from app.routes.packages import update_package_remaining_hours
+    from app.routes.packages import update_package_status
     
     db_lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
     if db_lesson is None:
@@ -571,6 +571,6 @@ def delete_lesson(lesson_id: int, db: Session = Depends(get_db)):
     
     # Se la lezione faceva parte di un pacchetto, aggiorna le ore rimanenti
     if package_id:
-        update_package_remaining_hours(db, package_id)
+        update_package_status(db, package_id)
     
     return None

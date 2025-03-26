@@ -28,14 +28,14 @@ function LessonFormPage() {
   const [error, setError] = useState(null);
   const [infoMessage, setInfoMessage] = useState('');
 
-  // Dati principali
+  // Main data
   const [professors, setProfessors] = useState([]);
   const [students, setStudents] = useState([]);
   const [packages, setPackages] = useState([]);
   const [lessonsInPackage, setLessonsInPackage] = useState([]);
   const [originalLesson, setOriginalLesson] = useState(null);
 
-  // Dialog di overflow
+  // Overflow dialog
   const [overflowDialogOpen, setOverflowDialogOpen] = useState(false);
   const [overflowLessonData, setOverflowLessonData] = useState(null);
   const [overflowDetails, setOverflowDetails] = useState({
@@ -44,34 +44,34 @@ function LessonFormPage() {
     overflowHours: 0
   });
 
-  // Dialog di sovrapposizione
+  // Overlap dialog
   const [overlapDialogOpen, setOverlapDialogOpen] = useState(false);
   const [overlapLesson, setOverlapLesson] = useState(null);
 
-  // Lezioni dello studente selezionato
+  // Selected student's lessons
   const [studentLessons, setStudentLessons] = useState([]);
 
-  // Valori iniziali predefiniti
+  // Default initial values
   const [initialValues, setInitialValues] = useState({
     professor_id: currentUser ? currentUser.id : '',
     student_id: location.state?.student_id || '',
     lesson_date: new Date(),
-    start_time: new Date(new Date().setHours(9, 0, 0, 0)), // Default alle 9:00
+    start_time: new Date(new Date().setHours(9, 0, 0, 0)), // Default to 9:00
     duration: 1,
     is_package: location.state?.is_package || false,
     package_id: location.state?.package_id || null,
     hourly_rate: '',
     is_paid: true,
-    payment_date: new Date(), // Default oggi
+    payment_date: new Date(), // Default to today
   });
 
-  // Carica i dati necessari
+  // Load required data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Carica i professori in base ai permessi
+        // Load professors based on permissions
         if (isAdmin()) {
           const professorsResponse = await professorService.getAll();
           setProfessors(professorsResponse.data);
@@ -79,27 +79,27 @@ function LessonFormPage() {
           setProfessors([currentUser]);
         }
 
-        // Carica tutti gli studenti
+        // Load all students
         const studentsResponse = await studentService.getAll();
         setStudents(studentsResponse.data);
 
-        // Carica pacchetti per lo studente selezionato
+        // Load packages for the selected student
         if (location.state?.student_id) {
           await loadStudentPackages(location.state.student_id);
 
-          // Carica lezioni per il pacchetto selezionato
+          // Load lessons for the selected package
           if (location.state?.package_id) {
             await loadPackageLessons(location.state.package_id);
           }
         }
 
-        // Se in modalità modifica, carica i dati della lezione
+        // If in edit mode, load lesson data
         if (isEditMode) {
           await loadLessonData();
         }
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Impossibile caricare i dati. Prova a riaggiornare la pagina.');
+        setError('Unable to load data. Please try refreshing the page.');
       } finally {
         setLoading(false);
       }
@@ -108,53 +108,53 @@ function LessonFormPage() {
     fetchData();
   }, [id, isEditMode, currentUser, isAdmin, location.state]);
 
-  // Gestione del caso di lezione creata da un overflow
+  // Handle case of lesson created from overflow
   useEffect(() => {
     if (location.state?.overflow_from_lesson) {
       handleOverflowLessonInit();
     }
   }, [location.state]);
 
-  // Carica i dati della lezione esistente (in modalità modifica)
+  // Load existing lesson data (in edit mode)
   const loadLessonData = async () => {
     const lessonResponse = await lessonService.getById(id);
     const lesson = lessonResponse.data;
 
-    // Salva la lezione originale
+    // Save original lesson
     setOriginalLesson(lesson);
 
-    // Carica pacchetti per lo studente (indipendentemente dal tipo di lezione)
+    // Load packages for the student
     await loadStudentPackages(lesson.student_id);
 
-    // Carica lezioni per il pacchetto selezionato se la lezione è parte di un pacchetto
+    // Load lessons for the package if the lesson is part of a package
     if (lesson.is_package && lesson.package_id) {
       await loadPackageLessons(lesson.package_id, lesson.id);
     }
 
-    // Carica lezioni dello studente per verificare sovrapposizioni
+    // Load student lessons to check for overlaps
     await loadStudentLessons(lesson.student_id);
 
-    // Imposta i valori iniziali del form
+    // Set initial form values
     const lessonDate = new Date(lesson.lesson_date);
     let startTime = null;
 
     if (lesson.start_time) {
-      // Se start_time esiste nel formato "HH:MM:SS", lo convertiamo in un oggetto Date
+      // If start_time exists in "HH:MM:SS" format, convert it to Date object
       const [hours, minutes] = lesson.start_time.split(':').map(Number);
       startTime = new Date();
       startTime.setHours(hours, minutes, 0, 0);
     } else {
-      // Default alle 9:00 se non esiste
+      // Default to 9:00 if it doesn't exist
       startTime = new Date();
       startTime.setHours(9, 0, 0, 0);
     }
 
-    // Gestisci la data di pagamento
+    // Handle payment date
     let paymentDate = null;
     if (lesson.is_paid && lesson.payment_date) {
       paymentDate = new Date(lesson.payment_date);
     } else if (lesson.is_paid) {
-      paymentDate = new Date(); // Default oggi se è pagata ma non ha data
+      paymentDate = new Date(); // Default to today if paid but no date
     }
 
     setInitialValues({
@@ -171,7 +171,7 @@ function LessonFormPage() {
     });
   };
 
-  // Carica i pacchetti di uno studente
+  // Load student packages
   const loadStudentPackages = async (studentId) => {
     const packagesResponse = await packageService.getByStudent(studentId);
     const activePackages = packagesResponse.data.filter(pkg => pkg.status === 'in_progress');
@@ -179,7 +179,7 @@ function LessonFormPage() {
     return activePackages;
   };
 
-  // Carica le lezioni di un pacchetto
+  // Load lessons for a package
   const loadPackageLessons = async (packageId, excludeLessonId = null) => {
     const lessonsResponse = await lessonService.getAll();
     const packageLessons = lessonsResponse.data.filter(
@@ -191,7 +191,7 @@ function LessonFormPage() {
     return packageLessons;
   };
 
-  // Gestione dell'inizializzazione della lezione da overflow
+  // Initialize the form for overflow lesson
   const handleOverflowLessonInit = () => {
     const {
       student_id,
@@ -202,18 +202,18 @@ function LessonFormPage() {
       original_hourly_rate
     } = location.state;
 
-    // Crea una data per l'orario di inizio
+    // Create a date for the start time
     let startTimeDate = new Date();
     if (start_time) {
-      // Se c'è un orario nella forma "HH:MM:SS"
+      // If there's a time in "HH:MM:SS" format
       const [hours, minutes] = start_time.split(':').map(Number);
       startTimeDate.setHours(hours, minutes, 0, 0);
     } else {
-      // Default alle 9:00
+      // Default to 9:00
       startTimeDate.setHours(9, 0, 0, 0);
     }
 
-    // Pre-compila il form
+    // Pre-fill the form
     setInitialValues({
       ...initialValues,
       student_id: student_id,
@@ -228,10 +228,10 @@ function LessonFormPage() {
       payment_date: null,
     });
 
-    setInfoMessage(`Stai creando una lezione singola per ${overflow_hours} ore eccedenti da un'altra lezione. Puoi modificare la tariffa oraria o altri dettagli se necessario.`);
+    setInfoMessage(`You're creating a single lesson for ${overflow_hours} excess hours from another lesson. You can modify the hourly rate or other details if needed.`);
   };
 
-  // Gestisce il cambio dello studente
+  // Handle student change
   const handleStudentChange = async (studentId, setFieldValue) => {
     if (!studentId) return;
 
@@ -240,17 +240,17 @@ function LessonFormPage() {
       setFieldValue('package_id', null);
       setLessonsInPackage([]);
 
-      // Carica i pacchetti dello studente
+      // Load student packages
       await loadStudentPackages(studentId);
 
-      // Carica le lezioni dello studente per verificare le sovrapposizioni
+      // Load student lessons to check for overlaps
       await loadStudentLessons(studentId);
     } catch (err) {
       console.error('Error fetching student data:', err);
     }
   };
 
-  // Carica le lezioni dello studente
+  // Load student lessons
   const loadStudentLessons = async (studentId) => {
     try {
       const response = await lessonService.getByStudent(studentId);
@@ -258,12 +258,12 @@ function LessonFormPage() {
       return response.data;
     } catch (err) {
       console.error('Error loading student lessons:', err);
-      setError('Impossibile caricare le lezioni dello studente. Prova a riaggiornare la pagina.');
+      setError('Unable to load student lessons. Please try refreshing the page.');
       return [];
     }
   };
 
-  // Gestisce il cambio del pacchetto
+  // Handle package change
   const handlePackageChange = async (packageId, setFieldValue) => {
     if (!packageId) {
       setLessonsInPackage([]);
@@ -278,12 +278,12 @@ function LessonFormPage() {
     }
   };
 
-  // Gestisce la chiusura del dialog di overflow
+  // Handle closing overflow dialog
   const handleCloseOverflowDialog = () => {
     setOverflowDialogOpen(false);
   };
 
-  // Gestisce l'azione scelta nel dialog di overflow
+  // Handle chosen action in overflow dialog
   const handleOverflowAction = (action) => {
     setOverflowDialogOpen(false);
 
@@ -293,11 +293,11 @@ function LessonFormPage() {
       navigateToNewPackage();
     }
 
-    // Salva la lezione originale utilizzando solo le ore disponibili
+    // Save the original lesson using only available hours
     savePartialLesson();
   };
 
-  // Naviga alla creazione di una nuova lezione per ore in eccesso
+  // Navigate to create a new lesson for excess hours
   const navigateToNewLesson = () => {
     navigate('/lessons/new', {
       state: {
@@ -312,7 +312,7 @@ function LessonFormPage() {
     });
   };
 
-  // Naviga alla creazione di un nuovo pacchetto per ore in eccesso
+  // Navigate to create a new package for excess hours
   const navigateToNewPackage = () => {
     navigate('/packages/new', {
       state: {
@@ -332,12 +332,12 @@ function LessonFormPage() {
     });
   };
 
-  // Salva la lezione con durata limitata alle ore disponibili nel pacchetto
+  // Save lesson with duration limited to available hours in the package
   const savePartialLesson = async () => {
     try {
       setLoading(true);
 
-      // Crea una copia dei dati della lezione con la durata limitata alle ore disponibili
+      // Create a copy of the lesson data with duration limited to available hours
       const partialLessonData = {
         ...overflowLessonData,
         duration: overflowDetails.remainingHours,
@@ -352,24 +352,15 @@ function LessonFormPage() {
       return true;
     } catch (err) {
       console.error('Error saving partial lesson:', err);
-      alert('Si è verificato un errore nel salvare la lezione principale. Si prega di verificare e riprovare.');
+      alert('An error occurred while saving the main lesson. Please check and try again.');
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-  // Controlla se la durata supera le ore disponibili nel pacchetto
-  // Nel componente LessonFormPage.jsx
+  // Check if duration exceeds available hours in the package
   const handlePackageOverflow = async (formattedValues) => {
-    // Se è un pacchetto aperto, non gestire l'overflow
-    if (formattedValues.is_package && packages.find(p =>
-      p.id === parseInt(formattedValues.package_id) &&
-      p.package_type === 'open')
-    ) {
-      return false;
-    }
-
     const { hasOverflow, details } = checkPackageOverflow({
       formValues: formattedValues,
       packages,
@@ -387,21 +378,21 @@ function LessonFormPage() {
     return false;
   };
 
-  // Calcola le ore disponibili nel pacchetto selezionato
+  // Calculate available hours in the selected package
   const calculatePackageHours = (packageId, totalHours) => {
     if (!packageId || !totalHours) return { usedHours: 0, availableHours: 0 };
 
-    // Calcola la somma delle ore di lezione già usate in questo pacchetto
+    // Calculate sum of hours already used in this package
     const usedHours = lessonsInPackage.reduce((total, lesson) =>
       total + parseFloat(lesson.duration), 0);
 
-    // Ore originali della lezione (se stiamo modificando una lezione esistente)
+    // Original lesson hours (if editing an existing lesson)
     const originalLessonHours = isEditMode && originalLesson &&
       originalLesson.is_package &&
       originalLesson.package_id === packageId
       ? parseFloat(originalLesson.duration) : 0;
 
-    // Calcola le ore disponibili
+    // Calculate available hours
     const availableHours = parseFloat(totalHours) - usedHours;
 
     return {
@@ -411,7 +402,7 @@ function LessonFormPage() {
     };
   };
 
-  // Salva la lezione e naviga
+  // Save lesson and navigate
   const saveLesson = async (formattedValues) => {
     if (isEditMode) {
       await lessonService.update(id, formattedValues);
@@ -419,7 +410,7 @@ function LessonFormPage() {
       await lessonService.create(formattedValues);
     }
 
-    // Se siamo ritornati dal pacchetto, torniamo alla pagina del pacchetto
+    // If we returned from package, go back to package page
     if (location.state?.returnToPackage && formattedValues.is_package && formattedValues.package_id) {
       navigate(`/packages/${formattedValues.package_id}`, { state: { refreshPackage: true } });
     } else {
@@ -427,12 +418,12 @@ function LessonFormPage() {
     }
   };
 
-  // Gestisce l'invio del form
+  // Handle form submission
   const handleSubmit = async (values) => {
     try {
       setError(null);
 
-      // Formatta le date e l'orario per l'API
+      // Format dates and time for API
       const formattedValues = {
         ...values,
         lesson_date: format(values.lesson_date, 'yyyy-MM-dd'),
@@ -440,12 +431,12 @@ function LessonFormPage() {
         payment_date: values.is_paid && values.payment_date ? format(values.payment_date, 'yyyy-MM-dd') : null,
       };
 
-      // Se non è un pacchetto, rimuovi l'ID del pacchetto
+      // If not a package, remove package ID
       if (!formattedValues.is_package) {
         formattedValues.package_id = null;
       }
 
-      // Verifica sovrapposizioni con la funzione utility
+      // Check for overlaps with utility function
       const { hasOverlap, overlappingLesson } = checkLessonOverlap(
         formattedValues,
         studentLessons,
@@ -458,18 +449,18 @@ function LessonFormPage() {
         return false;
       }
 
-      // Controlla l'overflow delle ore se è un pacchetto
+      // Check for hour overflow if it's a package
       if (formattedValues.is_package && formattedValues.package_id) {
         const shouldShowOverflowDialog = await handlePackageOverflow(formattedValues);
         if (shouldShowOverflowDialog) return false;
       }
 
-      // Salva la lezione
+      // Save the lesson
       await saveLesson(formattedValues);
       return true;
     } catch (err) {
       console.error('Error saving lesson:', err);
-      setError('Errore durante il salvataggio. Verifica i dati e riprova.');
+      setError('Error during save. Please check data and try again.');
       return false;
     }
   };
@@ -485,7 +476,7 @@ function LessonFormPage() {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        {isEditMode ? 'Modifica Lezione' : 'Nuova Lezione'}
+        {isEditMode ? 'Edit Lesson' : 'New Lesson'}
       </Typography>
 
       {error && (
@@ -517,7 +508,7 @@ function LessonFormPage() {
         />
       </Paper>
 
-      {/* Dialog per gestire l'overflow delle ore */}
+      {/* Dialog for handling hour overflow */}
       <PackageOverflowDialog
         open={overflowDialogOpen}
         onClose={handleCloseOverflowDialog}
@@ -525,8 +516,7 @@ function LessonFormPage() {
         details={overflowDetails}
       />
 
-      {/* Dialog per gestire le sovrapposizioni delle lezioni */}
-      {/* Use our common LessonOverlapDialog component */}
+      {/* Dialog for handling lesson overlaps */}
       <LessonOverlapDialog
         open={overlapDialogOpen}
         onClose={() => setOverlapDialogOpen(false)}

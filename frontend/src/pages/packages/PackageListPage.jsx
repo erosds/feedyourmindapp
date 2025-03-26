@@ -24,7 +24,6 @@ import {
 import {
   Add as AddIcon,
   Edit as EditIcon,
-  Visibility as ViewIcon,
   Search as SearchIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
@@ -43,73 +42,51 @@ function PackageListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPackages, setFilteredPackages] = useState([]);
   const [showActive, setShowActive] = useState(false);
-  const [lessonsPerPackage, setLessonsPerPackage] = useState({});
 
-  // Stato per l'ordinamento
+  // State for sorting
   const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('id');
 
-  // Funzione per gestire la richiesta di cambio dell'ordinamento
+  // Function to handle sort request
   const handleRequestSort = (property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
   };
 
-  // Funzione helper per l'ordinamento stabile
+  // Helper function for sorting
   const descendingComparator = (a, b, orderBy) => {
-    // Casi speciali per i formati di data
-    if (orderBy === 'start_date') {
-      return new Date(b.start_date) - new Date(a.start_date);
+    // Special cases for date formats
+    if (orderBy === 'start_date' || orderBy === 'expiry_date') {
+      return new Date(b[orderBy]) - new Date(a[orderBy]);
     }
 
-    // Per i campi numerici
+    // For numeric fields
     if (['total_hours', 'remaining_hours', 'package_cost'].includes(orderBy)) {
       return parseFloat(b[orderBy]) - parseFloat(a[orderBy]);
     }
 
-    // Per student_id, usa il nome mappato
+    // For student_id, use the mapped name
     if (orderBy === 'student_id') {
       return (students[b.student_id] || '').localeCompare(students[a.student_id] || '');
     }
 
-    // Per ordinare in base allo stato
+    // For status sorting
     if (orderBy === 'status') {
-      // Prima i pacchetti attivi
-      if (a.status === 'in_progress' && b.status !== 'in_progress') return -1;
-      if (a.status !== 'in_progress' && b.status === 'in_progress') return 1;
-      return 0;
+      const statusPriority = {
+        'in_progress': 0,
+        'expired': 1,
+        'completed': 2
+      };
+      return statusPriority[b.status] - statusPriority[a.status];
     }
 
-    // Per ordinare in base al pagamento
+    // For payment status
     if (orderBy === 'is_paid') {
       return (b.is_paid === a.is_paid) ? 0 : b.is_paid ? -1 : 1;
     }
 
-    // Per ottenere un ordinamento preciso in base alle ore rimanenti
-    if (orderBy === 'remaining_calc') {
-      const remainingA = getRemainingHours(a);
-      const remainingB = getRemainingHours(b);
-      return remainingB - remainingA;
-    }
-
-    // Per il tipo di pacchetto
-    if (orderBy === 'package_type') {
-      return (a.package_type === b.package_type) ? 0 :
-        (a.package_type === 'fixed' ? -1 : 1);
-    }
-
-    // Per la data di scadenza
-    if (orderBy === 'expiry_date') {
-      // Gestisci il caso in cui uno o entrambi non abbiano data di scadenza
-      if (!a.expiry_date && !b.expiry_date) return 0;
-      if (!a.expiry_date) return 1;
-      if (!b.expiry_date) return -1;
-
-      return new Date(b.expiry_date) - new Date(a.expiry_date);
-    }
-
-    // Per altri campi
+    // For other fields
     if (b[orderBy] < a[orderBy]) {
       return -1;
     }
@@ -125,7 +102,7 @@ function PackageListPage() {
       : (a, b) => -descendingComparator(a, b, orderBy);
   };
 
-  // Funzione per ordinare in modo stabile
+  // Function for stable sorting
   const stableSort = (array, comparator) => {
     const stabilizedThis = array.map((el, index) => [el, index]);
     stabilizedThis.sort((a, b) => {
@@ -136,32 +113,16 @@ function PackageListPage() {
     return stabilizedThis.map((el) => el[0]);
   };
 
-  // Funzione per calcolare le ore utilizzate e rimanenti di ogni pacchetto
-  const calculatePackageStats = (packageId, lessons) => {
-    const packageLessons = lessons.filter(lesson =>
-      lesson.package_id === packageId && lesson.is_package
-    );
-
-    const usedHours = packageLessons.reduce((total, lesson) =>
-      total + parseFloat(lesson.duration), 0
-    );
-
-    return {
-      usedHours,
-      lessonsCount: packageLessons.length
-    };
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Carica tutti i pacchetti
+        // Load all packages
         const packagesResponse = await packageService.getAll();
         setPackages(packagesResponse.data);
 
-        // Carica tutti gli studenti per mostrare i loro nomi
+        // Load all students to show their names
         const studentsResponse = await studentService.getAll();
         const studentsMap = {};
         studentsResponse.data.forEach(student => {
@@ -169,24 +130,11 @@ function PackageListPage() {
         });
         setStudents(studentsMap);
 
-        // Carica tutte le lezioni per calcolare le ore utilizzate
-        const lessonsResponse = await lessonService.getAll();
-
-        // Crea una mappa di lezioni per pacchetto
-        const lessonsMap = {};
-        packagesResponse.data.forEach(pkg => {
-          lessonsMap[pkg.id] = calculatePackageStats(
-            pkg.id,
-            lessonsResponse.data
-          );
-        });
-        setLessonsPerPackage(lessonsMap);
-
-        // Imposta i pacchetti filtrati
+        // Set filtered packages
         setFilteredPackages(packagesResponse.data);
       } catch (err) {
         console.error('Error fetching packages:', err);
-        setError('Impossibile caricare la lista dei pacchetti. Prova a riaggiornare la pagina.');
+        setError('Unable to load packages. Please try refreshing the page.');
       } finally {
         setLoading(false);
       }
@@ -198,7 +146,7 @@ function PackageListPage() {
   useEffect(() => {
     let filtered = [...packages];
 
-    // Filtra per termine di ricerca (nome studente)
+    // Filter by search term (student name)
     if (searchTerm.trim() !== '') {
       const lowercaseSearch = searchTerm.toLowerCase();
       filtered = filtered.filter((pkg) => {
@@ -207,12 +155,12 @@ function PackageListPage() {
       });
     }
 
-    // Filtra per stato (attivo o tutti)
+    // Filter by status (active or all)
     if (showActive) {
       filtered = filtered.filter(pkg => pkg.status === 'in_progress');
     }
 
-    // Applica l'ordinamento
+    // Apply sorting
     const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
     setFilteredPackages(sortedFiltered);
     setPage(0); // Reset to first page after filtering
@@ -240,7 +188,7 @@ function PackageListPage() {
   };
 
   const handleEditPackage = (id, event) => {
-    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
+    event.stopPropagation(); // Prevent navigation to details view
     navigate(`/packages/edit/${id}`);
   };
 
@@ -249,97 +197,53 @@ function PackageListPage() {
   };
 
   const handleDeletePackage = async (id, event) => {
-    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
+    event.stopPropagation(); // Prevent navigation to details view
 
     try {
-      // Prima ottieni le lezioni per questo pacchetto per mostrare all'utente
+      // First get lessons for this package to show to user
       const lessonsResponse = await lessonService.getAll();
       const packageLessons = lessonsResponse.data.filter(lesson =>
         lesson.package_id === id && lesson.is_package
       );
 
-      let confirmMessage = `Sei sicuro di voler eliminare il pacchetto #${id}?`;
+      let confirmMessage = `Are you sure you want to delete package #${id}?`;
 
-      // Se ci sono lezioni associate, avvisa l'utente che verranno eliminate anche quelle
+      // If there are associated lessons, warn the user they will be deleted too
       if (packageLessons.length > 0) {
-        confirmMessage += `\n\nATTENZIONE: Questo pacchetto contiene ${packageLessons.length} lezioni che verranno eliminate:`;
+        confirmMessage += `\n\nWARNING: This package contains ${packageLessons.length} lessons that will be deleted:`;
 
-        // Aggiungi informazioni sulle prime 5 lezioni (per non rendere il messaggio troppo lungo)
+        // Add information about the first 5 lessons (to keep message reasonable)
         const maxLessonsToShow = 5;
         packageLessons.slice(0, maxLessonsToShow).forEach(lesson => {
           const lessonDate = format(parseISO(lesson.lesson_date), 'dd/MM/yyyy', { locale: it });
-          confirmMessage += `\n- Lezione #${lesson.id} del ${lessonDate} (${lesson.duration} ore)`;
+          confirmMessage += `\n- Lesson #${lesson.id} on ${lessonDate} (${lesson.duration} hours)`;
         });
 
-        // Se ci sono più di 5 lezioni, indica che ce ne sono altre
+        // If there are more than 5 lessons, indicate there are more
         if (packageLessons.length > maxLessonsToShow) {
-          confirmMessage += `\n...e altre ${packageLessons.length - maxLessonsToShow} lezioni`;
+          confirmMessage += `\n...and ${packageLessons.length - maxLessonsToShow} more lessons`;
         }
       }
 
-      confirmMessage += "\n\nQuesta azione non può essere annullata.";
+      confirmMessage += "\n\nThis action cannot be undone.";
 
       if (window.confirm(confirmMessage)) {
-        const response = await packageService.delete(id);
+        await packageService.delete(id);
 
-        // Mostra messaggio di conferma con dettagli sulle lezioni eliminate
-        if (response.data && response.data.deleted_lessons_count > 0) {
-          alert(`Pacchetto #${id} eliminato con successo insieme a ${response.data.deleted_lessons_count} lezioni associate.`);
-        }
-
-        // Aggiorna la lista dopo l'eliminazione
+        // Reload packages after deletion
         const packagesResponse = await packageService.getAll();
         setPackages(packagesResponse.data);
-
-        // Aggiorna le statistiche delle lezioni
-        const updatedLessonsResponse = await lessonService.getAll();
-        const lessonsMap = {};
-        packagesResponse.data.forEach(pkg => {
-          lessonsMap[pkg.id] = calculatePackageStats(
-            pkg.id,
-            updatedLessonsResponse.data
-          );
-        });
-        setLessonsPerPackage(lessonsMap);
-
-        // Applica i filtri
-        let filtered = [...packagesResponse.data];
-        if (searchTerm.trim() !== '') {
-          const lowercaseSearch = searchTerm.toLowerCase();
-          filtered = filtered.filter((pkg) => {
-            const studentName = students[pkg.student_id] || '';
-            return studentName.toLowerCase().includes(lowercaseSearch);
-          });
-        }
-        if (showActive) {
-          filtered = filtered.filter(pkg => pkg.status === 'in_progress');
-        }
-        setFilteredPackages(filtered);
       }
     } catch (err) {
       console.error('Error deleting package:', err);
-      alert('Errore durante l\'eliminazione del pacchetto. Riprova più tardi.');
+      alert('Error deleting package. Please try again later.');
     }
   };
 
-  // Calcola le ore rimanenti in tempo reale
-  const getRemainingHours = (pkg) => {
-    const stats = lessonsPerPackage[pkg.id];
-    if (!stats) return parseFloat(pkg.remaining_hours);
-
-    if (pkg.package_type === 'fixed') {
-      // Per pacchetti fissi, le ore rimanenti sono la differenza tra ore totali e ore utilizzate
-      return parseFloat(pkg.total_hours) - stats.usedHours;
-    } else {
-      // Per pacchetti aperti, le ore rimanenti sono in realtà le ore accumulate
-      return stats.usedHours;
-    }
-  };
-
-  // Componente SortableTableCell per le intestazioni delle colonne
+  // SortableTableCell component for column headers
   const SortableTableCell = ({ id, label, numeric }) => {
     const isActive = orderBy === id;
-
+    
     return (
       <TableCell
         align={numeric ? "right" : "left"}
@@ -389,21 +293,21 @@ function PackageListPage() {
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Pacchetti</Typography>
+        <Typography variant="h4">Packages</Typography>
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
           onClick={handleAddPackage}
         >
-          Nuovo Pacchetto
+          New Package
         </Button>
       </Box>
 
       <Box mb={3} display="flex" alignItems="center">
         <TextField
           variant="outlined"
-          label="Cerca pacchetto per studente"
+          label="Search by student name"
           value={searchTerm}
           onChange={handleSearchChange}
           sx={{ flexGrow: 1, mr: 2 }}
@@ -419,7 +323,7 @@ function PackageListPage() {
               color="primary"
             />
           }
-          label="Solo pacchetti attivi"
+          label="Only active packages"
         />
       </Box>
 
@@ -428,124 +332,93 @@ function PackageListPage() {
           <TableHead>
             <TableRow>
               <SortableTableCell id="id" label="ID" />
-              <SortableTableCell id="student_id" label="Studente" />
-              <SortableTableCell id="start_date" label="Data Inizio" />
-              <SortableTableCell id="package_type" label="Tipo" />  {/* Nuova colonna */}
-              {/* Per i pacchetti a durata fissa */}
-              <SortableTableCell id="total_hours" label="Ore Totali" />
-              <SortableTableCell id="remaining_calc" label="Ore Rimanenti" />
-              <SortableTableCell id="package_cost" label="Costo" />
-              <SortableTableCell id="status" label="Stato" />
-              <SortableTableCell id="is_paid" label="Pagamento" />
-              <SortableTableCell id="expiry_date" label="Scadenza" />  {/* Nuova colonna */}
-              <TableCell align="right">Azioni</TableCell>
+              <SortableTableCell id="student_id" label="Student" />
+              <SortableTableCell id="start_date" label="Start Date" />
+              <SortableTableCell id="expiry_date" label="Expiry Date" />
+              <SortableTableCell id="total_hours" label="Total Hours" />
+              <SortableTableCell id="remaining_hours" label="Remaining Hours" />
+              <SortableTableCell id="package_cost" label="Cost" />
+              <SortableTableCell id="status" label="Status" />
+              <SortableTableCell id="is_paid" label="Payment" />
+              <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredPackages.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} align="center">
-                  Nessun pacchetto trovato
+                <TableCell colSpan={10} align="center">
+                  No packages found
                 </TableCell>
               </TableRow>
             ) : (
               filteredPackages
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((pkg) => {
-                  // Calcola le ore rimanenti in tempo reale
-                  const remainingHours = getRemainingHours(pkg);
-
-                  return (
-                    <TableRow
-                      key={pkg.id}
-                      hover
-                      onClick={() => handleViewPackage(pkg.id)}
-                      sx={{
-                        cursor: 'pointer',
-                        '&:hover': {
-                          backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                .map((pkg) => (
+                  <TableRow
+                    key={pkg.id}
+                    hover
+                    onClick={() => handleViewPackage(pkg.id)}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                      }
+                    }}
+                  >
+                    <TableCell>#{pkg.id}</TableCell>
+                    <TableCell>{students[pkg.student_id] || `Student #${pkg.student_id}`}</TableCell>
+                    <TableCell>
+                      {format(parseISO(pkg.start_date), 'dd/MM/yyyy', { locale: it })}
+                    </TableCell>
+                    <TableCell>
+                      {format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it })}
+                    </TableCell>
+                    <TableCell>{pkg.total_hours}</TableCell>
+                    <TableCell>{parseFloat(pkg.remaining_hours).toFixed(1)}</TableCell>
+                    <TableCell>€{parseFloat(pkg.package_cost).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={
+                          pkg.status === 'in_progress' ? 'In Progress' :
+                          pkg.status === 'expired' ? 'Expired' :
+                          'Completed'
                         }
-                      }}
-                    >
-                      <TableCell>#{pkg.id}</TableCell>
-                      <TableCell>{students[pkg.student_id] || `Studente #${pkg.student_id}`}</TableCell>
-                      <TableCell>
-                        {format(parseISO(pkg.start_date), 'EEEE dd/MM/yyyy', { locale: it })}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={pkg.package_type === 'fixed' ? 'Fisso 4 sett.' : 'Aperto'}
-                          color={pkg.package_type === 'fixed' ? 'primary' : 'secondary'}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-
-                      <TableCell>
-                        {/* Per pacchetti aperti non pagati, mostra "In registrazione" invece del totale ore */}
-                        {pkg.package_type === 'open' && !pkg.is_paid
-                          ? <Typography variant="body2" fontStyle="italic">In registrazione</Typography>
-                          : pkg.total_hours
+                        color={
+                          pkg.status === 'in_progress' ? 'primary' :
+                          pkg.status === 'expired' ? 'warning' :
+                          'success'
                         }
-                      </TableCell>
-                      <TableCell>
-                        {/* Per pacchetti aperti, visualizza "Ore accumulate" invece di "Ore rimanenti" */}
-                        {pkg.package_type === 'open'
-                          ? <Typography fontWeight="medium" color="primary">
-                            {getRemainingHours(pkg).toFixed(1)} ore accumulate
-                          </Typography>
-                          : getRemainingHours(pkg).toFixed(1)
-                        }
-                      </TableCell>
-                      <TableCell>
-                        {pkg.package_type === 'open' && !pkg.is_paid
-                          ? <Typography variant="body2" fontStyle="italic">Da definire</Typography>
-                          : `€${parseFloat(pkg.package_cost).toFixed(2)}`
-                        }
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={pkg.package_type === 'fixed'
-                            ? (getRemainingHours(pkg) > 0 ? 'In corso' : 'Terminato')
-                            : 'In corso'}
-                          color={pkg.status === 'in_progress' ? 'primary' : 'default'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={pkg.is_paid ? 'Pagato' : 'Non pagato'}
-                          color={pkg.is_paid ? 'success' : 'error'}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {pkg.package_type === 'fixed' && pkg.expiry_date ?
-                          format(parseISO(pkg.expiry_date), 'EEEE dd/MM/yyyy', { locale: it }) :
-                          '-'}
-                      </TableCell>
-                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                        <Tooltip title="Modifica">
-                          <IconButton
-                            color="primary"
-                            onClick={(e) => handleEditPackage(pkg.id, e)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Elimina">
-                          <IconButton
-                            color="secondary"
-                            onClick={(e) => handleDeletePackage(pkg.id, e)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={pkg.is_paid ? 'Paid' : 'Not paid'}
+                        color={pkg.is_paid ? 'success' : 'error'}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                      <Tooltip title="Edit">
+                        <IconButton
+                          color="primary"
+                          onClick={(e) => handleEditPackage(pkg.id, e)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete">
+                        <IconButton
+                          color="error"
+                          onClick={(e) => handleDeletePackage(pkg.id, e)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))
             )}
           </TableBody>
         </Table>
@@ -557,8 +430,8 @@ function PackageListPage() {
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Righe per pagina:"
-          labelDisplayedRows={({ from, to, count }) => `${from}-${to} di ${count}`}
+          labelRowsPerPage="Rows per page:"
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
         />
       </TableContainer>
     </Box>
