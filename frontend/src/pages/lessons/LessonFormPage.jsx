@@ -20,7 +20,9 @@ import { format } from 'date-fns';
 import StudentAutocomplete from '../../components/common/StudentAutocomplete';
 import LessonForm from './components/LessonForm';
 import PackageOverflowDialog from './components/PackageOverflowDialog';
-import { checkPackageOverflow, checkLessonOverlap } from './utils/packageUtils';
+import { checkPackageOverflow } from './utils/packageUtils';
+import { checkLessonOverlap } from '../../utils/lessonOverlapUtils';
+import LessonOverlapDialog from '../../components/lessons/LessonOverlapDialog';
 
 function LessonFormPage() {
   const { id } = useParams();
@@ -32,14 +34,14 @@ function LessonFormPage() {
   const [loading, setLoading] = useState(isEditMode);
   const [error, setError] = useState(null);
   const [infoMessage, setInfoMessage] = useState('');
-  
+
   // Dati principali
   const [professors, setProfessors] = useState([]);
   const [students, setStudents] = useState([]);
   const [packages, setPackages] = useState([]);
   const [lessonsInPackage, setLessonsInPackage] = useState([]);
   const [originalLesson, setOriginalLesson] = useState(null);
-  
+
   // Dialog di overflow
   const [overflowDialogOpen, setOverflowDialogOpen] = useState(false);
   const [overflowLessonData, setOverflowLessonData] = useState(null);
@@ -48,11 +50,11 @@ function LessonFormPage() {
     remainingHours: 0,
     overflowHours: 0
   });
-  
+
   // Dialog di sovrapposizione
   const [overlapDialogOpen, setOverlapDialogOpen] = useState(false);
   const [overlapLesson, setOverlapLesson] = useState(null);
-  
+
   // Lezioni dello studente selezionato
   const [studentLessons, setStudentLessons] = useState([]);
 
@@ -124,13 +126,13 @@ function LessonFormPage() {
   const loadLessonData = async () => {
     const lessonResponse = await lessonService.getById(id);
     const lesson = lessonResponse.data;
-    
+
     // Salva la lezione originale
     setOriginalLesson(lesson);
 
     // Carica pacchetti per lo studente (indipendentemente dal tipo di lezione)
     await loadStudentPackages(lesson.student_id);
-    
+
     // Carica lezioni per il pacchetto selezionato se la lezione è parte di un pacchetto
     if (lesson.is_package && lesson.package_id) {
       await loadPackageLessons(lesson.package_id, lesson.id);
@@ -142,7 +144,7 @@ function LessonFormPage() {
     // Imposta i valori iniziali del form
     const lessonDate = new Date(lesson.lesson_date);
     let startTime = null;
-    
+
     if (lesson.start_time) {
       // Se start_time esiste nel formato "HH:MM:SS", lo convertiamo in un oggetto Date
       const [hours, minutes] = lesson.start_time.split(':').map(Number);
@@ -153,7 +155,7 @@ function LessonFormPage() {
       startTime = new Date();
       startTime.setHours(9, 0, 0, 0);
     }
-    
+
     // Gestisci la data di pagamento
     let paymentDate = null;
     if (lesson.is_paid && lesson.payment_date) {
@@ -161,7 +163,7 @@ function LessonFormPage() {
     } else if (lesson.is_paid) {
       paymentDate = new Date(); // Default oggi se è pagata ma non ha data
     }
-    
+
     setInitialValues({
       professor_id: lesson.professor_id,
       student_id: lesson.student_id,
@@ -188,9 +190,9 @@ function LessonFormPage() {
   const loadPackageLessons = async (packageId, excludeLessonId = null) => {
     const lessonsResponse = await lessonService.getAll();
     const packageLessons = lessonsResponse.data.filter(
-      lesson => lesson.package_id === packageId && 
-                lesson.is_package && 
-                (!excludeLessonId || lesson.id !== parseInt(excludeLessonId))
+      lesson => lesson.package_id === packageId &&
+        lesson.is_package &&
+        (!excludeLessonId || lesson.id !== parseInt(excludeLessonId))
     );
     setLessonsInPackage(packageLessons);
     return packageLessons;
@@ -247,14 +249,14 @@ function LessonFormPage() {
 
       // Carica i pacchetti dello studente
       await loadStudentPackages(studentId);
-      
+
       // Carica le lezioni dello studente per verificare le sovrapposizioni
       await loadStudentLessons(studentId);
     } catch (err) {
       console.error('Error fetching student data:', err);
     }
   };
-  
+
   // Carica le lezioni dello studente
   const loadStudentLessons = async (studentId) => {
     try {
@@ -366,51 +368,51 @@ function LessonFormPage() {
 
   // Controlla se la durata supera le ore disponibili nel pacchetto
   // Nel componente LessonFormPage.jsx
-const handlePackageOverflow = async (formattedValues) => {
-  // Se è un pacchetto aperto, non gestire l'overflow
-  if (formattedValues.is_package && packages.find(p => 
-    p.id === parseInt(formattedValues.package_id) && 
-    p.package_type === 'open')
-  ) {
-    return false;
-  }
+  const handlePackageOverflow = async (formattedValues) => {
+    // Se è un pacchetto aperto, non gestire l'overflow
+    if (formattedValues.is_package && packages.find(p =>
+      p.id === parseInt(formattedValues.package_id) &&
+      p.package_type === 'open')
+    ) {
+      return false;
+    }
 
-  const { hasOverflow, details } = checkPackageOverflow({
-    formValues: formattedValues,
-    packages,
-    packageLessons: lessonsInPackage,
-    originalLesson: isEditMode ? originalLesson : null
-  });
-  
-  if (hasOverflow) {
-    setOverflowLessonData(formattedValues);
-    setOverflowDetails(details);
-    setOverflowDialogOpen(true);
-    return true;
-  }
-  
-  return false;
-};
+    const { hasOverflow, details } = checkPackageOverflow({
+      formValues: formattedValues,
+      packages,
+      packageLessons: lessonsInPackage,
+      originalLesson: isEditMode ? originalLesson : null
+    });
+
+    if (hasOverflow) {
+      setOverflowLessonData(formattedValues);
+      setOverflowDetails(details);
+      setOverflowDialogOpen(true);
+      return true;
+    }
+
+    return false;
+  };
 
   // Calcola le ore disponibili nel pacchetto selezionato
   const calculatePackageHours = (packageId, totalHours) => {
     if (!packageId || !totalHours) return { usedHours: 0, availableHours: 0 };
-    
+
     // Calcola la somma delle ore di lezione già usate in questo pacchetto
-    const usedHours = lessonsInPackage.reduce((total, lesson) => 
+    const usedHours = lessonsInPackage.reduce((total, lesson) =>
       total + parseFloat(lesson.duration), 0);
-    
+
     // Ore originali della lezione (se stiamo modificando una lezione esistente)
-    const originalLessonHours = isEditMode && originalLesson && 
-                               originalLesson.is_package && 
-                               originalLesson.package_id === packageId 
-                                ? parseFloat(originalLesson.duration) : 0;
-    
+    const originalLessonHours = isEditMode && originalLesson &&
+      originalLesson.is_package &&
+      originalLesson.package_id === packageId
+      ? parseFloat(originalLesson.duration) : 0;
+
     // Calcola le ore disponibili
     const availableHours = parseFloat(totalHours) - usedHours;
-    
-    return { 
-      usedHours, 
+
+    return {
+      usedHours,
       availableHours,
       totalAvailable: availableHours + originalLessonHours
     };
@@ -450,12 +452,12 @@ const handlePackageOverflow = async (formattedValues) => {
         formattedValues.package_id = null;
       }
 
-      // Verifica sovrapposizioni con altre lezioni dello stesso studente
-      const { hasOverlap, overlappingLesson } = checkLessonOverlap({
-        existingLessons: studentLessons,
-        newLesson: formattedValues,
-        lessonIdToExclude: isEditMode ? parseInt(id) : null
-      });
+      // Verifica sovrapposizioni con la funzione utility
+      const { hasOverlap, overlappingLesson } = checkLessonOverlap(
+        formattedValues,
+        studentLessons,
+        isEditMode ? parseInt(id) : null
+      );
 
       if (hasOverlap) {
         setOverlapLesson(overlappingLesson);
@@ -531,51 +533,12 @@ const handlePackageOverflow = async (formattedValues) => {
       />
 
       {/* Dialog per gestire le sovrapposizioni delle lezioni */}
-      <Dialog
+      {/* Use our common LessonOverlapDialog component */}
+      <LessonOverlapDialog
         open={overlapDialogOpen}
         onClose={() => setOverlapDialogOpen(false)}
-        aria-labelledby="overlap-dialog-title"
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle id="overlap-dialog-title">
-          Sovrapposizione di orario rilevata
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText gutterBottom>
-            Lo studente ha già una lezione programmata in questo orario. Non è possibile creare lezioni sovrapposte per lo stesso studente.
-          </DialogContentText>
-          
-          {overlapLesson && (
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, boxShadow: 1 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Dettagli della lezione in conflitto:
-              </Typography>
-              <Typography variant="body2">
-                <strong>Data:</strong> {format(new Date(overlapLesson.lesson_date), 'dd/MM/yyyy')}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Orario:</strong> {overlapLesson.start_time?.substring(0, 5)}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Durata:</strong> {overlapLesson.duration} ore
-              </Typography>
-              <Typography variant="body2">
-                <strong>ID lezione:</strong> #{overlapLesson.id}
-              </Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setOverlapDialogOpen(false)} 
-            color="primary"
-            variant="contained"
-          >
-            Modifica orario
-          </Button>
-        </DialogActions>
-      </Dialog>
+        overlappingLesson={overlapLesson}
+      />
     </Box>
   );
 }
