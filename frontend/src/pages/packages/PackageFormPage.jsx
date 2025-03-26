@@ -420,9 +420,9 @@ function PackageFormPage() {
                     <Typography variant="body2">
                       Lo stato del pacchetto verrà aggiornato automaticamente:
                       <ul>
-                        <li><strong>In corso</strong>: La data odierna è precedente alla data di scadenza e il pacchetto non è pagato.</li>
-                        <li><strong>Scaduto</strong>: La data odierna è successiva alla data di scadenza e il pacchetto non è pagato.</li>
-                        <li><strong>Completato</strong>: Il pacchetto è stato contrassegnato come pagato.</li>
+                        <li><strong>In corso</strong>:  non è ancora arrivata la data di scadenza del pacchetto.</li>
+                        <li><strong>Terminato</strong>: la data di scadenza è passata, ma il pacchetto è stato saldato.</li>
+                        <li><strong>Scaduto</strong>:   la data odierna è successiva alla data di scadenza e il pacchetto non è pagato.</li>
                       </ul>
                     </Typography>
 

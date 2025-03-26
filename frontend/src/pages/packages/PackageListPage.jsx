@@ -157,7 +157,7 @@ function PackageListPage() {
 
     // Filter by status (active or all)
     if (showActive) {
-      filtered = filtered.filter(pkg => pkg.status === 'in_progress');
+      filtered = filtered.filter(pkg => pkg.status === 'expired');
     }
 
     // Apply sorting
@@ -323,7 +323,7 @@ function PackageListPage() {
               color="primary"
             />
           }
-          label="Solo pacchetti in corso"
+          label="Pacchetti scaduti"
         />
       </Box>
 
