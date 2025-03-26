@@ -50,11 +50,15 @@ def update_package_status(db: Session, package_id: int, commit: bool = True):
     today = date.today()
     
     if package.is_paid:
-        package.status = "completed"
-    elif today > package.expiry_date:
-        package.status = "expired"
+        if today < package.expiry_date:
+            package.status = "in_progress"
+        elif today >= package.expiry_date:
+            package.status = "completed"
     else:
-        package.status = "in_progress"
+        if today < package.expiry_date:
+            package.status = "in_progress"
+        elif today >= package.expiry_date:
+            package.status = "expired"
     
     # Commit if requested
     if commit:
@@ -95,11 +99,19 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
     
     # Determine payment date
     payment_date = package.payment_date if package.is_paid else None
-    
+
     # Set initial status
-    status = "completed" if package.is_paid else "in_progress"
-    if date.today() > expiry_date and not package.is_paid:
-        status = "expired"
+
+    if package.is_paid:
+        if date.today() < expiry_date:
+            status = "in_progress"
+        elif date.today() >= expiry_date:
+            status = "completed"
+    else:
+        if date.today() < expiry_date:
+            status = "in_progress"
+        elif date.today() >= expiry_date:
+            status = "expired"
     
     # Create new package
     db_package = models.Package(

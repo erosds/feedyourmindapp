@@ -172,7 +172,7 @@ function AddLessonDialog({
       // Combiniamo le lezioni locali e quelle caricate per lo studente
       const allLessons = [...lessons, ...studentLessons];
       const { hasOverlap, overlappingLesson } = checkLessonOverlap(lessonForm, allLessons);
-      
+
       if (hasOverlap) {
         setOverlappingLesson(overlappingLesson);
         setOverlapWarningOpen(true);
@@ -253,17 +253,17 @@ function AddLessonDialog({
         is_package: false
       }));
       console.log("Studente selezionato:", studentId);
-      
+
       // Load packages
       const packagesResponse = await packageService.getByStudent(studentId);
       const activePackages = packagesResponse.data.filter(pkg => pkg.status === 'in_progress');
       console.log("Pacchetti caricati direttamente:", activePackages.length);
       setLocalPackages(activePackages);
       setLocalSelectedPackage(null);
-      
+
       // Load all lessons for this student regardless of professor
       await loadStudentLessons(studentId);
-      
+
       if (handleStudentChange) {
         await handleStudentChange(studentId);
       }
@@ -320,7 +320,7 @@ function AddLessonDialog({
       } else {
         setLocalSelectedPackage(null);
       }
-      
+
       // If student_id is already set, load their lessons
       if (lessonForm.student_id) {
         loadStudentLessons(lessonForm.student_id);
@@ -446,8 +446,8 @@ function AddLessonDialog({
                   </FormHelperText>
                 )}
                 {lessonForm.student_id && localPackages.length > 0 && (
-                  <FormHelperText>
-                    {localPackages.length} pacchetti disponibili
+                  <FormHelperText sx={{ color: 'red' }}>
+                    {localPackages.length} pacchetto disponibile
                   </FormHelperText>
                 )}
               </Box>
@@ -508,16 +508,7 @@ function AddLessonDialog({
                       ))
                     )}
                   </Select>
-                  {localSelectedPackage && (
-                    <FormHelperText>
-                      Ore disponibili: {availableHours.toFixed(1)} di {localSelectedPackage.total_hours}
-                      {isDurationExceedingAvailable && (
-                        <span style={{ color: 'red' }}>
-                          {' '}(insufficienti per la lezione)
-                        </span>
-                      )}
-                    </FormHelperText>
-                  )}
+                  
                 </FormControl>
               </Grid>
             )}
@@ -554,7 +545,7 @@ function AddLessonDialog({
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Dialogo di avviso per sovrapposizioni */}
       <LessonOverlapDialog
         open={overlapWarningOpen}

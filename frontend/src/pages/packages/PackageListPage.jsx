@@ -380,11 +380,10 @@ function PackageListPage() {
                       <Chip
                         label={
                           pkg.status === 'in_progress' ? 'In corso' :
-                            pkg.status === 'expired' && pkg.is_paid ? 'Terminato' :
-                              pkg.status === 'expired' && !pkg.is_paid ? 'Scaduto' :
+                            pkg.status === 'completed' ? 'Terminato' :
+                              pkg.status === 'expired' ? 'Scaduto' :
                                 'In corso'
                         }
-
                         color={
                           pkg.status === 'in_progress' ? 'primary' :
                             pkg.status === 'expired' ? 'warning' :
@@ -392,6 +391,7 @@ function PackageListPage() {
                         }
                         size="small"
                       />
+
                     </TableCell>
                     <TableCell>
                       <Chip
