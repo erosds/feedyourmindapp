@@ -22,9 +22,9 @@ import {
   TextField
 } from '@mui/material';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { lessonService, packageService, studentService } from '../../services/api';
+import { lessonService, packageService } from '../../services/api';
 import StudentAutocomplete from '../common/StudentAutocomplete';
 import LessonOverlapDialog from '../lessons/LessonOverlapDialog';
 import { checkLessonOverlap } from '../../utils/lessonOverlapUtils';

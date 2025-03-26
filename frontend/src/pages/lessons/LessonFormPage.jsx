@@ -4,20 +4,13 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Paper,
   Typography,
 } from '@mui/material';
 import { professorService, studentService, packageService, lessonService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
-import StudentAutocomplete from '../../components/common/StudentAutocomplete';
 import LessonForm from './components/LessonForm';
 import PackageOverflowDialog from './components/PackageOverflowDialog';
 import { checkPackageOverflow } from './utils/packageUtils';
