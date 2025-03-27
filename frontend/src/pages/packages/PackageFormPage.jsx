@@ -106,7 +106,7 @@ function PackageFormPage() {
     return expiryDate;
   };
 
-  
+
 
   // Load initial data
   useEffect(() => {
@@ -198,11 +198,16 @@ function PackageFormPage() {
 
     // API call
     let submitPromise;
+    // In the handleSubmit function:
     if (isEditMode) {
       submitPromise = packageService.update(id, packageData);
     } else {
-      submitPromise = packageService.create(packageData).then(response => {
+      // Pass the allow_multiple flag if it exists in location.state
+      const allowMultiple = location.state?.allow_multiple || false;
+
+      submitPromise = packageService.create(packageData, allowMultiple).then(response => {
         if (location.state?.create_lesson_after && location.state?.lesson_data) {
+
           const lessonData = {
             ...location.state.lesson_data,
             student_id: values.student_id,

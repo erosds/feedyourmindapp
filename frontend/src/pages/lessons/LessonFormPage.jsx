@@ -312,25 +312,26 @@ function LessonFormPage() {
     });
   };
 
-  // Navigate to create a new package for excess hours
-  const navigateToNewPackage = () => {
-    navigate('/packages/new', {
-      state: {
-        student_id: overflowLessonData.student_id,
-        overflow_from_lesson: true,
-        overflow_hours: overflowDetails.overflowHours,
-        suggested_hours: Math.ceil(overflowDetails.overflowHours * 2),
-        create_lesson_after: true,
-        lesson_data: {
-          professor_id: overflowLessonData.professor_id,
-          lesson_date: overflowLessonData.lesson_date,
-          start_time: overflowLessonData.start_time,
-          duration: overflowDetails.overflowHours,
-          hourly_rate: overflowLessonData.hourly_rate
-        }
+// Navigate to create a new package for excess hours
+const navigateToNewPackage = () => {
+  navigate('/packages/new', {
+    state: {
+      student_id: overflowLessonData.student_id,
+      overflow_from_lesson: true,
+      overflow_hours: overflowDetails.overflowHours,
+      suggested_hours: Math.ceil(overflowDetails.overflowHours * 2),
+      create_lesson_after: true,
+      allow_multiple: true,  // Add this flag
+      lesson_data: {
+        professor_id: overflowLessonData.professor_id,
+        lesson_date: overflowLessonData.lesson_date,
+        start_time: overflowLessonData.start_time,
+        duration: overflowDetails.overflowHours,
+        hourly_rate: overflowLessonData.hourly_rate
       }
-    });
-  };
+    }
+  });
+};
 
   // Save lesson with duration limited to available hours in the package
   const savePartialLesson = async () => {

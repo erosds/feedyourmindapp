@@ -1,5 +1,5 @@
 # routes/packages.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status as http_status
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import date, timedelta
@@ -77,28 +77,29 @@ def update_package_status(db: Session, package_id: int, commit: bool = True):
     
     return package
 
-@router.post("/", response_model=models.PackageResponse, status_code=status.HTTP_201_CREATED)
-def create_package(package: models.PackageCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=models.PackageResponse, status_code=http_status.HTTP_201_CREATED)
+def create_package(package: models.PackageCreate, allow_multiple: bool = False, db: Session = Depends(get_db)):
     # Check if student exists
     student = db.query(models.Student).filter(models.Student.id == package.student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
-    # Check for active packages
-    active_package = db.query(models.Package).filter(
-        models.Package.student_id == package.student_id,
-        models.Package.status == "in_progress"
-    ).first()
-    
-    if active_package:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "message": "Student already has an active package",
-                "active_package_id": active_package.id,
-                "active_package_remaining_hours": float(active_package.remaining_hours)
-            }
-        )
+    # Check for active packages (skip if allow_multiple is True)
+    if not allow_multiple:
+        active_package = db.query(models.Package).filter(
+            models.Package.student_id == package.student_id,
+            models.Package.status == "in_progress"
+        ).first()
+        
+        if active_package:
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail={
+                    "message": "Student already has an active package",
+                    "active_package_id": active_package.id,
+                    "active_package_remaining_hours": float(active_package.remaining_hours)
+                }
+            )
     
     # Ensure total hours and cost are positive
     total_hours = max(Decimal('0.5'), package.total_hours)
@@ -110,18 +111,11 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
     # Determine payment date
     payment_date = package.payment_date if package.is_paid else None
 
-    # Set initial status
-
+    # Determine status based on dates and payment
     if package.is_paid:
-        if date.today() < expiry_date:
-            package.status = "in_progress"
-        elif date.today() >= expiry_date:
-            package.status = "completed"
+        status = "in_progress" if date.today() < expiry_date else "completed"
     else:
-        if date.today() < expiry_date:
-            package.status = "in_progress"
-        elif date.today() >= expiry_date:
-            package.status = "expired"
+        status = "in_progress" if date.today() < expiry_date else "expired"
     
     # Create new package
     db_package = models.Package(
@@ -129,7 +123,7 @@ def create_package(package: models.PackageCreate, db: Session = Depends(get_db))
         start_date=package.start_date,
         total_hours=total_hours,
         package_cost=package_cost,
-        status=package.status,
+        status=status,  # Use the computed status here
         is_paid=package.is_paid,
         payment_date=payment_date,
         remaining_hours=total_hours,  # Initially, remaining = total
@@ -225,7 +219,7 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
     # Validate total hours (must be >= hours used)
     if "total_hours" in update_data and update_data["total_hours"] < hours_used:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=f"Total hours cannot be less than hours already used ({hours_used})"
         )
     

@@ -139,6 +139,10 @@ export const packageService = {
   create: async (data) => {
     return api.post('/packages', data);
   },
+
+  create: async (data, allowMultiple = false) => {
+    return api.post(`/packages/?allow_multiple=${allowMultiple}`, data);
+  },
   
   update: async (id, data) => {
     return api.put(`/packages/${id}`, data);
