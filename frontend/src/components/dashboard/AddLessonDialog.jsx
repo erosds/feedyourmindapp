@@ -406,7 +406,8 @@ function AddLessonDialog({
                 disabled={submitting}
                 error={isDurationExceedingAvailable}
                 helperText={isDurationExceedingAvailable ?
-                  `Attenzione: la durata supera le ore disponibili (${availableHours.toFixed(1)})` : ''}
+                  `Attenzione: la durata supera le ore disponibili (${availableHours.toFixed(1)}).      
+                  Creare la lezione che va in overflow dal form apposito.` : ''}
               />
             </Grid>
             {/* Tariffa oraria */}
@@ -437,6 +438,7 @@ function AddLessonDialog({
                 InputProps={{ readOnly: true }}
               />
             </Grid>
+            
             {/* Toggle per pacchetto - nascondi nel contesto del pacchetto */}
             {context !== 'packageDetail' && (
               <Grid item xs={12} md={6}>
@@ -465,6 +467,7 @@ function AddLessonDialog({
                 </Box>
               </Grid>
             )}
+            
             {/* Toggle pagamento (disabilitato per lezioni da pacchetto) */}
             <Grid item xs={12} md={6}>
               <FormControlLabel

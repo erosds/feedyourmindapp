@@ -31,7 +31,7 @@ const LessonSchema = Yup.object().shape({
   is_package: Yup.boolean(),
   package_id: Yup.number().nullable().when('is_package', {
     is: true,
-    then: () => Yup.number().required('Pacchetto obbligatorio'),
+    then: () => Yup.number().required('Pacchetto obbligatoriosssss'),
     otherwise: () => Yup.number().nullable(),
   }),
   hourly_rate: Yup.number().positive('La tariffa oraria deve essere positiva').required('Tariffa oraria obbligatoria'),
@@ -187,25 +187,57 @@ function LessonForm({
                 />
                 {selectedPackage && values.is_package && (
                   <FormHelperText>
-                    Ore disponibili: 
-                    {isEditMode && originalLesson?.is_package && 
-                     originalLesson?.package_id === parseInt(values.package_id) 
+                    Ore disponibili:
+                    {isEditMode && originalLesson?.is_package &&
+                      originalLesson?.package_id === parseInt(values.package_id)
                       ? totalAvailable.toFixed(1)
                       : `${availableHours.toFixed(1)} di ${selectedPackage.total_hours}`}
-                    
+
                     {((isEditMode && parseFloat(values.duration) > totalAvailable) ||
                       (!isEditMode && parseFloat(values.duration) > availableHours)) && (
-                      <span style={{ color: 'red' }}> (La durata supera le ore disponibili)</span>
-                    )}
+                        <span style={{ color: 'red' }}> (La durata supera le ore disponibili)</span>
+                      )}
                   </FormHelperText>
                 )}
               </Grid>
 
+              {/* Tariffa oraria */}
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  name="hourly_rate"
+                  label="Tariffa oraria"
+                  type="number"
+                  value={values.hourly_rate}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.hourly_rate && Boolean(errors.hourly_rate)}
+                  helperText={touched.hourly_rate && errors.hourly_rate}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                  }}
+                  required
+                />
+              </Grid>
+
+              {/* Totale calcolato automaticamente */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Totale lezione"
+                  value={`€ ${(values.duration * values.hourly_rate).toFixed(2) || '0.00'}`}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                />
+              </Grid>
+
               {/* Checkbox pacchetto */}
-              <Grid item xs={12}>
+              <Grid item xs={12} md={6}>
                 <FormControlLabel
                   control={
-                    <Checkbox
+                    <Switch
                       name="is_package"
                       checked={values.is_package}
                       onChange={(e) => {
@@ -218,11 +250,60 @@ function LessonForm({
                   }
                   label="Parte di un pacchetto"
                 />
+                {/* Aggiungi questa parte per mostrare il numero di pacchetti disponibili */}
+                {values.student_id && packages.length > 0 && (
+                  <FormHelperText sx={{ color: 'primary.main', ml: 2 }}>
+                    {packages.length} pacchetto{packages.length !== 1 ? 'i' : ''} disponibile{packages.length !== 1 ? 'i' : ''}
+                  </FormHelperText>
+                )}
               </Grid>
+
+              {/* Stato pagamento (solo per lezioni singole) */}
+              {!values.is_package && (
+                <>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          name="is_paid"
+                          checked={values.is_paid}
+                          onChange={(e) => {
+                            const isPaid = e.target.checked;
+                            setFieldValue('is_paid', isPaid);
+                            if (isPaid && !values.payment_date) {
+                              setFieldValue('payment_date', new Date());
+                            }
+                          }}
+                        />
+                      }
+                      label="Lezione pagata"
+                    />
+                  </Grid>
+
+                  {/* Data di pagamento */}
+                  {values.is_paid && (
+                    <Grid item xs={12}>
+                      <DatePicker
+                        label="Data pagamento"
+                        value={values.payment_date}
+                        onChange={(date) => setFieldValue('payment_date', date)}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            required: true,
+                            error: touched.payment_date && Boolean(errors.payment_date),
+                            helperText: touched.payment_date && errors.payment_date,
+                          },
+                        }}
+                      />
+                    </Grid>
+                  )}
+                </>
+              )}
 
               {/* Selezione pacchetto */}
               {values.is_package && (
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12}>
                   <FormControl
                     fullWidth
                     error={touched.package_id && Boolean(errors.package_id)}
@@ -256,79 +337,7 @@ function LessonForm({
                 </Grid>
               )}
 
-              {/* Tariffa oraria */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  name="hourly_rate"
-                  label="Tariffa oraria"
-                  type="number"
-                  value={values.hourly_rate}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={touched.hourly_rate && Boolean(errors.hourly_rate)}
-                  helperText={touched.hourly_rate && errors.hourly_rate}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                  }}
-                  required
-                />
-              </Grid>
 
-              {/* Stato pagamento (solo per lezioni singole) */}
-              {!values.is_package && (
-                <>
-                  <Grid item xs={12} md={6}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          name="is_paid"
-                          checked={values.is_paid}
-                          onChange={(e) => {
-                            const isPaid = e.target.checked;
-                            setFieldValue('is_paid', isPaid);
-                            if (isPaid && !values.payment_date) {
-                              setFieldValue('payment_date', new Date());
-                            }
-                          }}
-                        />
-                      }
-                      label="Lezione pagata"
-                    />
-                  </Grid>
-
-                  {/* Data di pagamento */}
-                  {values.is_paid && (
-                    <Grid item xs={12} md={6}>
-                      <DatePicker
-                        label="Data pagamento"
-                        value={values.payment_date}
-                        onChange={(date) => setFieldValue('payment_date', date)}
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            required: true,
-                            error: touched.payment_date && Boolean(errors.payment_date),
-                            helperText: touched.payment_date && errors.payment_date,
-                          },
-                        }}
-                      />
-                    </Grid>
-                  )}
-                </>
-              )}
-
-              {/* Totale calcolato automaticamente */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Totale lezione"
-                  value={`€ ${(values.duration * values.hourly_rate).toFixed(2) || '0.00'}`}
-                  InputProps={{
-                    readOnly: true,
-                  }}
-                />
-              </Grid>
 
               {/* Pulsanti di azione */}
               <Grid item xs={12}>
