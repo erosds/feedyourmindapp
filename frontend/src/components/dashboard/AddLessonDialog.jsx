@@ -168,6 +168,8 @@ function AddLessonDialog({
         payment_date: lessonForm.is_paid && lessonForm.payment_date
           ? formatDateForAPI(lessonForm.payment_date)
           : null,
+        price: lessonForm.is_package ? 0 : (lessonForm.price || 20) // Set price to 0 for package lessons
+
       };
 
       // Controllo sovrapposizioni usando la funzione utility
@@ -338,12 +340,12 @@ function AddLessonDialog({
           setLocalSelectedPackage(null);
         }
       }
-        // If student_id is already set, load their lessons
-        if (lessonForm.student_id) {
-          loadStudentLessons(lessonForm.student_id);
-        }
+      // If student_id is already set, load their lessons
+      if (lessonForm.student_id) {
+        loadStudentLessons(lessonForm.student_id);
       }
-    }, [open, studentPackages, selectedPackage, lessonForm.student_id, context, fixedPackageId]);
+    }
+  }, [open, studentPackages, selectedPackage, lessonForm.student_id, context, fixedPackageId]);
 
   return (
     <>
@@ -363,7 +365,6 @@ function AddLessonDialog({
                 onChange={handleStudentAutocomplete}
                 disabled={submitting || context === 'packageDetail'}
                 required
-                error={!lessonForm.student_id}
                 helperText={!lessonForm.student_id ? "Seleziona uno studente" : ""}
               />
             </Grid>
@@ -425,7 +426,6 @@ function AddLessonDialog({
                 }}
                 required
                 disabled={submitting}
-                error={!lessonForm.hourly_rate}
                 helperText={!lessonForm.hourly_rate ? "Inserisci una tariffa oraria" : ""}
               />
             </Grid>
@@ -438,7 +438,7 @@ function AddLessonDialog({
                 InputProps={{ readOnly: true }}
               />
             </Grid>
-            
+
             {/* Toggle per pacchetto - nascondi nel contesto del pacchetto */}
             {context !== 'packageDetail' && (
               <Grid item xs={12} md={6}>
@@ -467,7 +467,7 @@ function AddLessonDialog({
                 </Box>
               </Grid>
             )}
-            
+
             {/* Toggle pagamento (disabilitato per lezioni da pacchetto) */}
             <Grid item xs={12} md={6}>
               <FormControlLabel
@@ -480,7 +480,8 @@ function AddLessonDialog({
                       setLessonForm(prev => ({
                         ...prev,
                         is_paid: isPaid,
-                        payment_date: isPaid ? new Date() : null
+                        payment_date: isPaid ? new Date() : null,
+                        price: isPaid ? (prev.price || 20) : 0 // Set price to 20 if paid, 0 if not
                       }));
                     }}
                     disabled={submitting || (lessonForm.is_package && localSelectedPackage)}
@@ -537,6 +538,29 @@ function AddLessonDialog({
                   onChange={(date) => setLessonForm(prev => ({ ...prev, payment_date: date }))}
                   slotProps={{ textField: { fullWidth: true, required: true, disabled: submitting } }}
                 />
+              </Grid>
+            )}
+            {/* 4. Add the price field for admin users */}
+            {!lessonForm.is_package && lessonForm.is_paid && currentUser?.is_admin && (
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Prezzo studente"
+                  type="number"
+                  value={lessonForm.price || 20}
+                  onChange={(e) => setLessonForm(prev => ({
+                    ...prev,
+                    price: parseFloat(e.target.value) || 20
+                  }))}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                    inputProps: { min: 0, step: 0.5 }
+                  }}
+                  disabled={submitting}
+                />
+                <FormHelperText>
+                  Prezzo pagato dallo studente all'associazione
+                </FormHelperText>
               </Grid>
             )}
           </Grid>

@@ -63,6 +63,7 @@ function LessonFormPage() {
     hourly_rate: '',
     is_paid: true,
     payment_date: new Date(), // Default to today
+    price: 20,
   });
 
   // Load required data
@@ -167,7 +168,9 @@ function LessonFormPage() {
       package_id: lesson.package_id,
       hourly_rate: lesson.hourly_rate,
       is_paid: lesson.is_paid !== undefined ? lesson.is_paid : true,
-      payment_date: paymentDate
+      payment_date: paymentDate,
+      price: lesson.price || 20, // Use existing price or default to 20
+
     });
   };
 
@@ -430,6 +433,8 @@ const navigateToNewPackage = () => {
         lesson_date: format(values.lesson_date, 'yyyy-MM-dd'),
         start_time: values.start_time ? format(values.start_time, 'HH:mm:ss') : null,
         payment_date: values.is_paid && values.payment_date ? format(values.payment_date, 'yyyy-MM-dd') : null,
+        price: values.is_package ? 0 : (values.price || 20), // Set to 0 for package, otherwise use provided price or default
+
       };
 
       // If not a package, remove package ID

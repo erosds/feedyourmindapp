@@ -270,8 +270,17 @@ function LessonForm({
                           onChange={(e) => {
                             const isPaid = e.target.checked;
                             setFieldValue('is_paid', isPaid);
-                            if (isPaid && !values.payment_date) {
+                            if (isPaid) {
+                              // When switching to paid, set default date and price
                               setFieldValue('payment_date', new Date());
+                              // Only set default price if it's currently empty
+                              if (!values.price) {
+                                setFieldValue('price', 20);
+                              }
+                            } else {
+                              // When switching to not paid, reset price to 0
+                              setFieldValue('price', 0);
+                              setFieldValue('payment_date', null);
                             }
                           }}
                         />
@@ -282,21 +291,48 @@ function LessonForm({
 
                   {/* Data di pagamento */}
                   {values.is_paid && (
-                    <Grid item xs={12}>
-                      <DatePicker
-                        label="Data pagamento"
-                        value={values.payment_date}
-                        onChange={(date) => setFieldValue('payment_date', date)}
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            required: true,
-                            error: touched.payment_date && Boolean(errors.payment_date),
-                            helperText: touched.payment_date && errors.payment_date,
-                          },
-                        }}
-                      />
-                    </Grid>
+                    <>
+                      <Grid item xs={12} md={6}>
+                        <DatePicker
+                          label="Data pagamento"
+                          value={values.payment_date}
+                          onChange={(date) => setFieldValue('payment_date', date)}
+                          slotProps={{
+                            textField: {
+                              fullWidth: true,
+                              required: true,
+                              error: touched.payment_date && Boolean(errors.payment_date),
+                              helperText: touched.payment_date && errors.payment_date,
+                            },
+                          }}
+                        />
+                      </Grid>
+
+                      {/* Prezzo (only for admins) */}
+                      {isAdmin && (
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            name="price"
+                            label="Prezzo studente"
+                            type="number"
+                            value={values.price || 20}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            InputProps={{
+                              startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                            }}
+                            inputProps={{
+                              min: 0,
+                              step: 0.5,
+                            }}
+                          />
+                          <FormHelperText>
+                            Prezzo pagato dallo studente all'associazione
+                          </FormHelperText>
+                        </Grid>
+                      )}
+                    </>
                   )}
                 </>
               )}

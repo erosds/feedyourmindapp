@@ -12,7 +12,9 @@ import {
   Grid,
   IconButton,
   Tooltip,
+  TextField,
   Typography,
+  InputAdornment
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -42,6 +44,8 @@ function LessonDetailPage() {
   const [packageData, setPackageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [priceValue, setPriceValue] = useState(0);
 
   // Verifica autorizzazioni: gli admin possono vedere tutte le lezioni,
   // i professori standard possono vedere solo le proprie
@@ -93,6 +97,24 @@ function LessonDetailPage() {
 
   const handleEditLesson = () => {
     navigate(`/lessons/edit/${id}`);
+  };
+
+  const handleEditPrice = () => {
+    setPriceValue(parseFloat(lesson.price || 0));
+    setIsEditingPrice(true);
+  };
+
+  const handleSavePrice = async () => {
+    try {
+      await lessonService.update(id, { price: priceValue });
+      // Reload lesson data
+      const response = await lessonService.getById(id);
+      setLesson(response.data);
+      setIsEditingPrice(false);
+    } catch (err) {
+      console.error('Error updating price:', err);
+      alert('Errore durante l\'aggiornamento del prezzo. Riprova più tardi.');
+    }
   };
 
   const handleBackToLessons = () => {
@@ -310,6 +332,73 @@ function LessonDetailPage() {
                 />
               </Grid>
             )}
+            {/* Add this Grid item for admins only */}
+{isAdmin() && (
+  <Grid item xs={12} md={4}>
+    <Box display="flex" alignItems="center" mb={1}>
+      <EuroIcon sx={{ mr: 1 }} color="primary" />
+      <Typography variant="body2" color="text.secondary">
+        Prezzo studente
+      </Typography>
+    </Box>
+    
+    {isEditingPrice ? (
+      <Box display="flex" alignItems="center" mt={1}>
+        <TextField
+          size="small"
+          type="number"
+          value={priceValue}
+          onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}
+          InputProps={{
+            startAdornment: <InputAdornment position="start">€</InputAdornment>,
+            inputProps: { min: 0, step: 0.5 }
+          }}
+          sx={{ width: '120px', mr: 1 }}
+        />
+        <Button size="small" variant="contained" onClick={handleSavePrice}>
+          Salva
+        </Button>
+        <Button size="small" onClick={() => setIsEditingPrice(false)} sx={{ ml: 1 }}>
+          Annulla
+        </Button>
+      </Box>
+    ) : (
+      <>
+        {lesson.is_package ? (
+          <Typography variant="body1" fontWeight="medium" color="success.main">
+            — <Typography variant="caption" color="success.main" sx={{ display: 'inline', ml: 1 }}>
+                (Incluso nel pacchetto)
+              </Typography>
+          </Typography>
+        ) : (
+          <Typography 
+            variant="body1" 
+            fontWeight="medium"
+            color={parseFloat(lesson.price) === 0 ? "error" : "inherit"}
+          >
+            €{parseFloat(lesson.price || 0).toFixed(2)}
+            {parseFloat(lesson.price) === 0 && (
+              <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+                Prezzo da impostare
+              </Typography>
+            )}
+          </Typography>
+        )}
+        {!lesson.is_package && (
+          <Button 
+            size="small" 
+            variant="outlined" 
+            startIcon={<EditIcon />} 
+            onClick={handleEditPrice} 
+            sx={{ mt: 1 }}
+          >
+            Modifica prezzo
+          </Button>
+        )}
+      </>
+    )}
+  </Grid>
+)}
 
             {/* Data pagamento (solo per lezioni singole pagate) */}
             {!lesson.is_package && lesson.is_paid && lesson.payment_date && (

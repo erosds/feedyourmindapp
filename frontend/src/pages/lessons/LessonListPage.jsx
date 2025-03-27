@@ -252,7 +252,7 @@ function LessonListPage() {
 
   const handleDeleteLesson = async (id, event) => {
     event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
-    
+
     if (window.confirm(`Sei sicuro di voler eliminare la lezione #${id}? Questa azione non può essere annullata.`)) {
       try {
         await lessonService.delete(id);
@@ -277,7 +277,7 @@ function LessonListPage() {
   // Componente SortableTableCell per le intestazioni delle colonne
   const SortableTableCell = ({ id, label, numeric }) => {
     const isActive = orderBy === id;
-    
+
     return (
       <TableCell
         align={numeric ? "right" : "left"}
@@ -401,9 +401,11 @@ function LessonListPage() {
               <SortableTableCell id="student_id" label="Studente" />
               <SortableTableCell id="duration" label="Durata" />
               <SortableTableCell id="is_package" label="Tipo" />
-              <SortableTableCell id="hourly_rate" label="Tariffa Oraria" numeric/>
-              <SortableTableCell id="total_payment" label="Totale" numeric/>
+              <SortableTableCell id="total_payment" label="Totale" numeric />
               <SortableTableCell id="is_paid" label="Pagamento" />
+              {isAdmin() && (
+                <SortableTableCell id="price" label="Prezzo" numeric />
+              )}
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
@@ -418,11 +420,11 @@ function LessonListPage() {
               filteredLessons
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((lesson) => (
-                  <TableRow 
+                  <TableRow
                     key={lesson.id}
                     hover
                     onClick={() => handleViewLesson(lesson.id)}
-                    sx={{ 
+                    sx={{
                       cursor: 'pointer',
                       '&:hover': {
                         backgroundColor: 'rgba(0, 0, 0, 0.04)'
@@ -456,7 +458,6 @@ function LessonListPage() {
                         />
                       )}
                     </TableCell>
-                    <TableCell align="right">€{parseFloat(lesson.hourly_rate).toFixed(2)}</TableCell>
                     <TableCell align="right">€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>
                     <TableCell>
                       {lesson.is_package ? (
@@ -485,6 +486,31 @@ function LessonListPage() {
                         </Tooltip>
                       )}
                     </TableCell>
+                    {isAdmin() && (
+                      <TableCell
+                        align="right"
+                        sx={{
+                          color: lesson.is_package
+                            ? "success.main"
+                            : (parseFloat(lesson.price || 0) === 0 ? "error.main" : "inherit"),
+                          fontWeight: !lesson.is_package && parseFloat(lesson.price || 0) === 0 ? "bold" : "normal"
+                        }}
+                      >
+                        {lesson.is_package ? (
+                          "—"
+                        ) : (
+                          <>
+                            €{parseFloat(lesson.price || 0).toFixed(2)}
+                            {parseFloat(lesson.price || 0) === 0 && (
+                              <Tooltip title="Prezzo da impostare">
+                                <span style={{ marginLeft: '4px' }}>⚠️</span>
+                              </Tooltip>
+                            )}
+                          </>
+                        )}
+                      </TableCell>
+                    )}
+                    
 
                     <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ whiteSpace: 'nowrap' }}>
                       <Tooltip title="Modifica">
