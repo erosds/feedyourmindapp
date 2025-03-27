@@ -137,9 +137,10 @@ const PackageCalendar = ({ lessons, professors, onDayClick }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    bgcolor: hasLesson ? 'primary.main' : (isToday ? 'secondary.light' : 'transparent'),
-                    color: hasLesson || isToday ? 'primary.contrastText' : 'text.primary',
-                    fontWeight: hasLesson || isToday ? 'bold' : 'normal',
+                    border: isToday ? 1 : 0,
+                    borderColor: 'primary.main',
+                    bgcolor: hasLesson ? 'primary.main' : (isToday ? 'transparent' : 'transparent'),
+                    color: hasLesson ? 'primary.contrastText' : 'text.primary',
                     // Modificato il cursore per indicare che è cliccabile se esiste onDayClick
                     cursor: onDayClick ? 'pointer' : 'default',
                     // Effetto hover migliorato per indicare che è cliccabile
