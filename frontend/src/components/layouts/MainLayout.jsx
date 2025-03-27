@@ -26,7 +26,6 @@ import {
   School as SchoolIcon,
   Book as BookIcon,
   MenuBook as MenuBookIcon,
-  AccountCircle,
   AdminPanelSettings as AdminDashboardIcon,
   LockReset as LockResetIcon, // Aggiungi questa linea
 

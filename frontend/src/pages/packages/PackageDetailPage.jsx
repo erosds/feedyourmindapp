@@ -12,8 +12,6 @@ import {
   Grid,
   IconButton,
   LinearProgress,
-  List,
-  ListItem,
   Paper,
   Table,
   TableBody,
@@ -28,13 +26,10 @@ import {
 import {
   Edit as EditIcon,
   ArrowBack as ArrowBackIcon,
-  Event as EventIcon,
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
   AddTask as AddLessonIcon,
   Delete as DeleteIcon,
-  EventNote as ListItemIcon,
-  EventNote as ListItemText
 } from '@mui/icons-material';
 import { format, parseISO, isAfter, differenceInDays } from 'date-fns';
 import { it } from 'date-fns/locale';

@@ -1,6 +1,6 @@
 // src/pages/lessons/utils/PackageCalendar.jsx
 import React, { useState } from 'react';
-import { Box, Grid, IconButton, Typography, Tooltip } from '@mui/material';
+import { Box, Grid, IconButton, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TodayIcon from '@mui/icons-material/Today';
 import { format, getYear, getMonth, getDaysInMonth, getDay, startOfMonth, parseISO, addMonths, subMonths, isSameDay } from 'date-fns';
@@ -117,11 +117,6 @@ const PackageCalendar = ({ lessons, professors, onDayClick }) => {
           const hasLesson = lessonsByDay[dateKey] && lessonsByDay[dateKey].length > 0;
           const dayLessons = hasLesson ? lessonsByDay[dateKey] : [];
           const isToday = isSameDay(dateObj, new Date());
-
-          // Calculate total hours for this day
-          const totalHours = hasLesson 
-            ? dayLessons.reduce((sum, lesson) => sum + lesson.duration, 0)
-            : 0;
 
           return (
             <Grid item xs={12 / 7} key={`day-${index}`}>
