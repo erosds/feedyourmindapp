@@ -337,9 +337,10 @@ function PackageListPage() {
               <SortableTableCell id="expiry_date" label="Data Scadenza" />
               <SortableTableCell id="total_hours" label="Totale Ore" />
               <SortableTableCell id="remaining_hours" label="Ore Rimanenti" />
-              <SortableTableCell id="package_cost" label="Costo" />
               <SortableTableCell id="status" label="Stato" />
               <SortableTableCell id="is_paid" label="Pagamento" />
+              <SortableTableCell id="package_cost" label="Prezzo" />
+
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
@@ -375,7 +376,6 @@ function PackageListPage() {
                     </TableCell>
                     <TableCell>{pkg.total_hours}</TableCell>
                     <TableCell>{parseFloat(pkg.remaining_hours).toFixed(1)}</TableCell>
-                    <TableCell>€{parseFloat(pkg.package_cost).toFixed(2)}</TableCell>
                     <TableCell>
                       <Chip
                         label={
@@ -401,6 +401,8 @@ function PackageListPage() {
                         variant="outlined"
                       />
                     </TableCell>
+                    <TableCell>€{parseFloat(pkg.package_cost).toFixed(2)}</TableCell>
+
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       <Tooltip title="Edit">
                         <IconButton

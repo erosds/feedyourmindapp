@@ -395,13 +395,13 @@ function LessonListPage() {
           <TableHead>
             <TableRow>
               <SortableTableCell id="id" label="ID" />
+              <SortableTableCell id="student_id" label="Studente" />
               <SortableTableCell id="lesson_date" label="Data" />
               <SortableTableCell id="start_time" label="Orario" />
-              <SortableTableCell id="professor_id" label="Professore" />
-              <SortableTableCell id="student_id" label="Studente" />
               <SortableTableCell id="duration" label="Durata" />
+              <SortableTableCell id="professor_id" label="Professore" />
               <SortableTableCell id="is_package" label="Tipo" />
-              <SortableTableCell id="total_payment" label="Totale" numeric />
+              <SortableTableCell id="total_payment" label="Costo" numeric />
               <SortableTableCell id="is_paid" label="Pagamento" />
               {isAdmin() && (
                 <SortableTableCell id="price" label="Prezzo" numeric />
@@ -432,15 +432,17 @@ function LessonListPage() {
                     }}
                   >
                     <TableCell>#{lesson.id}</TableCell>
+                    <TableCell>{students[lesson.student_id] || `Studente #${lesson.student_id}`}</TableCell>
+
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>
                       {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                     </TableCell>
+                    <TableCell>{lesson.duration} ore</TableCell>
+
                     <TableCell>
                       {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
                     </TableCell>
                     <TableCell>{professors[lesson.professor_id] || `Prof. #${lesson.professor_id}`}</TableCell>
-                    <TableCell>{students[lesson.student_id] || `Studente #${lesson.student_id}`}</TableCell>
-                    <TableCell>{lesson.duration} ore</TableCell>
                     <TableCell>
                       {lesson.is_package ? (
                         <Chip
@@ -492,7 +494,9 @@ function LessonListPage() {
                         sx={{
                           color: lesson.is_package
                             ? "success.main"
-                            : (parseFloat(lesson.price || 0) === 0 ? "error.main" : "inherit"),
+                            : parseFloat(lesson.price || 0) === 0
+                              ? "error.main"
+                              : "success.main", // Imposta il colore verde per i prezzi > 0
                           fontWeight: !lesson.is_package && parseFloat(lesson.price || 0) === 0 ? "bold" : "normal"
                         }}
                       >
@@ -503,14 +507,15 @@ function LessonListPage() {
                             €{parseFloat(lesson.price || 0).toFixed(2)}
                             {parseFloat(lesson.price || 0) === 0 && (
                               <Tooltip title="Prezzo da impostare">
-                                <span style={{ marginLeft: '4px' }}>⚠️</span>
+                                <span style={{ marginLeft: '4px' }}></span>
                               </Tooltip>
                             )}
                           </>
                         )}
                       </TableCell>
                     )}
-                    
+
+
 
                     <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ whiteSpace: 'nowrap' }}>
                       <Tooltip title="Modifica">
