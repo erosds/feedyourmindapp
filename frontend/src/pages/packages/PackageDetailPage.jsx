@@ -455,16 +455,14 @@ function PackageDetailPage() {
                 </Grid>
 
                 <Grid item xs={12}>
-                <Box display="flex" flexDirection="column" mt={3}>
-  <Box display="flex" justifyContent="space-between">
+                <Box display="flex" flexDirection="column" >
+  <Box display="flex" justifyContent="space-between" sx={{mt: 2.5}}>
     <Typography variant="h6">Completamento:</Typography>
     <Typography variant="h5" fontWeight="medium">
       {completionPercentage.toFixed(0)}%
     </Typography>
   </Box>
-  <Typography variant="caption">
-    I divisori rappresentano le 4 settimane in cui va completato il pacchetto
-  </Typography>
+
 </Box>
 
                   <LinearProgress
@@ -472,7 +470,7 @@ function PackageDetailPage() {
                     value={completionPercentage}
                     color={packageData.status === 'completed' ? 'success' : 'primary'}
                     sx={{
-                      height: 15,
+                      height: 10,
                       borderRadius: 1,
                       backgroundImage: `repeating-linear-gradient(
       to right,
