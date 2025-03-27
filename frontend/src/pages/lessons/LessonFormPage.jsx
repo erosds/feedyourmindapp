@@ -63,7 +63,7 @@ function LessonFormPage() {
     hourly_rate: '',
     is_paid: true,
     payment_date: new Date(), // Default to today
-    price: 0,
+    price: 20,
   });
 
   // Load required data
