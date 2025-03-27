@@ -3,7 +3,6 @@ import React from 'react';
 import {
   Box,
   Button,
-  Checkbox,
   CircularProgress,
   FormControl,
   FormControlLabel,
@@ -19,7 +18,8 @@ import {
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
-import StudentAutocomplete from '../../../components/common/StudentAutocomplete';
+import EntityAutocomplete from '../../../components/common/EntityAutocomplete';
+import { studentService, professorService } from '../../../services/api';
 
 // Schema di validazione
 const LessonSchema = Yup.object().shape({
@@ -31,7 +31,7 @@ const LessonSchema = Yup.object().shape({
   is_package: Yup.boolean(),
   package_id: Yup.number().nullable().when('is_package', {
     is: true,
-    then: () => Yup.number().required('Pacchetto obbligatoriosssss'),
+    then: () => Yup.number().required('Pacchetto obbligatorio'),
     otherwise: () => Yup.number().nullable(),
   }),
   hourly_rate: Yup.number().positive('La tariffa oraria deve essere positiva').required('Tariffa oraria obbligatoria'),
@@ -92,7 +92,7 @@ function LessonForm({
             <Grid container spacing={3}>
               {/* Studente */}
               <Grid item xs={12} md={4}>
-                <StudentAutocomplete
+                <EntityAutocomplete
                   value={values.student_id}
                   onChange={(studentId) => {
                     setFieldValue('student_id', studentId);
@@ -100,50 +100,30 @@ function LessonForm({
                       onStudentChange(studentId, setFieldValue);
                     }
                   }}
+                  label="Studente"
+                  fetchEntities={studentService.getAll}
+                  items={students}
                   error={touched.student_id && Boolean(errors.student_id)}
                   helperText={touched.student_id && errors.student_id}
                   required={true}
-                  students={students}
                 />
               </Grid>
 
               {/* Professore */}
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth error={touched.professor_id && Boolean(errors.professor_id)}>
-                  <InputLabel id="professor-label">Professore</InputLabel>
-                  <Select
-                    labelId="professor-label"
-                    name="professor_id"
-                    value={values.professor_id}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    label="Professore"
-                    disabled={!isAdmin}
-                  >
-                    {professors
-                      .sort((a, b) => {
-                        // Sort alphabetically by first name
-                        const firstNameA = a.first_name.toLowerCase();
-                        const firstNameB = b.first_name.toLowerCase();
-
-                        // If first names are equal, sort by last name
-                        if (firstNameA === firstNameB) {
-                          return a.last_name.toLowerCase().localeCompare(b.last_name.toLowerCase());
-                        }
-
-                        return firstNameA.localeCompare(firstNameB);
-                      })
-                      .map((professor) => (
-                        <MenuItem key={professor.id} value={professor.id}>
-                          {professor.first_name} {professor.last_name}
-                        </MenuItem>
-                      ))
-                    }
-                  </Select>
-                  {touched.professor_id && errors.professor_id && (
-                    <FormHelperText>{errors.professor_id}</FormHelperText>
-                  )}
-                </FormControl>
+                <EntityAutocomplete
+                  value={values.professor_id}
+                  onChange={(professorId) => {
+                    setFieldValue('professor_id', professorId);
+                  }}
+                  label="Professore"
+                  fetchEntities={professorService.getAll}
+                  items={professors}
+                  error={touched.professor_id && Boolean(errors.professor_id)}
+                  helperText={touched.professor_id && errors.professor_id}
+                  required={true}
+                  disabled={!isAdmin}
+                />
               </Grid>
 
               {/* Data lezione */}
@@ -216,7 +196,6 @@ function LessonForm({
               </Grid>
 
               {/* Tariffa oraria */}
-
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -264,7 +243,6 @@ function LessonForm({
                   }
                   label="Parte di un pacchetto"
                 />
-                {/* Aggiungi questa parte per mostrare il numero di pacchetti disponibili */}
                 {values.student_id && packages.length > 0 && (
                   <FormHelperText sx={{ color: 'primary.main', ml: 2 }}>
                     {packages.length} pacchetto{packages.length !== 1 ? 'i' : ''} disponibile{packages.length !== 1 ? 'i' : ''}
@@ -285,14 +263,11 @@ function LessonForm({
                             const isPaid = e.target.checked;
                             setFieldValue('is_paid', isPaid);
                             if (isPaid) {
-                              // When switching to paid, set default date and price
                               setFieldValue('payment_date', new Date());
-                              // Only set default price if it's currently empty
                               if (!values.price) {
                                 setFieldValue('price', 20);
                               }
                             } else {
-                              // When switching to not paid, reset price to 0
                               setFieldValue('price', 0);
                               setFieldValue('payment_date', null);
                             }
@@ -303,7 +278,7 @@ function LessonForm({
                     />
                   </Grid>
 
-                  {/* Data di pagamento */}
+                  {/* Data di pagamento e prezzo (solo se pagata) */}
                   {values.is_paid && (
                     <>
                       <Grid item xs={12} md={6}>
@@ -322,7 +297,7 @@ function LessonForm({
                         />
                       </Grid>
 
-                      {/* Prezzo (only for admins) */}
+                      {/* Prezzo (solo per admin) */}
                       {isAdmin && (
                         <Grid item xs={12} md={6}>
                           <TextField
@@ -386,8 +361,6 @@ function LessonForm({
                   </FormControl>
                 </Grid>
               )}
-
-
 
               {/* Pulsanti di azione */}
               <Grid item xs={12}>
