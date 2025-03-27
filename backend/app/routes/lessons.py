@@ -275,7 +275,18 @@ def create_lesson(
                 raise HTTPException(status_code=400, detail="Package does not belong to this student")
             
             if package.status != "in_progress":
-                raise HTTPException(status_code=400, detail="Package is not active")
+                # Controlla se ci sono ore rimanenti
+                if package.remaining_hours <= 0:
+                    raise HTTPException(status_code=400, detail="Il pacchetto non ha ore rimanenti")
+    
+                # Controlla che la data lezione sia valida rispetto alla scadenza
+                if lesson.lesson_date > package.expiry_date:
+                    raise HTTPException(
+                        status_code=400, 
+                        detail="La data della lezione non può essere successiva alla scadenza del pacchetto"
+                    )
+    
+    # Se passiamo entrambi i controlli, permettiamo l'inserimento della lezione
             
             package_id = package.id
         

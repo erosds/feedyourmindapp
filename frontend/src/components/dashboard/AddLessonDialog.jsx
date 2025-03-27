@@ -258,7 +258,7 @@ function AddLessonDialog({
 
       // Load packages
       const packagesResponse = await packageService.getByStudent(studentId);
-      const activePackages = packagesResponse.data.filter(pkg => pkg.status === 'in_progress');
+      const activePackages = packagesResponse.data.filter(pkg => parseFloat(pkg.remaining_hours) > 0);
       console.log("Pacchetti caricati direttamente:", activePackages.length);
       setLocalPackages(activePackages);
       setLocalSelectedPackage(null);
