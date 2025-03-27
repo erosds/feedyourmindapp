@@ -16,16 +16,21 @@ import {
   isToday,
   isWithinInterval,
   addMinutes,
-  parse
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  format
 } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { lessonService, professorService } from '../../services/api';
+import { lessonService, professorService, packageService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 // Import the modular components
 import ProfessorWeeklyTable from '../../components/dashboard/ProfessorWeeklyTable';
 import AdminDashboardCalendar from '../../components/dashboard/AdminDashboardCalendar';
 import AdminProfessorSummary from '../../components/dashboard/AdminProfessorSummary';
+import AdminDashboardSummary from '../../components/dashboard/AdminDashboardSummary';
 import DayProfessorsDialog from '../../components/dashboard/DayProfessorsDialog';
 
 function AdminDashboardPage() {
@@ -34,8 +39,11 @@ function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lessons, setLessons] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [professors, setProfessors] = useState([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [periodFilter, setPeriodFilter] = useState('week');
+  const [currentTab, setCurrentTab] = useState(0);
 
   // State for day professors dialog
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
@@ -60,6 +68,10 @@ function AdminDashboardPage() {
         // Retrieve all lessons
         const lessonsResponse = await lessonService.getAll();
         setLessons(lessonsResponse.data);
+
+        // Retrieve all packages
+        const packagesResponse = await packageService.getAll();
+        setPackages(packagesResponse.data);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Impossibile caricare i dati. Prova a riaggiornare la pagina.');
@@ -190,6 +202,80 @@ function AdminDashboardPage() {
     setDayDialogOpen(true);
   };
 
+  // Function to get lessons for the period
+  const getLessonsForPeriod = () => {
+    if (!Array.isArray(lessons)) return [];
+
+    let startDate, endDate;
+
+    switch (periodFilter) {
+      case 'week':
+        startDate = currentWeekStart;
+        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+        break;
+      case 'month':
+        startDate = startOfMonth(new Date());
+        endDate = endOfMonth(new Date());
+        break;
+      case 'year':
+        startDate = startOfYear(new Date());
+        endDate = endOfYear(new Date());
+        break;
+      default:
+        startDate = currentWeekStart;
+        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+    }
+
+    return lessons.filter(lesson => {
+      if (!lesson || !lesson.lesson_date) return false;
+
+      try {
+        const lessonDate = parseISO(lesson.lesson_date);
+        return isWithinInterval(lessonDate, { start: startDate, end: endDate });
+      } catch (err) {
+        console.error('Error filtering lessons by date:', err);
+        return false;
+      }
+    });
+  };
+
+  // Function to get packages created/paid in the period
+  const getPackagesForPeriod = () => {
+    if (!Array.isArray(packages)) return [];
+
+    let startDate, endDate;
+
+    switch (periodFilter) {
+      case 'week':
+        startDate = currentWeekStart;
+        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+        break;
+      case 'month':
+        startDate = startOfMonth(new Date());
+        endDate = endOfMonth(new Date());
+        break;
+      case 'year':
+        startDate = startOfYear(new Date());
+        endDate = endOfYear(new Date());
+        break;
+      default:
+        startDate = currentWeekStart;
+        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+    }
+
+    return packages.filter(pkg => {
+      if (!pkg || !pkg.is_paid || !pkg.payment_date) return false;
+
+      try {
+        const paymentDate = parseISO(pkg.payment_date);
+        return isWithinInterval(paymentDate, { start: startDate, end: endDate });
+      } catch (err) {
+        console.error('Error filtering packages by date:', err);
+        return false;
+      }
+    });
+  };
+
   // Calculate lessons for the current week
   const currentWeekLessons = lessons.filter(lesson => {
     const lessonDate = parseISO(lesson.lesson_date);
@@ -235,6 +321,25 @@ function AdminDashboardPage() {
     0
   );
 
+  // Filtered lessons for the selected period
+  const periodLessons = getLessonsForPeriod();
+  
+  // Filtered packages for the selected period
+  const periodPackages = getPackagesForPeriod();
+
+  // Calculate income from single lessons (price field)
+  const lessonsPriceIncome = periodLessons
+    .filter(lesson => !lesson.is_package && lesson.is_paid)
+    .reduce((sum, lesson) => sum + parseFloat(lesson.price || 0), 0);
+
+  // Calculate income from packages (package_cost field)
+  const packagesPriceIncome = periodPackages
+    .reduce((sum, pkg) => sum + parseFloat(pkg.package_cost || 0), 0);
+
+  // Calculate payments to professors (total_payment field from all lessons)
+  const professorsPayments = periodLessons
+    .reduce((sum, lesson) => sum + parseFloat(lesson.total_payment || 0), 0);
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
@@ -268,28 +373,37 @@ function AdminDashboardPage() {
             handleDayClick={handleDayClick}
           />
         </Grid>
+        
         {/* Professors Weekly Table */}
-        <Grid item xs={12} md={9}>
+        <Grid item xs={12} md={7}>
           <ProfessorWeeklyTable
             currentWeekStart={currentWeekStart}
             endOfWeek={endOfWeek}
-            handleChangeWeek={handleChangeWeek}
-            resetToCurrentWeek={resetToCurrentWeek}
             navigateToManageProfessors={navigateToManageProfessors}
             professorWeeklyData={professorWeeklyData}
             totalProfessorPayments={totalProfessorPayments}
             handleProfessorClick={handleProfessorClick}
           />
         </Grid>
-        {/* Summary sidebar */}
-        <Grid item xs={12} md={3}>
-          <AdminProfessorSummary
+        
+        {/* Admin Dashboard Summary */}
+        <Grid item xs={12} md={5}>
+          <AdminDashboardSummary
+            currentWeekStart={currentWeekStart}
             professorWeeklyData={professorWeeklyData}
-            totalProfessorPayments={totalProfessorPayments}
+            periodFilter={periodFilter}
+            setPeriodFilter={setPeriodFilter}
+            periodLessons={periodLessons}
+            periodPackages={periodPackages}
+            lessonsPriceIncome={lessonsPriceIncome}
+            packagesPriceIncome={packagesPriceIncome}
+            professorsPayments={professorsPayments}
+            currentTab={currentTab}
+            setCurrentTab={setCurrentTab}
+            allPackages={packages}
+            allLessons={lessons}
           />
         </Grid>
-
-
       </Grid>
 
       {/* Dialog for day professors */}
