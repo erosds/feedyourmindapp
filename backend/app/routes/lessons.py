@@ -257,8 +257,12 @@ def create_lesson(
                 models.Package.status == "in_progress"
             ).first()
             
-            if not active_package:
-                raise HTTPException(status_code=400, detail="No active package found for this student")
+                # Usa questo controllo basato sulla data:
+            if lesson.lesson_date > package.expiry_date:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="La data di inserimento della lezione non può essere successiva alla scadenza del pacchetto."
+                )
             
             package_id = active_package.id
         else:

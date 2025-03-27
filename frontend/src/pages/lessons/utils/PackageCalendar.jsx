@@ -6,7 +6,7 @@ import TodayIcon from '@mui/icons-material/Today';
 import { format, getYear, getMonth, getDaysInMonth, getDay, startOfMonth, parseISO, addMonths, subMonths, isSameDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 
-const PackageCalendar = ({ lessons, professors, onDayClick }) => {
+const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const changeMonth = (offset) => {
@@ -117,6 +117,8 @@ const PackageCalendar = ({ lessons, professors, onDayClick }) => {
           const hasLesson = lessonsByDay[dateKey] && lessonsByDay[dateKey].length > 0;
           const dayLessons = hasLesson ? lessonsByDay[dateKey] : [];
           const isToday = isSameDay(dateObj, new Date());
+          const isPastExpiryDate = expiryDate && dateObj > new Date(expiryDate);
+          
 
           return (
             <Grid item xs={12 / 7} key={`day-${index}`}>
@@ -140,12 +142,13 @@ const PackageCalendar = ({ lessons, professors, onDayClick }) => {
                     border: isToday ? 1 : 0,
                     borderColor: 'primary.main',
                     bgcolor: hasLesson ? 'primary.main' : (isToday ? 'transparent' : 'transparent'),
-                    color: hasLesson ? 'primary.contrastText' : 'text.primary',
+                    color: hasLesson ? 'primary.contrastText' : (isPastExpiryDate ? 'text.disabled' : 'text.primary'),
+                    opacity: isPastExpiryDate ? 0.5 : 1,
                     // Modificato il cursore per indicare che è cliccabile se esiste onDayClick
-                    cursor: onDayClick ? 'pointer' : 'default',
+                    cursor: isPastExpiryDate ? 'not-allowed' : (onDayClick ? 'pointer' : 'default'),
                     // Effetto hover migliorato per indicare che è cliccabile
                     '&:hover': {
-                      ...(onDayClick && {
+                      ...(onDayClick && !isPastExpiryDate && {
                         transform: 'scale(1.1)',
                         boxShadow: '0 0 5px rgba(0,0,0,0.2)',
                       }),
@@ -157,7 +160,13 @@ const PackageCalendar = ({ lessons, professors, onDayClick }) => {
                     },
                   }}
                   // Aggiunto onClick che usa onDayClick se la prop è stata fornita
-                  onClick={() => onDayClick && onDayClick(dateObj)}
+                  onClick={() => {
+                    if (onDayClick && !isPastExpiryDate) {
+                      onDayClick(dateObj);
+                    } else if (isPastExpiryDate) {
+                      alert("Non è possibile aggiungere lezioni oltre la data di scadenza del pacchetto");
+                    }
+                  }}
                 >
                   {day}
                   {hasLesson && (

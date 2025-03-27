@@ -443,7 +443,7 @@ function PackageDetailPage() {
                   </Typography>
                   {packageData.is_paid && packageData.payment_date ? (
                     <Typography variant="body1" fontWeight="medium" color="success.main">
-                      {format(parseISO(packageData.payment_date), 'dd MMMM yyyy', { locale: it })}
+                      {format(parseISO(packageData.payment_date), 'EEEE dd MMMM yyyy', { locale: it })}
                     </Typography>
                   ) : (
                     <Typography variant="body2" color="text.secondary" fontStyle="italic">
@@ -543,7 +543,8 @@ function PackageDetailPage() {
               <PackageCalendar
                 lessons={lessons}
                 professors={professors}
-                onDayClick={handleDayClick} // Aggiungi questa prop al componente PackageCalendar
+                onDayClick={handleDayClick}
+                expiryDate={packageData.expiry_date}
               />
 
             </CardContent>
@@ -558,7 +559,7 @@ function PackageDetailPage() {
               <Typography variant="h6">
                 Lezioni del pacchetto
               </Typography>
-              {packageData.status === 'in_progress' && (
+              {parseFloat(packageData.remaining_hours) > 0 && (
                 <Button
                   variant="contained"
                   color="primary"
