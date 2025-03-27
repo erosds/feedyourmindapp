@@ -36,6 +36,8 @@ import {
 import { packageService, studentService, lessonService } from '../../services/api';
 import { format, parseISO, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useAuth } from '../../context/AuthContext';
+
 
 function PackageListPage() {
   const navigate = useNavigate();
@@ -49,6 +51,8 @@ function PackageListPage() {
   const [filteredPackages, setFilteredPackages] = useState([]);
   const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, month
   const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid
+  const { currentUser, isAdmin } = useAuth(); // Add isAdmin here
+
 
   // State for sorting
   const [order, setOrder] = useState('desc');
@@ -425,8 +429,9 @@ function PackageListPage() {
               <SortableTableCell id="status" label="Stato" />
               <SortableTableCell id="is_paid" label="Stato Pagamento" />
               <SortableTableCell id="payment_date" label="Data Pagamento" />
-              <SortableTableCell id="package_cost" label="Prezzo" />
-              <TableCell align="right">Azioni</TableCell>
+              {isAdmin() && (
+                <SortableTableCell id="package_cost" label="Prezzo" numeric={true} />
+              )}              <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -488,7 +493,26 @@ function PackageListPage() {
                     <TableCell>
                       {pkg.payment_date ? format(parseISO(pkg.payment_date), 'dd/MM/yyyy', { locale: it }) : '-'}
                     </TableCell>
-                    <TableCell>€{parseFloat(pkg.package_cost).toFixed(2)}</TableCell>
+                    {isAdmin() && (
+                      <TableCell
+                        align="right"
+                        sx={{
+                          color: !pkg.is_paid || parseFloat(pkg.package_cost) === 0
+                            ? "error.main"
+                            : "inherit",
+                          fontWeight: !pkg.is_paid || parseFloat(pkg.package_cost) === 0
+                            ? "bold"
+                            : "normal"
+                        }}
+                      >
+                        €{parseFloat(pkg.package_cost).toFixed(2)}
+                        {parseFloat(pkg.package_cost) === 0 && (
+                          <Typography variant="caption" color="error" component="span" sx={{ ml: 1 }}>
+                            (!!)
+                          </Typography>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       <Tooltip title="Modifica">
                         <IconButton

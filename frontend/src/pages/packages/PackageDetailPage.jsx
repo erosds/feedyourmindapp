@@ -22,6 +22,8 @@ import {
   TableRow,
   Tooltip,
   Typography,
+  TextField,
+  InputAdornment
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -37,11 +39,11 @@ import { packageService, studentService, lessonService, professorService } from 
 import PackageCalendar from '../lessons/utils/PackageCalendar';
 import AddLessonDialog from '../../components/dashboard/AddLessonDialog';
 import { useAuth } from '../../context/AuthContext'; // Assicurati di importare useAuth
-
+import getProfessorNameById from '../../utils/professorMapping';
 
 function PackageDetailPage() {
   const { id } = useParams();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
 
   const navigate = useNavigate();
   const [packageData, setPackageData] = useState(null);
@@ -58,6 +60,9 @@ function PackageDetailPage() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [students, setStudents] = useState([]);
   const [studentLessons, setStudentLessons] = useState([]);
+  // Modifiche al prezzo
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [priceValue, setPriceValue] = useState(0);
   // Stato per il form della lezione
   const [lessonForm, setLessonForm] = useState({
     professor_id: currentUser?.id || '',
@@ -71,6 +76,7 @@ function PackageDetailPage() {
     is_paid: true,
     payment_date: new Date(), // Default oggi
   });
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -113,13 +119,6 @@ function PackageDetailPage() {
           setCurrentMonth(parseISO(packageLessons[0].lesson_date));
         }
 
-        // Load all professors and create a dictionary for name/surname
-        const professorsResponse = await professorService.getAll();
-        const professorsMap = {};
-        professorsResponse.data.forEach(professor => {
-          professorsMap[professor.id] = `${professor.first_name} ${professor.last_name}`;
-        });
-        setProfessors(professorsMap);
       } catch (err) {
         console.error('Error fetching package data:', err);
         setError('Unable to load package data. Please try refreshing the page.');
@@ -160,6 +159,24 @@ function PackageDetailPage() {
       usedHours,
       availableHours
     };
+  };
+
+  const handleEditPrice = () => {
+    setPriceValue(parseFloat(packageData.package_cost || 0));
+    setIsEditingPrice(true);
+  };
+
+  const handleSavePrice = async () => {
+    try {
+      await packageService.update(id, { package_cost: priceValue });
+      // Reload package data
+      const response = await packageService.getById(id);
+      setPackageData(response.data);
+      setIsEditingPrice(false);
+    } catch (err) {
+      console.error('Error updating price:', err);
+      alert('Errore durante l\'aggiornamento del prezzo. Riprova più tardi.');
+    }
   };
 
   // Funzione per aggiornare le lezioni dopo un'aggiunta
@@ -457,14 +474,63 @@ function PackageDetailPage() {
                   <Divider />
                 </Grid>
 
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    Prezzo del Pacchetto
-                  </Typography>
-                  <Typography variant="h6" color="text.primary">
-                    €{parseFloat(packageData.package_cost).toFixed(2)}
-                  </Typography>
-                </Grid>
+                {isAdmin() && (
+                  <Grid item xs={12} md={4}>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <Typography variant="body2" color="text.secondary">
+                        Prezzo Pacchetto
+                      </Typography>
+                    </Box>
+
+                    {isEditingPrice ? (
+                      <Box display="flex" alignItems="center" mt={1}>
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={priceValue}
+                          onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                            inputProps: { min: 0, step: 0.5 }
+                          }}
+                          sx={{ width: '120px', mr: 1 }}
+                        />
+                        <Button size="small" variant="contained" onClick={handleSavePrice}>
+                          Salva
+                        </Button>
+                        <Button size="small" onClick={() => setIsEditingPrice(false)} sx={{ ml: 1 }}>
+                          Annulla
+                        </Button>
+                      </Box>
+                    ) : (
+                      <>
+                        <Typography
+                          variant="body1"
+                          fontWeight="medium"
+                          color={!packageData.is_paid || parseFloat(packageData.package_cost) === 0 ? "error.main" : "inherit"}
+                        >
+                          €{parseFloat(packageData.package_cost).toFixed(2)}
+                          {parseFloat(packageData.package_cost) === 0 && (
+                            <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+                              Prezzo da impostare
+                            </Typography>
+                          )}
+                        </Typography>
+                        {packageData.is_paid && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<EditIcon />}
+                            onClick={handleEditPrice}
+                            sx={{ mt: 1 }}
+                          >
+                            Modifica prezzo
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </Grid>
+                )}
 
                 <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
@@ -610,7 +676,7 @@ function PackageDetailPage() {
                               {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                             </TableCell>
                             <TableCell>
-                              {professors[lesson.professor_id] || `Prof. #${lesson.professor_id}`}
+                            {getProfessorNameById(lesson.professor_id)}
                             </TableCell>
                             <TableCell>{lesson.duration}</TableCell>
                             <TableCell>€{parseFloat(lesson.hourly_rate).toFixed(2)}</TableCell>

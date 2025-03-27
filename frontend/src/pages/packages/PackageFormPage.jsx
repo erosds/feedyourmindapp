@@ -24,11 +24,14 @@ import { format, parseISO, addDays, startOfWeek } from 'date-fns';
 
 import { studentService, packageService, lessonService } from '../../services/api';
 import StudentAutocomplete from '../../components/common/StudentAutocomplete';
+import { useAuth } from '../../context/AuthContext';
+
 
 function PackageFormPage() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentUser, isAdmin } = useAuth(); // Add isAdmin here
   const isEditMode = !!id;
 
   // States
@@ -375,27 +378,29 @@ function PackageFormPage() {
                 </Grid>
 
                 {/* ROW 4: Package Cost */}
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    name="package_cost"
-                    label="Costo Pacchetto"
-                    type="number"
-                    value={values.package_cost}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    error={touched.package_cost && Boolean(errors.package_cost)}
-                    helperText={touched.package_cost && errors.package_cost}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                    }}
-                    inputProps={{
-                      min: 0,
-                      step: 0.5,
-                    }}
-                    required
-                  />
-                </Grid>
+                {isAdmin() && (
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      name="package_cost"
+                      label="Prezzo Pacchetto"
+                      type="number"
+                      value={values.package_cost}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.package_cost && Boolean(errors.package_cost)}
+                      helperText={touched.package_cost && errors.package_cost}
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                      }}
+                      inputProps={{
+                        min: 0,
+                        step: 0.5,
+                      }}
+                      required={values.is_paid}
+                    />
+                  </Grid>
+                )}
 
                 {/* ROW 5: Package Status */}
                 <Grid item xs={12}>
@@ -417,9 +422,14 @@ function PackageFormPage() {
                             if (!values.payment_date) {
                               setFieldValue('payment_date', new Date());
                             }
+                            // Set default package cost if it's 0
+                            if (!values.package_cost || parseFloat(values.package_cost) === 0) {
+                              setFieldValue('package_cost', 20); // Default value
+                            }
                           } else {
                             // If marked as not paid
                             setFieldValue('payment_date', null);
+                            // Don't reset the price to allow preparing the package
                           }
                         }}
                       />
