@@ -31,21 +31,30 @@ function DashboardSummary({
   calculateEarnings,
   navigate
 }) {
-  // Aggiungiamo stati locali per tracciare i valori effettivi
-  const [displayedWeekLessons, setDisplayedWeekLessons] = useState(currentWeekLessons.length);
+  // Stati locali per tracciare i valori effettivi
+  const [displayedWeekHours, setDisplayedWeekHours] = useState(0);
   const [displayedWeekEarnings, setDisplayedWeekEarnings] = useState(currentWeekEarnings);
-  const [displayedPeriodLessons, setDisplayedPeriodLessons] = useState(periodLessons.length);
+  const [displayedPeriodHours, setDisplayedPeriodHours] = useState(0);
   const [displayedPeriodEarnings, setDisplayedPeriodEarnings] = useState(periodEarnings);
+  
+  // Funzione per calcolare il totale delle ore
+  const calculateTotalHours = (lessons) => {
+    return lessons.reduce((total, lesson) => {
+      // Consideriamo la durata di ogni lezione
+      const lessonDuration = parseFloat(lesson.duration) || 0;
+      return total + lessonDuration;
+    }, 0);
+  };
   
   // Aggiorniamo gli stati locali quando cambiano i props
   useEffect(() => {
-    setDisplayedWeekLessons(currentWeekLessons.length);
+    setDisplayedWeekHours(calculateTotalHours(currentWeekLessons));
     setDisplayedWeekEarnings(currentWeekEarnings);
   }, [currentWeekLessons, currentWeekEarnings]);
   
   // Aggiorniamo gli stati del periodo quando cambiano i props o il filtro del periodo
   useEffect(() => {
-    setDisplayedPeriodLessons(periodLessons.length);
+    setDisplayedPeriodHours(calculateTotalHours(periodLessons));
     setDisplayedPeriodEarnings(periodEarnings);
   }, [periodLessons, periodEarnings, periodFilter]);
 
@@ -56,10 +65,18 @@ function DashboardSummary({
     );
     return calculateEarnings(filteredLessons);
   };
+  
+  // Calcola le ore per tipo di lezione
+  const calculateTypeHours = (type) => {
+    const filteredLessons = periodLessons.filter(lesson => 
+      type === 'package' ? lesson.is_package : !lesson.is_package
+    );
+    return calculateTotalHours(filteredLessons);
+  };
 
-  // Conteggio lezioni per tipo
-  const packageLessonsCount = periodLessons.filter(lesson => lesson.is_package).length;
-  const singleLessonsCount = periodLessons.filter(lesson => !lesson.is_package).length;
+  // Conteggio ore per tipo
+  const packageHours = calculateTypeHours('package');
+  const singleHours = calculateTypeHours('single');
 
   // Calcolo guadagni per tipo
   const packageEarnings = calculateTypeEarnings('package');
@@ -84,10 +101,10 @@ function DashboardSummary({
           </Typography>
           <Box mt={2}>
             <Typography variant="body2" color="text.secondary">
-              Lezioni questa settimana
+              Ore svolte questa settimana
             </Typography>
             <Typography variant="h4" color="primary">
-              {displayedWeekLessons}
+              {displayedWeekHours.toFixed(1)}
             </Typography>
             <Typography variant="body2" color="text.secondary" mt={2}>
               Guadagni settimana in corso
@@ -130,10 +147,10 @@ function DashboardSummary({
 
             <Box mt={3}>
               <Typography variant="body2" color="text.secondary">
-                Lezioni nel periodo
+                Ore svolte nel periodo
               </Typography>
               <Typography variant="h5">
-                {displayedPeriodLessons}
+                {displayedPeriodHours.toFixed(1)}
               </Typography>
 
               <Divider sx={{ my: 2 }} />
@@ -149,14 +166,14 @@ function DashboardSummary({
         ) : (
           <Box>
             <Typography variant="subtitle1" gutterBottom>
-              Lezioni per tipo
+              Ore per tipo di lezione
             </Typography>
 
             <List dense>
               <ListItem>
                 <ListItemText
                   primary="Lezioni singole"
-                  secondary={`${singleLessonsCount} lezioni`}
+                  secondary={`${singleHours.toFixed(1)} ore`}
                 />
                 <Typography>
                   €{singleEarnings.toFixed(2)}
@@ -165,7 +182,7 @@ function DashboardSummary({
               <ListItem>
                 <ListItemText
                   primary="Lezioni da pacchetti"
-                  secondary={`${packageLessonsCount} lezioni`}
+                  secondary={`${packageHours.toFixed(1)} ore`}
                 />
                 <Typography>
                   €{packageEarnings.toFixed(2)}

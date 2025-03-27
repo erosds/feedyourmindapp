@@ -34,6 +34,7 @@ import {
   Search as SearchIcon,
   FilterList as FilterIcon,
   Today as TodayIcon,
+  Payment as PaymentIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { lessonService, studentService, professorService } from '../../services/api';
@@ -54,6 +55,7 @@ function LessonListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredLessons, setFilteredLessons] = useState([]);
   const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, month
+  const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid, package
   const [showOnlyMine, setShowOnlyMine] = useState(!isAdmin()); // Default: professori normali vedono solo le proprie lezioni
 
   // Stato per l'ordinamento
@@ -209,12 +211,28 @@ function LessonListPage() {
         }
       });
     }
+    
+    // Filtra per stato del pagamento
+    if (paymentFilter !== 'all') {
+      filtered = filtered.filter(lesson => {
+        switch (paymentFilter) {
+          case 'paid':
+            return !lesson.is_package && lesson.is_paid;
+          case 'unpaid':
+            return !lesson.is_package && !lesson.is_paid;
+          case 'package':
+            return lesson.is_package;
+          default:
+            return true;
+        }
+      });
+    }
 
     // Applica l'ordinamento
     const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
     setFilteredLessons(sortedFiltered);
     setPage(0); // Reset to first page after filtering
-  }, [searchTerm, lessons, students, professors, timeFilter, order, orderBy]);
+  }, [searchTerm, lessons, students, professors, timeFilter, paymentFilter, order, orderBy]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -231,6 +249,10 @@ function LessonListPage() {
 
   const handleTimeFilterChange = (event) => {
     setTimeFilter(event.target.value);
+  };
+  
+  const handlePaymentFilterChange = (event) => {
+    setPaymentFilter(event.target.value);
   };
 
   const handleToggleShowMine = () => {
@@ -340,11 +362,11 @@ function LessonListPage() {
 
       <Box mb={3}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={3.5}>
             <TextField
               fullWidth
               variant="outlined"
-              label="Cerca lezione"
+              label="Cerca lezione per studente o per professore"
               value={searchTerm}
               onChange={handleSearchChange}
               InputProps={{
@@ -373,8 +395,29 @@ function LessonListPage() {
               </Select>
             </FormControl>
           </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="payment-filter-label">Pagamento</InputLabel>
+              <Select
+                labelId="payment-filter-label"
+                value={paymentFilter}
+                onChange={handlePaymentFilterChange}
+                label="Pagamento"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <PaymentIcon />
+                  </InputAdornment>
+                }
+              >
+                <MenuItem value="all">Tutti i pagamenti</MenuItem>
+                <MenuItem value="paid">Pagate</MenuItem>
+                <MenuItem value="unpaid">Non pagate</MenuItem>
+                <MenuItem value="package">Da pacchetto</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
           {isAdmin() && (
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={2.5}>
               <FormControlLabel
                 control={
                   <Switch
@@ -400,8 +443,8 @@ function LessonListPage() {
               <SortableTableCell id="start_time" label="Orario" />
               <SortableTableCell id="duration" label="Durata" />
               <SortableTableCell id="professor_id" label="Professore" />
-              <SortableTableCell id="is_package" label="Tipo" />
-              <SortableTableCell id="total_payment" label="Costo" numeric />
+              {/* <SortableTableCell id="is_package" label="Tipo" /> */}
+              <SortableTableCell id="total_payment" label="Retribuzione" numeric />
               <SortableTableCell id="is_paid" label="Pagamento" />
               {isAdmin() && (
                 <SortableTableCell id="price" label="Prezzo" numeric />
@@ -437,13 +480,14 @@ function LessonListPage() {
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>
                       {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                     </TableCell>
-                    <TableCell>{lesson.duration} ore</TableCell>
-
                     <TableCell>
                       {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
                     </TableCell>
+                    <TableCell>{lesson.duration} ore</TableCell>
+
+                    
                     <TableCell>{professors[lesson.professor_id] || `Prof. #${lesson.professor_id}`}</TableCell>
-                    <TableCell>
+                    {/* <TableCell> 
                       {lesson.is_package ? (
                         <Chip
                           label={`Pacchetto #${lesson.package_id}`}
@@ -459,7 +503,7 @@ function LessonListPage() {
                           variant="outlined"
                         />
                       )}
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell align="right">€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>
                     <TableCell>
                       {lesson.is_package ? (
@@ -494,10 +538,12 @@ function LessonListPage() {
                         sx={{
                           color: lesson.is_package
                             ? "success.main"
-                            : parseFloat(lesson.price || 0) === 0
+                            : (!lesson.is_paid || parseFloat(lesson.price || 0) === 0)
                               ? "error.main"
-                              : "success.main", // Imposta il colore verde per i prezzi > 0
-                          fontWeight: !lesson.is_package && parseFloat(lesson.price || 0) === 0 ? "bold" : "normal"
+                              : "success.main",
+                          fontWeight: (!lesson.is_package && !lesson.is_paid) || 
+                                     (!lesson.is_package && parseFloat(lesson.price || 0) === 0) 
+                                     ? "bold" : "normal"
                         }}
                       >
                         {lesson.is_package ? (

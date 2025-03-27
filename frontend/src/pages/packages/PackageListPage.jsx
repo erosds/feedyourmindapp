@@ -18,17 +18,23 @@ import {
   TextField,
   Tooltip,
   Typography,
-  FormControlLabel,
-  Switch
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  InputAdornment,
+  Grid
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Search as SearchIcon,
   Delete as DeleteIcon,
+  Today as TodayIcon,
+  Payment as PaymentIcon
 } from '@mui/icons-material';
 import { packageService, studentService, lessonService } from '../../services/api';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { it } from 'date-fns/locale';
 
 function PackageListPage() {
@@ -41,7 +47,8 @@ function PackageListPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPackages, setFilteredPackages] = useState([]);
-  const [showActive, setShowActive] = useState(false);
+  const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, month
+  const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid
 
   // State for sorting
   const [order, setOrder] = useState('desc');
@@ -57,7 +64,13 @@ function PackageListPage() {
   // Helper function for sorting
   const descendingComparator = (a, b, orderBy) => {
     // Special cases for date formats
-    if (orderBy === 'start_date' || orderBy === 'expiry_date') {
+    if (orderBy === 'start_date' || orderBy === 'expiry_date' || orderBy === 'payment_date') {
+      // Handle null dates for payment_date
+      if (orderBy === 'payment_date') {
+        if (!a[orderBy] && !b[orderBy]) return 0;
+        if (!a[orderBy]) return 1;
+        if (!b[orderBy]) return -1;
+      }
       return new Date(b[orderBy]) - new Date(a[orderBy]);
     }
 
@@ -134,7 +147,7 @@ function PackageListPage() {
         setFilteredPackages(packagesResponse.data);
       } catch (err) {
         console.error('Error fetching packages:', err);
-        setError('Unable to load packages. Please try refreshing the page.');
+        setError('Impossibile caricare i pacchetti. Prova a riaggiornare la pagina.');
       } finally {
         setLoading(false);
       }
@@ -155,16 +168,47 @@ function PackageListPage() {
       });
     }
 
-    // Filter by status (active or all)
-    if (showActive) {
-      filtered = filtered.filter(pkg => pkg.status === 'expired');
+    // Filter by period
+    if (timeFilter !== 'all') {
+      filtered = filtered.filter(pkg => {
+        // Use start_date for period filtering
+        const startDate = parseISO(pkg.start_date);
+        switch (timeFilter) {
+          case 'today':
+            return isToday(startDate);
+          case 'week':
+            return isThisWeek(startDate);
+          case 'month':
+            return isThisMonth(startDate);
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filter by payment status
+    if (paymentFilter !== 'all') {
+      filtered = filtered.filter(pkg => {
+        switch (paymentFilter) {
+          case 'paid':
+            return pkg.is_paid;
+          case 'unpaid':
+            return !pkg.is_paid;
+          case 'expired':
+            return pkg.status === 'expired';
+          case 'active':
+            return pkg.status === 'in_progress';
+          default:
+            return true;
+        }
+      });
     }
 
     // Apply sorting
     const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
     setFilteredPackages(sortedFiltered);
     setPage(0); // Reset to first page after filtering
-  }, [searchTerm, packages, students, showActive, order, orderBy]);
+  }, [searchTerm, packages, students, timeFilter, paymentFilter, order, orderBy]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -179,8 +223,12 @@ function PackageListPage() {
     setSearchTerm(event.target.value);
   };
 
-  const handleToggleActive = () => {
-    setShowActive(!showActive);
+  const handleTimeFilterChange = (event) => {
+    setTimeFilter(event.target.value);
+  };
+
+  const handlePaymentFilterChange = (event) => {
+    setPaymentFilter(event.target.value);
   };
 
   const handleViewPackage = (id) => {
@@ -206,26 +254,26 @@ function PackageListPage() {
         lesson.package_id === id && lesson.is_package
       );
 
-      let confirmMessage = `Are you sure you want to delete package #${id}?`;
+      let confirmMessage = `Sei sicuro di voler eliminare il pacchetto #${id}?`;
 
       // If there are associated lessons, warn the user they will be deleted too
       if (packageLessons.length > 0) {
-        confirmMessage += `\n\nWARNING: This package contains ${packageLessons.length} lessons that will be deleted:`;
+        confirmMessage += `\n\nATTENZIONE: Questo pacchetto contiene ${packageLessons.length} lezioni che verranno eliminate:`;
 
         // Add information about the first 5 lessons (to keep message reasonable)
         const maxLessonsToShow = 5;
         packageLessons.slice(0, maxLessonsToShow).forEach(lesson => {
           const lessonDate = format(parseISO(lesson.lesson_date), 'dd/MM/yyyy', { locale: it });
-          confirmMessage += `\n- Lesson #${lesson.id} on ${lessonDate} (${lesson.duration} hours)`;
+          confirmMessage += `\n- Lezione #${lesson.id} del ${lessonDate} (${lesson.duration} ore)`;
         });
 
         // If there are more than 5 lessons, indicate there are more
         if (packageLessons.length > maxLessonsToShow) {
-          confirmMessage += `\n...and ${packageLessons.length - maxLessonsToShow} more lessons`;
+          confirmMessage += `\n...e altre ${packageLessons.length - maxLessonsToShow} lezioni`;
         }
       }
 
-      confirmMessage += "\n\nThis action cannot be undone.";
+      confirmMessage += "\n\nQuesta azione non può essere annullata.";
 
       if (window.confirm(confirmMessage)) {
         await packageService.delete(id);
@@ -236,7 +284,7 @@ function PackageListPage() {
       }
     } catch (err) {
       console.error('Error deleting package:', err);
-      alert('Error deleting package. Please try again later.');
+      alert('Errore durante l\'eliminazione del pacchetto. Riprova più tardi.');
     }
   };
 
@@ -304,27 +352,64 @@ function PackageListPage() {
         </Button>
       </Box>
 
-      <Box mb={3} display="flex" alignItems="center">
-        <TextField
-          variant="outlined"
-          label="Ricerca per nome studente"
-          value={searchTerm}
-          onChange={handleSearchChange}
-          sx={{ flexGrow: 1, mr: 2 }}
-          InputProps={{
-            startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
-          }}
-        />
-        <FormControlLabel
-          control={
-            <Switch
-              checked={showActive}
-              onChange={handleToggleActive}
-              color="primary"
+      <Box mb={3}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={3.5}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              label="Ricerca per nome studente"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
+              }}
             />
-          }
-          label="Pacchetti scaduti"
-        />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="time-filter-label">Periodo</InputLabel>
+              <Select
+                labelId="time-filter-label"
+                value={timeFilter}
+                onChange={handleTimeFilterChange}
+                label="Periodo"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <TodayIcon />
+                  </InputAdornment>
+                }
+              >
+                <MenuItem value="all">Tutti i periodi</MenuItem>
+                <MenuItem value="today">Oggi</MenuItem>
+                <MenuItem value="week">Questa settimana</MenuItem>
+                <MenuItem value="month">Questo mese</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="payment-filter-label">Stato</InputLabel>
+              <Select
+                labelId="payment-filter-label"
+                value={paymentFilter}
+                onChange={handlePaymentFilterChange}
+                label="Stato"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <PaymentIcon />
+                  </InputAdornment>
+                }
+              >
+                <MenuItem value="all">Tutti i pacchetti</MenuItem>
+                <MenuItem value="paid">Pagati</MenuItem>
+                <MenuItem value="unpaid">Non pagati</MenuItem>
+                <MenuItem value="active">In corso</MenuItem>
+                <MenuItem value="expired">Scaduti</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
       </Box>
 
       <TableContainer component={Paper}>
@@ -338,16 +423,16 @@ function PackageListPage() {
               <SortableTableCell id="total_hours" label="Totale Ore" />
               <SortableTableCell id="remaining_hours" label="Ore Rimanenti" />
               <SortableTableCell id="status" label="Stato" />
-              <SortableTableCell id="is_paid" label="Pagamento" />
+              <SortableTableCell id="is_paid" label="Stato Pagamento" />
+              <SortableTableCell id="payment_date" label="Data Pagamento" />
               <SortableTableCell id="package_cost" label="Prezzo" />
-
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredPackages.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} align="center">
+                <TableCell colSpan={11} align="center">
                   Nessun pacchetto presente
                 </TableCell>
               </TableRow>
@@ -369,10 +454,10 @@ function PackageListPage() {
                     <TableCell>#{pkg.id}</TableCell>
                     <TableCell>{students[pkg.student_id] || `Student #${pkg.student_id}`}</TableCell>
                     <TableCell>
-                      {format(parseISO(pkg.start_date), 'EEEE dd/MM/yyyy', { locale: it })}
+                      {format(parseISO(pkg.start_date), 'dd/MM/yyyy', { locale: it })}
                     </TableCell>
                     <TableCell>
-                      {format(parseISO(pkg.expiry_date), 'EEEE dd/MM/yyyy', { locale: it })}
+                      {format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it })}
                     </TableCell>
                     <TableCell>{pkg.total_hours}</TableCell>
                     <TableCell>{parseFloat(pkg.remaining_hours).toFixed(1)}</TableCell>
@@ -391,7 +476,6 @@ function PackageListPage() {
                         }
                         size="small"
                       />
-
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -401,10 +485,12 @@ function PackageListPage() {
                         variant="outlined"
                       />
                     </TableCell>
+                    <TableCell>
+                      {pkg.payment_date ? format(parseISO(pkg.payment_date), 'dd/MM/yyyy', { locale: it }) : '-'}
+                    </TableCell>
                     <TableCell>€{parseFloat(pkg.package_cost).toFixed(2)}</TableCell>
-
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      <Tooltip title="Edit">
+                      <Tooltip title="Modifica">
                         <IconButton
                           color="primary"
                           onClick={(e) => handleEditPackage(pkg.id, e)}
@@ -412,7 +498,7 @@ function PackageListPage() {
                           <EditIcon />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete">
+                      <Tooltip title="Elimina">
                         <IconButton
                           color="error"
                           onClick={(e) => handleDeletePackage(pkg.id, e)}
@@ -435,7 +521,7 @@ function PackageListPage() {
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
           labelRowsPerPage="Righe per pagina:"
-          labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} di ${count}`}
         />
       </TableContainer>
     </Box>

@@ -205,7 +205,7 @@ function DashboardCalendar({
                     }}
                     sx={{
                       mb: 1,
-                      py: 2,
+                      py: 1.7,
                       display: 'flex',
                       justifyContent: 'center',
                       alignItems: 'center',

@@ -120,11 +120,25 @@ function LessonForm({
                     label="Professore"
                     disabled={!isAdmin}
                   >
-                    {professors.map((professor) => (
-                      <MenuItem key={professor.id} value={professor.id}>
-                        {professor.first_name} {professor.last_name}
-                      </MenuItem>
-                    ))}
+                    {professors
+                      .sort((a, b) => {
+                        // Sort alphabetically by first name
+                        const firstNameA = a.first_name.toLowerCase();
+                        const firstNameB = b.first_name.toLowerCase();
+
+                        // If first names are equal, sort by last name
+                        if (firstNameA === firstNameB) {
+                          return a.last_name.toLowerCase().localeCompare(b.last_name.toLowerCase());
+                        }
+
+                        return firstNameA.localeCompare(firstNameB);
+                      })
+                      .map((professor) => (
+                        <MenuItem key={professor.id} value={professor.id}>
+                          {professor.first_name} {professor.last_name}
+                        </MenuItem>
+                      ))
+                    }
                   </Select>
                   {touched.professor_id && errors.professor_id && (
                     <FormHelperText>{errors.professor_id}</FormHelperText>
