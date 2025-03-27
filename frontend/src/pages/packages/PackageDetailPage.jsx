@@ -206,6 +206,19 @@ function PackageDetailPage() {
     });
   };
 
+  // Aggiungi questa funzione handleExtendPackage
+  const handleExtendPackage = async () => {
+    try {
+      await packageService.extendPackage(id);
+      // Ricarica i dati del pacchetto
+      const packageResponse = await packageService.getById(id);
+      setPackageData(packageResponse.data);
+    } catch (err) {
+      console.error('Error extending package:', err);
+      alert('Errore durante l\'estensione della scadenza del pacchetto. Riprova più tardi.');
+    }
+  };
+
   const handleDeletePackage = async () => {
     try {
       let confirmMessage = `Sei sicuro di voler eliminare il pacchetto #${id}?`;
@@ -295,6 +308,8 @@ function PackageDetailPage() {
           </Typography>
         </Box>
 
+
+
         <Box>
           <Button
             variant="outlined"
@@ -305,6 +320,19 @@ function PackageDetailPage() {
           >
             Modifica
           </Button>
+
+          {/* Aggiungi questo pulsante per l'estensione solo se il pacchetto è scaduto e ha ore rimanenti */}
+          {(packageData.status === 'expired' || packageData.status === 'completed') &&
+            parseFloat(packageData.remaining_hours) > 0 && (
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={handleExtendPackage}
+                sx={{ mr: 1 }}
+              >
+                Estendi scadenza +1
+              </Button>
+            )}
 
           <Button
             variant="outlined"
@@ -398,8 +426,15 @@ function PackageDetailPage() {
                     gutterBottom
                   >
                     {format(parseISO(packageData.expiry_date), 'dd MMMM yyyy', { locale: it })}
+                    {packageData.extension_count > 0 && (
+                      <Chip
+                        label={`+${packageData.extension_count}`}
+                        color="secondary"
+                        size="small"
+                        sx={{ ml: 1 }}
+                      />
+                    )}
                   </Typography>
-
                 </Grid>
 
                 <Grid item xs={12} md={4}>
@@ -455,15 +490,15 @@ function PackageDetailPage() {
                 </Grid>
 
                 <Grid item xs={12}>
-                <Box display="flex" flexDirection="column" >
-  <Box display="flex" justifyContent="space-between" sx={{mt: 2.5}}>
-    <Typography variant="h6">Completamento:</Typography>
-    <Typography variant="h5" fontWeight="medium">
-      {completionPercentage.toFixed(0)}%
-    </Typography>
-  </Box>
+                  <Box display="flex" flexDirection="column" >
+                    <Box display="flex" justifyContent="space-between" sx={{ mt: 2.5 }}>
+                      <Typography variant="h6">Completamento:</Typography>
+                      <Typography variant="h5" fontWeight="medium">
+                        {completionPercentage.toFixed(0)}%
+                      </Typography>
+                    </Box>
 
-</Box>
+                  </Box>
 
                   <LinearProgress
                     variant="determinate"
@@ -524,17 +559,17 @@ function PackageDetailPage() {
                 Lezioni del pacchetto
               </Typography>
               {packageData.status === 'in_progress' && (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AddLessonIcon />}
-              onClick={handleAddLesson}
-              sx={{ mr: 1 }}
-              size='small'
-            >
-              Aggiungi Lezioni al Pacchetto
-            </Button>
-          )}
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddLessonIcon />}
+                  onClick={handleAddLesson}
+                  sx={{ mr: 1 }}
+                  size='small'
+                >
+                  Aggiungi Lezioni al Pacchetto
+                </Button>
+              )}
             </Box>
 
             {lessons.length === 0 ? (

@@ -170,6 +170,7 @@ class Package(Base):
     payment_date = Column(Date, nullable=True)
     remaining_hours = Column(DECIMAL(5, 2))
     expiry_date = Column(Date, nullable=False)
+    extension_count = Column(Integer, default=0)  # Nuovo campo per tenere traccia delle estensioni
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     __table_args__ = (
@@ -267,6 +268,8 @@ class PackageResponse(BaseModel):
     payment_date: Optional[date]
     remaining_hours: Decimal
     expiry_date: date
+    extension_count: int = 0
+
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)

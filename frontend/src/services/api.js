@@ -144,6 +144,10 @@ export const packageService = {
     return api.post(`/packages/?allow_multiple=${allowMultiple}`, data);
   },
   
+  extendPackage: async (packageId) => {
+    return api.put(`/packages/${packageId}/extend`);
+  },
+
   update: async (id, data) => {
     return api.put(`/packages/${id}`, data);
   },

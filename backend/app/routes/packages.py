@@ -248,6 +248,31 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
     db.refresh(db_package)
     return db_package
 
+@router.put("/{package_id}/extend", response_model=models.PackageResponse)
+def extend_package_expiry(package_id: int, db: Session = Depends(get_db)):
+    """Estende la scadenza del pacchetto al lunedì successivo"""
+    db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
+    if db_package is None:
+        raise HTTPException(status_code=404, detail="Package not found")
+    
+    from datetime import timedelta
+    
+    # Calcola il lunedì successivo
+    current_expiry = db_package.expiry_date
+    days_until_next_monday = 7  # Se siamo lunedì, andiamo al lunedì successivo
+    
+    # Calcola la nuova data di scadenza
+    new_expiry = current_expiry + timedelta(days=days_until_next_monday)
+    
+    # Aggiorna il pacchetto
+    db_package.expiry_date = new_expiry
+    db_package.status = "in_progress"  # Rimetti il pacchetto in corso
+    db_package.extension_count += 1  # Incrementa il contatore delle estensioni
+    
+    db.commit()
+    db.refresh(db_package)
+    return db_package
+
 @router.delete("/{package_id}", response_model=dict)
 def delete_package(package_id: int, db: Session = Depends(get_db)):
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
