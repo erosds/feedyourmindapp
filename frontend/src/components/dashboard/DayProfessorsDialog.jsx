@@ -316,7 +316,7 @@ function DayProfessorsDialog({ open, onClose, selectedDay, professorSchedules, h
                     const maxOverlap = Math.max(1, ...Object.values(timeSlots));
                     
                     // Calculate height of each bar (with some space between bars)
-                    const barHeight = Math.max(12, Math.floor((TIMELINE_HEIGHT - 4) / maxOverlap) - 2);
+                    const barHeight = Math.max(12, Math.floor((TIMELINE_HEIGHT) / maxOverlap));
                     
                     // Assign lessons to time bands
                     const rows = Array(maxOverlap).fill().map(() => []);
