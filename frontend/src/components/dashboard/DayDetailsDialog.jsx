@@ -309,7 +309,7 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
                                   textOverflow: 'ellipsis',
                                   overflow: 'hidden',
                                   maxWidth: '100%',
-                                  fontSize: '0.5rem',
+                                  fontSize: '0.7rem',
                                   textShadow: '0px 0px 2px rgba(0,0,0,0.7)',
                                   px: 0.5
                                 }}

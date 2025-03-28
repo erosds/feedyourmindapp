@@ -358,8 +358,8 @@ function DashboardPage() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Le mie lezioni
+      <Typography variant="h4" gutterBottom mb={3}>
+        Dashboard Personale
       </Typography>
       <Grid container spacing={3}>
         {/* Calendario Settimanale */}

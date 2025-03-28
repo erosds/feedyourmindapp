@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
-  AppBar,
   Box,
   CssBaseline,
   Drawer,
@@ -35,7 +34,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import logo from '../assets/logo.jpg';
 
-const drawerWidth = 260;
+const drawerWidth = 250;
 
 function MainLayout() {
   const { currentUser, logout, isAdmin } = useAuth();
@@ -45,14 +44,11 @@ function MainLayout() {
   const [anchorEl, setAnchorEl] = useState(null);
   const theme = useTheme();
 
-  // Effettua il reindirizzamento alla dashboard appropriata se si è alla root
+  // Redirect automatico in base al ruolo utente
   useEffect(() => {
-    // Se siamo sulla root e l'utente è un admin, reindirizza a admin-dashboard
     if (location.pathname === '/' && isAdmin()) {
       navigate('/admin-dashboard', { replace: true });
-    } 
-    // Se siamo sulla root e l'utente non è admin, reindirizza alla dashboard standard
-    else if (location.pathname === '/') {
+    } else if (location.pathname === '/') {
       navigate('/dashboard', { replace: true });
     }
   }, [location.pathname, isAdmin, navigate, currentUser]);
@@ -74,19 +70,13 @@ function MainLayout() {
     navigate('/login');
   };
 
-  const handleProfile = () => {
-    handleClose();
-    navigate(`/professors/${currentUser.id}`);
-  };
-
   // Navigazione menu
   let menuItems = [];
 
   if (isAdmin()) {
-    // Per gli admin, metti prima la dashboard admin e poi la dashboard normale
     menuItems = [
-      { text: 'AdminDashboard', icon: <AdminDashboardIcon />, path: '/admin-dashboard' },
-      { text: 'MyDashboard', icon: <DashboardIcon />, path: '/dashboard' },
+      { text: 'Dashboard Admin', icon: <AdminDashboardIcon />, path: '/admin-dashboard' },
+      { text: 'Dashboard Personale', icon: <DashboardIcon />, path: '/dashboard' },
       { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
@@ -94,7 +84,6 @@ function MainLayout() {
       { text: 'Reset Password', icon: <LockResetIcon />, path: '/admin/reset-password' },
     ];
   } else {
-    // Per gli utenti normali, mostra solo le opzioni standard
     menuItems = [
       { text: 'MyDashboard', icon: <DashboardIcon />, path: '/dashboard' },
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
@@ -104,14 +93,16 @@ function MainLayout() {
   }
 
   const drawer = (
-    <Box sx={{ 
-      height: '100%', 
-      display: 'flex', 
-      flexDirection: 'column',
-      bgcolor: 'transparent'
-    }}>
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'transparent'
+      }}
+    >
       <Toolbar>
-        <img src={logo} alt="Logo" style={{ height: 46, marginRight: 12 , borderRadius: 8}} />
+        <img src={logo} alt="Logo" style={{ height: 46, marginRight: 12, borderRadius: 8 }} />
         <Typography variant="h6" noWrap component="div" fontWeight="bold">
           FeedYourMind
         </Typography>
@@ -148,19 +139,21 @@ function MainLayout() {
                   },
                 }}
               >
-                <ListItemIcon sx={{ 
-                  minWidth: 42,
-                  color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-                  transition: 'color 0.2s ease-in-out'
-                }}>
+                <ListItemIcon
+                  sx={{
+                    minWidth: 42,
+                    color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                    transition: 'color 0.2s ease-in-out'
+                  }}
+                >
                   {item.icon}
                 </ListItemIcon>
-                <ListItemText 
-                  primary={item.text} 
-                  primaryTypographyProps={{ 
+                <ListItemText
+                  primary={item.text}
+                  primaryTypographyProps={{
                     fontWeight: isActive ? 'medium' : 'normal',
                     fontSize: '0.95rem'
-                  }} 
+                  }}
                 />
               </ListItemButton>
             </ListItem>
@@ -169,24 +162,25 @@ function MainLayout() {
       </List>
       <Box sx={{ p: 2 }}>
         <Divider sx={{ mb: 2, opacity: 0.6 }} />
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            p: 1.5, 
+        {/* L'avatar ora gestisce il menu per profilo e logout */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            p: 1.5,
             borderRadius: 2,
             '&:hover': {
               bgcolor: alpha(theme.palette.primary.main, 0.08),
               cursor: 'pointer'
             }
           }}
-          onClick={handleProfile}
+          onClick={handleMenu}
         >
           <Avatar sx={{ width: 36, height: 36, bgcolor: 'secondary.main', mr: 2 }}>
             {currentUser?.first_name.charAt(0)}
           </Avatar>
           <Box>
-            <Typography variant="body2" fontWeight="medium">
+            <Typography variant="body1" fontWeight="medium">
               {currentUser?.first_name} {currentUser?.last_name}
             </Typography>
             <Typography variant="caption" color="text.secondary">
@@ -199,8 +193,8 @@ function MainLayout() {
   );
 
   const drawerContainer = (
-    <Box 
-      sx={{ 
+    <Box
+      sx={{
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -214,96 +208,12 @@ function MainLayout() {
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      <AppBar
-        position="fixed"
-        elevation={1}
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          borderRadius: 0,
-          backdropFilter: 'blur(8px)',
-          backgroundColor: alpha(theme.palette.background.default, 0.8),
-          color: theme.palette.text.primary,
-          borderBottom: `0px solid ${alpha(theme.palette.divider, 0.2)}`
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
 
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 'medium' }}>
-            {/* Titolo dinamico basato sul percorso */}
-            {location.pathname.includes('/admin-dashboard') && 'Dashboard Amministrazione'}
-            {location.pathname.includes('/dashboard') && !location.pathname.includes('/admin-dashboard') && 'Le mie lezioni'}
-            {location.pathname.includes('/professors') && 'Gestione Professori'}
-            {location.pathname.includes('/students') && 'Gestione Studenti'}
-            {location.pathname.includes('/packages') && 'Gestione Pacchetti'}
-            {location.pathname.includes('/lessons') && 'Gestione Lezioni'}
-            {location.pathname.includes('/admin/reset-password') && 'Reset Password Utenti'}
-          </Typography>
-
-          {currentUser && (
-            <div>
-              <IconButton
-                size="small"
-                aria-label="account of current user"
-                aria-controls="menu-appbar"
-                aria-haspopup="true"
-                onClick={handleMenu}
-                sx={{ 
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.2),
-                  }
-                }}
-              >
-                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                  {currentUser.first_name.charAt(0)}
-                </Avatar>
-              </IconButton>
-              <Menu
-                id="menu-appbar"
-                anchorEl={anchorEl}
-                anchorOrigin={{
-                  vertical: 'bottom',
-                  horizontal: 'right',
-                }}
-                keepMounted
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                open={Boolean(anchorEl)}
-                onClose={handleClose}
-                PaperProps={{
-                  elevation: 2,
-                  sx: { 
-                    mt: 1, 
-                    borderRadius: 2,
-                    minWidth: 180
-                  }
-                }}
-              >
-                <MenuItem onClick={handleProfile} sx={{ py: 1.5 }}>Profilo</MenuItem>
-                <Divider sx={{ my: 1 }} />
-                <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: 'error.main' }}>Logout</MenuItem>
-              </Menu>
-            </div>
-          )}
-        </Toolbar>
-      </AppBar>
-
+      {/* Drawer per navigazione */}
       <Box
         component="nav"
-        sx={{ 
-          width: { sm: drawerWidth }, 
+        sx={{
+          width: { sm: drawerWidth },
           flexShrink: { sm: 0 },
         }}
         aria-label="menu"
@@ -313,12 +223,12 @@ function MainLayout() {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better mobile performance
+            keepMounted: true,
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { 
-              boxSizing: 'border-box', 
+            '& .MuiDrawer-paper': {
+              boxSizing: 'border-box',
               width: drawerWidth,
               bgcolor: 'background.default',
               borderRight: `0px solid ${alpha(theme.palette.divider, 0.2)}`
@@ -331,8 +241,8 @@ function MainLayout() {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { 
-              boxSizing: 'border-box', 
+            '& .MuiDrawer-paper': {
+              boxSizing: 'border-box',
               width: drawerWidth,
               bgcolor: 'background.default',
               borderRight: `0px solid ${alpha(theme.palette.divider, 0.2)}`
@@ -344,6 +254,7 @@ function MainLayout() {
         </Drawer>
       </Box>
 
+      {/* Contenuto principale */}
       <Box
         component="main"
         sx={{
@@ -354,9 +265,47 @@ function MainLayout() {
           backgroundColor: alpha(theme.palette.background.default, 0.5)
         }}
       >
-        <Toolbar />
         <Outlet />
       </Box>
+
+      {/* Menu per profilo e logout, ora accessibile cliccando sull'avatar nel Drawer */}
+      <Menu
+        id="menu-appbar"
+        anchorEl={anchorEl}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        keepMounted
+        transformOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        open={Boolean(anchorEl)}
+        onClose={handleClose}
+        PaperProps={{
+          elevation: 2,
+          sx: {
+            mt: 1,
+            borderRadius: 2,
+            minWidth: 180
+          }
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            navigate(`/professors/${currentUser.id}`);
+          }}
+          sx={{ py: 1.5 }}
+        >
+          Profilo
+        </MenuItem>
+        <Divider sx={{ my: 1 }} />
+        <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: 'error.main' }}>
+          Logout
+        </MenuItem>
+      </Menu>
     </Box>
   );
 }

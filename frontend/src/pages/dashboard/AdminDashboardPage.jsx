@@ -358,7 +358,7 @@ function AdminDashboardPage() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h4" gutterBottom mb={3}>
         Dashboard Amministrazione
       </Typography>
 

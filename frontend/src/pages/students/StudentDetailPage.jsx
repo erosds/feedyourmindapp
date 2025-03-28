@@ -52,18 +52,6 @@ import getProfessorNameById from '../../utils/professorMapping';
 const StudentProfile = ({ student }) => (
   <Card>
     <CardContent sx={{ textAlign: 'center' }}>
-      <Avatar
-        sx={{
-          width: 60,
-          height: 60,
-          bgcolor: 'secondary.main',
-          fontSize: '2.5rem',
-          margin: '0 auto',
-          mb: 2,
-        }}
-      >
-        {student.first_name.charAt(0)}
-      </Avatar>
       <Typography variant="h5" gutterBottom>
         {student.first_name} {student.last_name}
       </Typography>
@@ -604,10 +592,10 @@ function StudentDetailPage() {
 
       {/* Middle Row: Calendario a sinistra e Selettore Settimana con Statistiche Settimanali a destra */}
       <Grid container spacing={2} mt={2}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <StudentCalendar currentMonth={currentWeekStart} lessons={lessons} />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={8}>
           <WeekSelector currentWeekStart={currentWeekStart} onChangeWeek={handleChangeWeek} />
           <WeeklyStatsCard weeklyLessons={weeklyLessonsCount} weeklyHours={weeklyHours} />
         </Grid>
@@ -616,7 +604,7 @@ function StudentDetailPage() {
       {/* Bottom Section: Filtro per tipo di lezione e Tabella Lezioni */}
       <Box mt={2}>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={4}>
             <FormControl fullWidth>
               <InputLabel id="lesson-type-filter-label">Tipo di lezione</InputLabel>
               <Select
@@ -632,7 +620,7 @@ function StudentDetailPage() {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={9}>
+          <Grid item xs={12} md={8}>
             <LessonsTable 
               lessons={filteredLessons}
               page={lessonsPage}

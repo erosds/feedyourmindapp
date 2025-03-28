@@ -56,9 +56,6 @@ import { useAuth } from '../../context/AuthContext';
 const ProfessorProfile = ({ professor }) => (
   <Card>
     <CardContent sx={{ textAlign: 'center' }}>
-      <Avatar sx={{ width: 50, height: 50, fontSize: '1.3rem', margin: '0 auto', mb: 2 }}>
-        {professor.first_name.charAt(0)}
-      </Avatar>
       <Typography variant="h5">
         {professor.first_name} {professor.last_name}
       </Typography>
@@ -638,14 +635,14 @@ function ProfessorDetailPage() {
 
       {/* Middle Row: Calendario a sinistra e Selettore Settimana con Statistiche Settimanali a destra */}
       <Grid container spacing={2} mt={2}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <ProfessorCalendar 
             currentMonth={currentWeekStart}
             lessons={lessons}
             studentsMap={studentsMap}
           />
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={8}>
           <WeekSelector currentWeekStart={currentWeekStart} onChangeWeek={handleChangeWeek} />
           <WeeklyStatsCard 
             weeklyLessons={weeklyLessonsCount}
@@ -658,7 +655,7 @@ function ProfessorDetailPage() {
       {/* Bottom Section: Filtro Tipo di lezione e Tabella lezioni */}
       <Box mt={2}>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={4}>
             <FormControl fullWidth>
               <InputLabel id="lesson-type-filter-label">Tipo di lezione</InputLabel>
               <Select
@@ -674,7 +671,7 @@ function ProfessorDetailPage() {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={9}>
+          <Grid item xs={12} md={8}>
             <LessonsTable 
               lessons={filteredLessons}
               studentsMap={studentsMap}
