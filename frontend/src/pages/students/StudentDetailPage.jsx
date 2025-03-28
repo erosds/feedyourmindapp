@@ -276,8 +276,8 @@ const StudentCalendar = ({ currentMonth, lessons }) => {
                           py: 0.2,
                           borderBottom: i < dayLessons.length - 1 ? '1px solid rgba(0,0,0,0.2)' : 'none'
                         }}>
-                          {lesson.duration} {lesson.duration === 1 ? 'ora' : 'ore'} (Prof. #{lesson.professorId})
-                          {lesson.isPackage ? ' (P)' : ''}
+                          {lesson.duration} {lesson.duration === 1 ? 'ora' : 'ore'} con {getProfessorNameById(lesson.professorId)}
+                          {lesson.isPackage ? '(P)' : ''}
                         </Box>
                       ))}
                     </Box>

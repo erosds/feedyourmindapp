@@ -12,6 +12,9 @@ import {
   Chip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import { 
+  Search as SearchIcon 
+} from '@mui/icons-material';
 import {
   format,
   endOfWeek,
@@ -195,16 +198,16 @@ function DashboardCalendar({
                   )}
 
                   {/* Add Lesson button at the top of each day */}
-                  
+
                   <ListItem
-                  divider
+                    divider
                     button
                     onClick={(e) => {
                       e.stopPropagation(); // Impedisce di aprire il dialogo del giorno
                       handleAddLessonClick(day);
                     }}
                     sx={{
-                      mb: 1,
+                      mb: 5,
                       py: 1.7,
                       display: 'flex',
                       justifyContent: 'center',
@@ -221,16 +224,29 @@ function DashboardCalendar({
                     }}
                   >
                     <AddIcon fontSize="small" sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', mr: 0.3 }} />
-                    <Box sx={{ width: '100%'}}>
-                    <Typography variant="body1" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
-                      Nuova
-                    </Typography>
-                    <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
-                      lezione
-                    </Typography>
+                    <Box sx={{ width: '100%' }}>
+                      <Typography variant="body1" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
+                        Nuova
+                      </Typography>
+                      <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
+                        lezione
+                      </Typography>
                     </Box>
                   </ListItem>
                 </List>
+                {/* Icona di ricerca in basso a centro */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 7,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    color: 'text.secondary',
+                    opacity: 0.5
+                  }}
+                >
+                  <SearchIcon fontSize="small" />
+                </Box>
               </Paper>
             </Grid>
           );

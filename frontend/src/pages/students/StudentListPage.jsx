@@ -1,4 +1,3 @@
-// src/pages/students/StudentListPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -24,15 +23,16 @@ import {
   Edit as EditIcon,
   Visibility as ViewIcon,
   Search as SearchIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { studentService } from '../../services/api';
+import { studentService, packageService } from '../../services/api';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 
 function StudentListPage() {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
+  const [studentPackages, setStudentPackages] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
@@ -67,6 +67,32 @@ function StudentListPage() {
       if (a[orderBy] === null) return 1;
       if (b[orderBy] === null) return -1;
     }
+
+    // Caso speciale per l'ordinamento del pacchetto
+    if (orderBy === 'package') {
+      const packageA = studentPackages[a.id];
+      const packageB = studentPackages[b.id];
+
+      // Definisci una priorità per gli stati del pacchetto
+      const packageStatusPriority = {
+        'in_progress': 1,
+        'expired': 0,
+        'completed': 2,
+        null: 3 // Nessun pacchetto
+      };
+
+      // Se entrambi gli studenti hanno pacchetti, confronta gli stati
+      if (packageA && packageB) {
+        return packageStatusPriority[packageA.status] - packageStatusPriority[packageB.status];
+      }
+
+      // Gestisci casi in cui uno o entrambi gli studenti non hanno pacchetti
+      if (!packageA && !packageB) return 0;
+      if (!packageA) return 1;
+      if (!packageB) return -1;
+
+      return 0;
+    }
     
     // Per altri campi
     if (b[orderBy] < a[orderBy]) {
@@ -95,13 +121,80 @@ function StudentListPage() {
     return stabilizedThis.map((el) => el[0]);
   };
 
+  // Funzione per caricare i pacchetti per tutti gli studenti
+  const fetchStudentPackages = async (studentsData) => {
+    try {
+      const packagesMap = {};
+      
+      for (const student of studentsData) {
+        const packagesResponse = await packageService.getByStudent(student.id);
+        
+        // Trova l'ultimo pacchetto
+        const sortedPackages = packagesResponse.data.sort((a, b) => 
+          new Date(b.start_date) - new Date(a.start_date)
+        );
+        
+        packagesMap[student.id] = sortedPackages.length > 0 ? sortedPackages[0] : null;
+      }
+      
+      setStudentPackages(packagesMap);
+    } catch (err) {
+      console.error('Error fetching student packages:', err);
+    }
+  };
+
+  // Funzione per ottenere lo stato del pacchetto come componente
+  const getPackageStatusChip = (studentId) => {
+    const lastPackage = studentPackages[studentId];
+    
+    if (!lastPackage) {
+      return (
+        <Typography variant="caption" color="text.secondary">
+          Nessun pacchetto
+        </Typography>
+      );
+    }
+    
+    let chipColor, chipLabel;
+    switch (lastPackage.status) {
+      case 'in_progress':
+        chipColor = 'primary';
+        chipLabel = 'In corso';
+        break;
+      case 'completed':
+        chipColor = 'success';
+        chipLabel = 'Terminato';
+        break;
+      case 'expired':
+        chipColor = 'error';
+        chipLabel = 'Scaduto';
+        break;
+      default:
+        chipColor = 'default';
+        chipLabel = 'Non definito';
+    }
+    
+    return (
+      <Chip
+        label={chipLabel}
+        color={chipColor}
+        variant="outlined"
+        size="small"
+      />
+    );
+  };
+
   useEffect(() => {
     const fetchStudents = async () => {
       try {
         setLoading(true);
         const response = await studentService.getAll();
-        setStudents(response.data);
-        setFilteredStudents(response.data);
+        const studentsData = response.data;
+        setStudents(studentsData);
+        setFilteredStudents(studentsData);
+        
+        // Carica i pacchetti per tutti gli studenti
+        await fetchStudentPackages(studentsData);
       } catch (err) {
         console.error('Error fetching students:', err);
         setError('Impossibile caricare la lista degli studenti. Prova a riaggiornare la pagina.');
@@ -129,7 +222,7 @@ function StudentListPage() {
       setFilteredStudents(sortedFiltered);
     }
     setPage(0); // Reset to first page after search or sort
-  }, [searchTerm, students, order, orderBy]);
+  }, [searchTerm, students, order, orderBy, studentPackages]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -275,13 +368,14 @@ function StudentListPage() {
               <SortableTableCell id="birth_date" label="Data di Nascita" />
               <SortableTableCell id="email" label="Email" />
               <SortableTableCell id="phone" label="Telefono" />
+              <SortableTableCell id="package" label="Ultimo Pacchetto" />
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredStudents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   Nessuno studente trovato
                 </TableCell>
               </TableRow>
@@ -307,6 +401,9 @@ function StudentListPage() {
                     </TableCell>
                     <TableCell>{student.email || '-'}</TableCell>
                     <TableCell>{student.phone || '-'}</TableCell>
+                    <TableCell>
+                      {getPackageStatusChip(student.id)}
+                    </TableCell>
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       <Tooltip title="Modifica">
                         <IconButton

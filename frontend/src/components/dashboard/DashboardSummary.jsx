@@ -116,9 +116,9 @@ function DashboardSummary({
                 label="Periodo"
                 onChange={handlePeriodChange}
               >
-                <MenuItem value="week">Questa Settimana</MenuItem>
-                <MenuItem value="month">Questo Mese</MenuItem>
-                <MenuItem value="year">Questo Anno</MenuItem>
+                <MenuItem value="week">Settimana Selezionata</MenuItem>
+                <MenuItem value="month">Mese Corrente</MenuItem>
+                <MenuItem value="year">Anno Corrente</MenuItem>
               </Select>
             </FormControl>
 

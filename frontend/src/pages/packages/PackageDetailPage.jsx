@@ -36,7 +36,7 @@ import {
 import { format, parseISO, isAfter, differenceInDays } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { packageService, studentService, lessonService, professorService } from '../../services/api';
-import PackageCalendar from '../lessons/utils/PackageCalendar';
+import PackageCalendar from '../../components/packages/PackageCalendar';
 import AddLessonDialog from '../../components/dashboard/AddLessonDialog';
 import { useAuth } from '../../context/AuthContext'; // Assicurati di importare useAuth
 import getProfessorNameById from '../../utils/professorMapping';

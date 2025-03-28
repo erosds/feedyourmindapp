@@ -5,6 +5,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TodayIcon from '@mui/icons-material/Today';
 import { format, getYear, getMonth, getDaysInMonth, getDay, startOfMonth, parseISO, addMonths, subMonths, isSameDay } from 'date-fns';
 import { it } from 'date-fns/locale';
+import getProfessorNameById from '../../utils/professorMapping';
 
 const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -61,7 +62,7 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate }) => {
         professorId: lesson.professor_id,
         professorName: professors && professors[lesson.professor_id] ? 
           professors[lesson.professor_id] : 
-          `Prof. #${lesson.professor_id}`,
+          `Prof. ${lesson.professor_id}`,
         duration: parseFloat(lesson.duration)
       });
     });
@@ -193,18 +194,14 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate }) => {
                       }}
                     >
                       {dayLessons.map((lesson, i) => {
-                        // Get name and surname initial
-                        const nameParts = lesson.professorName.split(' ');
-                        const name = nameParts[0];
-                        const surnameInitial = nameParts.length > 1 ? nameParts[1].charAt(0) + '.' : '';
-
+                        // Get name and surname initial                        
                         return (
                           <Box key={i} sx={{
                             textAlign: 'left',
                             py: 0.2,
                             borderBottom: i < dayLessons.length - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none'
                           }}>
-                            {lesson.duration} {lesson.duration === 1 || lesson.duration === 1.0 ? 'ora' : 'ore'} con {name} {surnameInitial}
+                            {lesson.duration} {lesson.duration === 1 || lesson.duration === 1.0 ? 'ora' : 'ore'} con {getProfessorNameById(lesson.professorId)}
                           </Box>
                         );
                       })}

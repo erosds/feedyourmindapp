@@ -9,6 +9,9 @@ import {
   ButtonGroup,
   Button
 } from '@mui/material';
+import { 
+  Search as SearchIcon 
+} from '@mui/icons-material';
 import {
   format,
   endOfWeek,
@@ -88,6 +91,7 @@ function AdminDashboardCalendar({
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
+                  position: 'relative', // Aggiunto per posizionare l'icona
                   bgcolor: isCurrentDay ? 'primary.light' : 'background.paper',
                   color: isCurrentDay ? 'primary.contrastText' : 'text.primary',
                   border: '1px solid',
@@ -121,7 +125,7 @@ function AdminDashboardCalendar({
                     </Typography>
                   </Box>
                 ) : (
-                  <List dense disablePadding sx={{ flexGrow: 1 , mb: .5}}>
+                  <List dense disablePadding sx={{ flexGrow: 1 , mb: 5}}>
                     {dayProfessors.map(professor => (
                       <ListItem
                         key={professor.id}
@@ -160,6 +164,20 @@ function AdminDashboardCalendar({
                     ))}
                   </List>
                 )}
+
+                {/* Icona di ricerca in basso a centro */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 7,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    color: 'text.secondary',
+                    opacity: 0.5
+                  }}
+                >
+                  <SearchIcon fontSize="small" />
+                </Box>
               </Paper>
             </Grid>
           );
