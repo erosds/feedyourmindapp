@@ -18,7 +18,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 &
 # Avvia frontend React
 cd /Users/erosdesimone/VSProject/feedyourmindapp/frontend
 echo "Avvio del frontend su http://localhost:3000..."
-npm start -- --host 0.0.0.0 &
+DANGEROUSLY_DISABLE_HOST_CHECK=true npm start -- --host 0.0.0.0 &
 
 # Attendi l'interruzione
 wait

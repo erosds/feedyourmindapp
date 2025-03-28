@@ -1,5 +1,5 @@
 // src/components/layouts/MainLayout.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   AppBar,
@@ -27,8 +27,7 @@ import {
   Book as BookIcon,
   MenuBook as MenuBookIcon,
   AdminPanelSettings as AdminDashboardIcon,
-  LockReset as LockResetIcon, // Aggiungi questa linea
-
+  LockReset as LockResetIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import logo from '../assets/logo.jpg';
@@ -41,6 +40,18 @@ function MainLayout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+
+  // Effettua il reindirizzamento alla dashboard appropriata se si è alla root
+  useEffect(() => {
+    // Se siamo sulla root e l'utente è un admin, reindirizza a admin-dashboard
+    if (location.pathname === '/' && isAdmin()) {
+      navigate('/admin-dashboard', { replace: true });
+    } 
+    // Se siamo sulla root e l'utente non è admin, reindirizza alla dashboard standard
+    else if (location.pathname === '/') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [location.pathname, isAdmin, navigate, currentUser]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -76,8 +87,7 @@ function MainLayout() {
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
       { text: 'Professori', icon: <PeopleIcon />, path: '/professors' },
-      { text: 'Reset Password', icon: <LockResetIcon />, path: '/admin/reset-password' }, // Aggiungi questa linea
-
+      { text: 'Reset Password', icon: <LockResetIcon />, path: '/admin/reset-password' },
     ];
   } else {
     // Per gli utenti normali, mostra solo le opzioni standard
@@ -146,8 +156,7 @@ function MainLayout() {
             {location.pathname.includes('/students') && 'Gestione Studenti'}
             {location.pathname.includes('/packages') && 'Gestione Pacchetti'}
             {location.pathname.includes('/lessons') && 'Gestione Lezioni'}
-            {location.pathname.includes('/admin/reset-password') && 'Reset Password Utenti'} {/* Aggiungi questa linea */}
-
+            {location.pathname.includes('/admin/reset-password') && 'Reset Password Utenti'}
           </Typography>
 
           {currentUser && (

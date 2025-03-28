@@ -17,11 +17,11 @@ import AuthLayout from './components/layouts/AuthLayout';
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
 import ChangePasswordPage from './pages/auth/ChangePasswordPage';
-import AdminResetPasswordPage from './pages/admin/ResetPasswordPage'; // Importa la nuova pagina per il reset della password
+import AdminResetPasswordPage from './pages/admin/ResetPasswordPage';
 
 // Dashboard Pages
 import DashboardPage from './pages/dashboard/DashboardPage';
-import AdminDashboardPage from './pages/dashboard/AdminDashboardPage'; // Importa la nuova dashboard amministrativa
+import AdminDashboardPage from './pages/dashboard/AdminDashboardPage';
 
 // Professor Pages
 import ProfessorListPage from './pages/professors/ProfessorListPage';
@@ -49,6 +49,7 @@ import NotFoundPage from './pages/NotFoundPage';
 // Guards
 import PrivateRoute from './components/auth/PrivateRoute';
 import AdminRoute from './components/auth/AdminRoute';
+import RootRedirect from './components/auth/RootRedirect';
 
 // Theme
 const theme = createTheme({
@@ -76,15 +77,18 @@ function App() {
               </Route>
               <Route path="/change-password" element={<ChangePasswordPage />} />
               <Route 
-              path="/admin/reset-password" 
-              element={<AdminRoute><AdminResetPasswordPage /></AdminRoute>} 
+                path="/admin/reset-password" 
+                element={<AdminRoute><AdminResetPasswordPage /></AdminRoute>} 
               />
+              
+              {/* Root redirect based on user role */}
+              <Route path="/" element={<RootRedirect />} />
+              
               {/* Main App Routes */}
               <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 
-                {/* Nuova rotta per la dashboard amministrativa - protetta da AdminRoute */}
+                {/* Admin dashboard route */}
                 <Route 
                   path="/admin-dashboard" 
                   element={<AdminRoute><AdminDashboardPage /></AdminRoute>} 
