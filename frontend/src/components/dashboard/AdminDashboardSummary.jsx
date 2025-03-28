@@ -226,7 +226,7 @@ function AdminDashboardSummary({
     <Card sx={{ height: '100%' }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          Riepilogo Statistiche
+          Statistiche
         </Typography>
 
         <Tabs
@@ -257,7 +257,7 @@ function AdminDashboardSummary({
               </Select>
             </FormControl>
 
-            <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
 
               {/* Financial details */}
               <ClickableStatBlock
@@ -281,7 +281,7 @@ function AdminDashboardSummary({
                 color={netProfit >= 0 ? 'success.main' : 'error.main'}
               />
               <Grid item xs={12}>
-                <Divider sx={{ my: 2 }} />
+                <Divider/>
               </Grid>
 
               {/* Next row - clickable blocks */}
@@ -306,8 +306,12 @@ function AdminDashboardSummary({
                 label="Lezioni da saldare"
                 value={unpaidLessons.length}
                 onClick={() => navigateToLessons('unpaid')}
-                color="secondary.main"
+                color="error.main"
               />
+
+              <Grid item xs={12}>
+                <Divider/>
+              </Grid>
 
               {/* Active professors */}
               <ClickableStatBlock

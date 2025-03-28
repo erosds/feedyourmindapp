@@ -29,7 +29,7 @@ function ProfessorWeeklyTable({
     <Paper sx={{ p: 2, height: '100%', mb: 2 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6">
-          Riepilogo Settimanale Professori
+          Riepilogo Settimana Corrente
         </Typography>
         <Box display="flex" alignItems="center">
         </Box>

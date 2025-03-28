@@ -119,7 +119,7 @@ function AdminDashboardCalendar({
                 </Typography>
 
                 {dayProfessors.length === 0 ? (
-                  <Box textAlign="center" py={2} sx={{ flexGrow: 1 }}>
+                  <Box textAlign="center" mb={6} mt={2} sx={{ flexGrow: 1 }}>
                     <Typography variant="body2" color={isCurrentDay ? 'primary.contrastText' : 'text.secondary'}>
                       Nessun professore in sede
                     </Typography>
