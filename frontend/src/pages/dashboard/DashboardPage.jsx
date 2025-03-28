@@ -81,6 +81,15 @@ function DashboardPage() {
     }
   }, [currentUser?.id, selectedProfessor]);
 
+  useEffect(() => {
+    if (lessonForm.lesson_date && lessonForm.is_paid) {
+      setLessonForm(prev => ({
+        ...prev,
+        payment_date: prev.lesson_date // Aggiorniamo payment_date per corrispondere a lesson_date
+      }));
+    }
+  }, [lessonForm.lesson_date]);
+
   const fetchData = async (professorId) => {
     if (!professorId) return;
 

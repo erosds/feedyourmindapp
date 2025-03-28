@@ -70,7 +70,7 @@ function ProfessorWeeklyTable({
                           width: 24,
                           height: 24,
                           mr: 1,
-                          bgcolor: prof.is_admin ? 'secondary.main' : 'primary.main',
+                          bgcolor: 'primary.main',
                           fontSize: '0.875rem'
                         }}
                       >

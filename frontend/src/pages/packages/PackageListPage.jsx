@@ -477,7 +477,7 @@ function PackageListPage() {
                         color={
                           pkg.status === 'in_progress' ? 'primary' :
                             pkg.status === 'expired' ? 'warning' :
-                              'success'
+                              'default'
                         }
                         size="small"
                       />
@@ -508,7 +508,7 @@ function PackageListPage() {
                         €{parseFloat(pkg.package_cost).toFixed(2)}
                         {parseFloat(pkg.package_cost) === 0 && (
                           <Typography variant="caption" color="error" component="span" sx={{ ml: 1 }}>
-                            (!!)
+                            (da inserire)
                           </Typography>
                         )}
                       </TableCell>

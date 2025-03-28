@@ -44,6 +44,8 @@ import { format, parseISO, startOfWeek, endOfWeek, addWeeks, subWeeks, isWithinI
 import { it } from 'date-fns/locale';
 import { studentService, packageService, lessonService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import getProfessorNameById from '../../utils/professorMapping';
+
 
 // COMPONENTI MODULARI
 
@@ -365,10 +367,10 @@ const LessonsTable = ({ lessons, page, rowsPerPage, orderBy, order, onSort, onCh
                 }}
               >
                 <TableCell>
-                  {format(parseISO(lesson.lesson_date), 'dd/MM/yyyy', { locale: it })}
+                  {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                 </TableCell>
                 <TableCell>
-                  {`Prof. #${lesson.professor_id}`}
+                {getProfessorNameById(lesson.professor_id)}
                 </TableCell>
                 <TableCell>{lesson.duration}</TableCell>
                 <TableCell>

@@ -480,8 +480,8 @@ function AddLessonDialog({
                       setLessonForm(prev => ({
                         ...prev,
                         is_paid: isPaid,
-                        payment_date: isPaid ? new Date() : null,
-                        price: isPaid ? (prev.price || 20) : 0 // Set price to 20 if paid, 0 if not
+                        payment_date: isPaid ? prev.lesson_date : null,  // <-- Usa la data della lezione
+                        price: isPaid ? (prev.price || 20) : 0
                       }));
                     }}
                     disabled={submitting || (lessonForm.is_package && localSelectedPackage)}

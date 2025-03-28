@@ -56,6 +56,7 @@ function PackageFormPage() {
     package_cost: '',
     is_paid: false,
     payment_date: null,
+    package_cost: '0'
   });
 
   // Package validation schema
@@ -69,7 +70,11 @@ function PackageFormPage() {
     package_cost: Yup.number()
       .transform((value, originalValue) => originalValue === '' ? null : value)
       .min(0, 'Cost cannot be negative')
-      .required('Cost is required'),
+      .when('is_paid', {
+        is: true,
+        then: () => Yup.number().required('Cost is required'),
+        otherwise: () => Yup.number().optional()
+      }),
     is_paid: Yup.boolean(),
     payment_date: Yup.date().nullable().when('is_paid', {
       is: true,
@@ -197,6 +202,8 @@ function PackageFormPage() {
       payment_date: values.is_paid && values.payment_date
         ? format(new Date(values.payment_date), 'yyyy-MM-dd')
         : null,
+      package_cost: values.package_cost || '0',
+
     };
 
     // API call
@@ -378,7 +385,7 @@ function PackageFormPage() {
                 </Grid>
 
                 {/* ROW 4: Package Cost */}
-                {isAdmin() && (
+                {isAdmin() ? (
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
@@ -400,6 +407,7 @@ function PackageFormPage() {
                       required={values.is_paid}
                     />
                   </Grid>
+                ) : (  <input type="hidden" name="package_cost" value={values.package_cost || '0'} />
                 )}
 
                 {/* ROW 5: Package Status */}
@@ -424,7 +432,7 @@ function PackageFormPage() {
                             }
                             // Set default package cost if it's 0
                             if (!values.package_cost || parseFloat(values.package_cost) === 0) {
-                              setFieldValue('package_cost', 20); // Default value
+                              setFieldValue('package_cost', 0); // Default value
                             }
                           } else {
                             // If marked as not paid
