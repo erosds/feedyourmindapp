@@ -275,6 +275,25 @@ function DayProfessorsDialog({ open, onClose, selectedDay, professorSchedules, h
                 
                 {/* Lesson timeline with fixed height */}
                 <Box sx={{ flex: 1, position: 'relative', height: '60px' }}>
+                  {/* Vertical dividing lines for hours - in main body */}
+                  {hourLabels.map((hour, index) => {
+                    // First line (left) has different style
+                    const isFirst = index === 0;
+                    
+                    return (
+                      <Box
+                        key={`divider-${hour}`}
+                        sx={{
+                          position: 'absolute',
+                          left: `${calculateHourPosition(hour)}%`,
+                          top: 0,
+                          bottom: 0,
+                          width: '1px',
+                          backgroundColor: isFirst ? 'transparent' : 'rgba(224, 224, 224, 0.5)'
+                        }}
+                      />
+                    );
+                  })}
                   {(() => {
                     // Calculate distribution of lessons in fixed height
                     
@@ -447,25 +466,7 @@ function DayProfessorsDialog({ open, onClose, selectedDay, professorSchedules, h
                     ));
                   })()}
                   
-                  {/* Vertical dividing lines for hours - in main body */}
-                  {hourLabels.map((hour, index) => {
-                    // First line (left) has different style
-                    const isFirst = index === 0;
-                    
-                    return (
-                      <Box
-                        key={`divider-${hour}`}
-                        sx={{
-                          position: 'absolute',
-                          left: `${calculateHourPosition(hour)}%`,
-                          top: 0,
-                          bottom: 0,
-                          width: '1px',
-                          backgroundColor: isFirst ? 'transparent' : 'rgba(224, 224, 224, 0.5)'
-                        }}
-                      />
-                    );
-                  })}
+                
                 </Box>
               </Box>
             ))}

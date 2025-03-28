@@ -18,6 +18,9 @@ import {
   Avatar,
   Menu,
   MenuItem,
+  Paper,
+  useTheme,
+  alpha
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -32,7 +35,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import logo from '../assets/logo.jpg';
 
-const drawerWidth = 240;
+const drawerWidth = 260;
 
 function MainLayout() {
   const { currentUser, logout, isAdmin } = useAuth();
@@ -40,6 +43,7 @@ function MainLayout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const theme = useTheme();
 
   // Effettua il reindirizzamento alla dashboard appropriata se si è alla root
   useEffect(() => {
@@ -100,31 +104,111 @@ function MainLayout() {
   }
 
   const drawer = (
-    <div>
+    <Box sx={{ 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column',
+      bgcolor: 'transparent'
+    }}>
       <Toolbar>
-        <img src={logo} alt="Logo" style={{ height: 46, marginRight: 12 }} />
-        <Typography variant="h6" noWrap component="div">
+        <img src={logo} alt="Logo" style={{ height: 46, marginRight: 12 , borderRadius: 8}} />
+        <Typography variant="h6" noWrap component="div" fontWeight="bold">
           FeedYourMind
         </Typography>
       </Toolbar>
-      <Divider />
-      <List>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              selected={location.pathname.startsWith(item.path)}
-              onClick={() => {
-                navigate(item.path);
-                setMobileOpen(false);
-              }}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+      <Divider sx={{ mx: 2, opacity: 0.6 }} />
+      <List sx={{ flex: 1, px: 1, py: 2 }}>
+        {menuItems.map((item) => {
+          const isActive = location.pathname.startsWith(item.path);
+          return (
+            <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton
+                selected={isActive}
+                onClick={() => {
+                  navigate(item.path);
+                  setMobileOpen(false);
+                }}
+                sx={{
+                  borderRadius: 2,
+                  py: 1.2,
+                  px: 2,
+                  transition: 'all 0.2s ease-in-out',
+                  '&.Mui-selected': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.15),
+                    color: theme.palette.primary.main,
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.25),
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: theme.palette.primary.main,
+                    }
+                  },
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ 
+                  minWidth: 42,
+                  color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                  transition: 'color 0.2s ease-in-out'
+                }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={item.text} 
+                  primaryTypographyProps={{ 
+                    fontWeight: isActive ? 'medium' : 'normal',
+                    fontSize: '0.95rem'
+                  }} 
+                />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
       </List>
-    </div>
+      <Box sx={{ p: 2 }}>
+        <Divider sx={{ mb: 2, opacity: 0.6 }} />
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            p: 1.5, 
+            borderRadius: 2,
+            '&:hover': {
+              bgcolor: alpha(theme.palette.primary.main, 0.08),
+              cursor: 'pointer'
+            }
+          }}
+          onClick={handleProfile}
+        >
+          <Avatar sx={{ width: 36, height: 36, bgcolor: 'secondary.main', mr: 2 }}>
+            {currentUser?.first_name.charAt(0)}
+          </Avatar>
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              {currentUser?.first_name} {currentUser?.last_name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {currentUser?.is_admin ? 'Amministratore' : 'Professore'}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+
+  const drawerContainer = (
+    <Box 
+      sx={{ 
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRight: 'none'
+      }}
+    >
+      {drawer}
+    </Box>
   );
 
   return (
@@ -132,9 +216,15 @@ function MainLayout() {
       <CssBaseline />
       <AppBar
         position="fixed"
+        elevation={1}
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
+          borderRadius: 0,
+          backdropFilter: 'blur(8px)',
+          backgroundColor: alpha(theme.palette.background.default, 0.8),
+          color: theme.palette.text.primary,
+          borderBottom: `0px solid ${alpha(theme.palette.divider, 0.2)}`
         }}
       >
         <Toolbar>
@@ -148,10 +238,10 @@ function MainLayout() {
             <MenuIcon />
           </IconButton>
 
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 'medium' }}>
             {/* Titolo dinamico basato sul percorso */}
-            {location.pathname.includes('/admin-dashboard') && 'AdminDashboard'}
-            {location.pathname.includes('/dashboard') && !location.pathname.includes('/admin-dashboard') && 'MyDashboard'}
+            {location.pathname.includes('/admin-dashboard') && 'Dashboard Amministrazione'}
+            {location.pathname.includes('/dashboard') && !location.pathname.includes('/admin-dashboard') && 'Le mie lezioni'}
             {location.pathname.includes('/professors') && 'Gestione Professori'}
             {location.pathname.includes('/students') && 'Gestione Studenti'}
             {location.pathname.includes('/packages') && 'Gestione Pacchetti'}
@@ -162,14 +252,19 @@ function MainLayout() {
           {currentUser && (
             <div>
               <IconButton
-                size="large"
+                size="small"
                 aria-label="account of current user"
                 aria-controls="menu-appbar"
                 aria-haspopup="true"
                 onClick={handleMenu}
-                color="inherit"
+                sx={{ 
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.2),
+                  }
+                }}
               >
-                <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
                   {currentUser.first_name.charAt(0)}
                 </Avatar>
               </IconButton>
@@ -187,9 +282,18 @@ function MainLayout() {
                 }}
                 open={Boolean(anchorEl)}
                 onClose={handleClose}
+                PaperProps={{
+                  elevation: 2,
+                  sx: { 
+                    mt: 1, 
+                    borderRadius: 2,
+                    minWidth: 180
+                  }
+                }}
               >
-                <MenuItem onClick={handleProfile}>Profilo</MenuItem>
-                <MenuItem onClick={handleLogout}>Logout</MenuItem>
+                <MenuItem onClick={handleProfile} sx={{ py: 1.5 }}>Profilo</MenuItem>
+                <Divider sx={{ my: 1 }} />
+                <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: 'error.main' }}>Logout</MenuItem>
               </Menu>
             </div>
           )}
@@ -198,7 +302,10 @@ function MainLayout() {
 
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        sx={{ 
+          width: { sm: drawerWidth }, 
+          flexShrink: { sm: 0 },
+        }}
         aria-label="menu"
       >
         <Drawer
@@ -210,20 +317,30 @@ function MainLayout() {
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              bgcolor: 'background.default',
+              borderRight: `0px solid ${alpha(theme.palette.divider, 0.2)}`
+            },
           }}
         >
-          {drawer}
+          {drawerContainer}
         </Drawer>
         <Drawer
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              bgcolor: 'background.default',
+              borderRight: `0px solid ${alpha(theme.palette.divider, 0.2)}`
+            },
           }}
           open
         >
-          {drawer}
+          {drawerContainer}
         </Drawer>
       </Box>
 
@@ -234,6 +351,7 @@ function MainLayout() {
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           minHeight: '100vh',
+          backgroundColor: alpha(theme.palette.background.default, 0.5)
         }}
       >
         <Toolbar />

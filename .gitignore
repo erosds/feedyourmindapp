@@ -6,3 +6,4 @@ frontend/node_modules/
 .jwt_secret_key
 __pycache__/
 *.pyc
+frontend/build/

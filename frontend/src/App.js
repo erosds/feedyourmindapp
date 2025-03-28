@@ -51,17 +51,9 @@ import PrivateRoute from './components/auth/PrivateRoute';
 import AdminRoute from './components/auth/AdminRoute';
 import RootRedirect from './components/auth/RootRedirect';
 
-// Theme
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#3f51b5',
-    },
-    secondary: {
-      main: '#f50057',
-    },
-  },
-});
+// Scegli tema
+import {theme} from './services/theme'
+
 
 function App() {
   return (
