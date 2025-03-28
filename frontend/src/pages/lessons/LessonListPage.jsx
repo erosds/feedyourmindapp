@@ -1,6 +1,6 @@
 // src/pages/lessons/LessonListPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -68,6 +68,20 @@ function LessonListPage() {
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
   };
+
+  // Aggiungi queste righe all'inizio della funzione LessonListPage, dopo l'inizializzazione degli stati
+  const location = useLocation();
+
+  // Gestione dei filtri iniziali che arrivano dalla dashboard
+  useEffect(() => {
+    if (location.state) {
+      // Se c'è un filtro iniziale impostato dalla dashboard, applicalo
+      if (location.state.initialFilter === 'unpaid') {
+        // Imposta il filtro per le lezioni non pagate
+        setPaymentFilter('unpaid');
+      }
+    }
+  }, [location.state]);
 
   // Funzione helper per l'ordinamento stabile
   const descendingComparator = (a, b, orderBy) => {

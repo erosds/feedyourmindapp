@@ -16,7 +16,8 @@ import {
   Tabs,
   Typography,
   IconButton,
-  Tooltip
+  Tooltip,
+  Button
 } from '@mui/material';
 import {
   EuroSymbol as EuroIcon,
@@ -41,6 +42,7 @@ import {
   isBefore,
   addDays
 } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 function AdminDashboardSummary({
   currentWeekStart,
@@ -54,14 +56,52 @@ function AdminDashboardSummary({
   professorsPayments = 0,
   currentTab = 0,
   setCurrentTab,
-  // Aggiungi prop per packages e lessons totali
+  // Props for total packages and lessons
   allPackages = [],
   allLessons = [],
-  // Aggiungi funzioni di navigazione
-  navigateToPackages,
-  navigateToLessons,
 }) {
-  // Funzione per ottenere l'intervallo del periodo selezionato
+  const navigate = useNavigate();
+
+  // Function to navigate to packages page with proper filter
+  const navigateToPackages = (filter) => {
+    // If a specific filter is provided, navigate with query params or state
+    if (filter === 'expiring') {
+      // Navigate to packages page with filter for expiring packages
+      navigate('/packages', {
+        state: {
+          initialFilter: 'expiring',
+          timeFilter: periodFilter
+        }
+      });
+    } else if (filter === 'unpaid') {
+      // Navigate to packages page with filter for unpaid packages
+      navigate('/packages', {
+        state: {
+          initialFilter: 'expired'
+        }
+      });
+    } else {
+      // Default navigation without filters
+      navigate('/packages');
+    }
+  };
+
+  // Function to navigate to lessons page with proper filter
+  const navigateToLessons = (filter) => {
+    if (filter === 'unpaid') {
+      // Navigate to lessons page with filter for unpaid lessons
+      navigate('/lessons', {
+        state: {
+          initialFilter: 'unpaid'
+        }
+      });
+    } else {
+      // Default navigation without filters
+      navigate('/lessons');
+    }
+  };
+
+  // Function to get the period interval
   const getPeriodInterval = () => {
     const today = new Date();
     switch (periodFilter) {
@@ -88,12 +128,12 @@ function AdminDashboardSummary({
     }
   };
 
-  // Calcolo pacchetti in scadenza
+  // Calculate expiring packages
   const expiringPackages = useMemo(() => {
     const { start, end } = getPeriodInterval();
     return allPackages.filter(pkg => {
       const expiryDate = parseISO(pkg.expiry_date);
-      // Pacchetti che scadono nell'intervallo corrente
+      // Packages expiring in the current period
       return (
         isWithinInterval(expiryDate, { start, end }) &&
         (pkg.status === 'in_progress' || pkg.status === 'expired')
@@ -101,21 +141,21 @@ function AdminDashboardSummary({
     });
   }, [allPackages, periodFilter]);
 
-  // Calcolo pacchetti scaduti non pagati
+  // Calculate expired unpaid packages
   const expiredPackages = useMemo(() => {
     return allPackages.filter(pkg =>
       pkg.status === 'expired' && !pkg.is_paid
     );
   }, [allPackages]);
 
-  // Calcolo lezioni non pagate
+  // Calculate unpaid lessons
   const unpaidLessons = useMemo(() => {
     return allLessons.filter(lesson =>
       !lesson.is_package && !lesson.is_paid
     );
   }, [allLessons]);
 
-  // Calcoli esistenti
+  // Calculate total lesson hours
   const totalLessonHours = useMemo(() => {
     return periodLessons.reduce((total, lesson) =>
       total + parseFloat(lesson.duration), 0
@@ -137,7 +177,7 @@ function AdminDashboardSummary({
     setCurrentTab(newValue);
   };
 
-  // Componente per blocchi statistici cliccabili
+  // Modified ClickableStatBlock component to make the entire block clickable
   const ClickableStatBlock = ({
     icon,
     label,
@@ -149,30 +189,36 @@ function AdminDashboardSummary({
     <Grid item xs={12} md={4}>
       <Box
         display="flex"
-        alignItems="center"
-        mb={1}
-        sx={{ cursor: onClick ? 'pointer' : 'default' }}
+        flexDirection="column"
+        sx={{
+          cursor: onClick ? 'pointer' : 'default',
+          p: 1,
+          borderRadius: 1,
+          transition: 'all 0.2s ease',
+          '&:hover': onClick ? {
+            backgroundColor: 'rgba(0,0,0,0.04)',
+            transform: 'translateY(-2px)',
+            boxShadow: 1
+          } : {}
+        }}
+        onClick={onClick}
       >
-        <IconButton
-          onClick={onClick}
-          disabled={!onClick}
-          sx={{
-            mr: 1,
-            color: color,
-            '&:hover': onClick ? {
-              backgroundColor: 'rgba(0,0,0,0.1)'
-            } : {}
-          }}
-        >
-          {icon}
-        </IconButton>
-        <Typography variant={variant} color="text.secondary">
-          {label}
+        <Box display="flex" alignItems="center" mb={1}>
+          {React.cloneElement(icon, {
+            sx: {
+              mr: 1,
+              color: color,
+              fontSize: 24
+            }
+          })}
+          <Typography variant={variant} color="text.secondary">
+            {label}
+          </Typography>
+        </Box>
+        <Typography variant="h5" fontWeight="medium" color={onClick ? color : 'inherit'}>
+          {value}
         </Typography>
       </Box>
-      <Typography variant="h5">
-        {value}
-      </Typography>
     </Grid>
   );
 
@@ -213,86 +259,37 @@ function AdminDashboardSummary({
 
             <Grid container spacing={2} sx={{ mt: 2 }}>
 
-              {/* Dettaglio finanziario */}
-              <Grid item xs={12} md={4} container alignItems="center" justifyContent="center">
-                <Grid item>
-                  <MoneyIcon color="primary" sx={{ mr: 2, fontSize: 20 }} />
-                </Grid>
-                <Grid item>
-                  <Typography variant="body2" color="text.secondary">
-                    Entrate
-                  </Typography>
-                  <Typography variant="h6" color="primary">
-                    €{totalIncome.toFixed(2)}
-                  </Typography>
-                </Grid>
-              </Grid>
+              {/* Financial details */}
+              <ClickableStatBlock
+                icon={<MoneyIcon />}
+                label="Entrate"
+                value={`€${totalIncome.toFixed(2)}`}
+                color="primary.main"
+              />
 
-              <Grid item xs={12} md={4} container alignItems="center" justifyContent="center">
-                <Grid item>
-                  <PaymentIcon color="secondary" sx={{ mr: 2, fontSize: 20 }} />
-                </Grid>
-                <Grid item>
-                  <Typography variant="body2" color="text.secondary">
-                    Pagamenti
-                  </Typography>
-                  <Typography variant="h6" color="secondary.main">
-                    €{totalExpenses.toFixed(2)}
-                  </Typography>
-                </Grid>
-              </Grid>
+              <ClickableStatBlock
+                icon={<PaymentIcon />}
+                label="Pagamenti"
+                value={`€${totalExpenses.toFixed(2)}`}
+                color="secondary.main"
+              />
 
-              <Grid item xs={12} md={4} container alignItems="center" justifyContent="center">
-                <Grid item>
-                  <TrendingUpIcon
-                    color={netProfit >= 0 ? 'success' : 'error'}
-                    sx={{ mr: 2, fontSize: 20 }}
-                  />
-                </Grid>
-                <Grid item>
-                  <Typography variant="body2" color="text.secondary">
-                    Ricavi
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    color={netProfit >= 0 ? 'success.main' : 'error.main'}
-                  >
-                    €{netProfit.toFixed(2)}
-                  </Typography>
-                </Grid>
-              </Grid>
-
+              <ClickableStatBlock
+                icon={<TrendingUpIcon />}
+                label="Ricavi"
+                value={`€${netProfit.toFixed(2)}`}
+                color={netProfit >= 0 ? 'success.main' : 'error.main'}
+              />
               <Grid item xs={12}>
                 <Divider sx={{ my: 2 }} />
               </Grid>
 
-              {/* Professori attivi */}
-              <ClickableStatBlock
-                icon={<PersonIcon />}
-                label="Professori attivi"
-                value={activeProfessorsCount}
-              />
-
-              {/* Lezioni nel periodo */}
-              <ClickableStatBlock
-                icon={<LessonIcon />}
-                label="Lezioni nel periodo"
-                value={totalLessonsCount}
-              />
-
-              {/* Ore totali di lezione */}
-              <ClickableStatBlock
-                icon={<LessonIcon />}
-                label="Ore di lezione totali"
-                value={totalLessonHours.toFixed(1)}
-              />
-
-              {/* Riga successiva - blocchi cliccabili */}
+              {/* Next row - clickable blocks */}
               <ClickableStatBlock
                 icon={<TimerIcon />}
                 label="Pacchetti in scadenza"
                 value={expiringPackages.length}
-                onClick={navigateToPackages}
+                onClick={() => navigateToPackages('expiring')}
                 color="warning.main"
               />
 
@@ -300,7 +297,7 @@ function AdminDashboardSummary({
                 icon={<CancelIcon />}
                 label="Pacchetti da saldare"
                 value={expiredPackages.length}
-                onClick={navigateToPackages}
+                onClick={() => navigateToPackages('unpaid')}
                 color="error.main"
               />
 
@@ -308,10 +305,30 @@ function AdminDashboardSummary({
                 icon={<MoneyIcon />}
                 label="Lezioni da saldare"
                 value={unpaidLessons.length}
-                onClick={navigateToLessons}
+                onClick={() => navigateToLessons('unpaid')}
                 color="secondary.main"
               />
 
+              {/* Active professors */}
+              <ClickableStatBlock
+                icon={<PersonIcon />}
+                label="Professori attivi"
+                value={activeProfessorsCount}
+              />
+
+              {/* Lessons in period */}
+              <ClickableStatBlock
+                icon={<LessonIcon />}
+                label="Lezioni nel periodo"
+                value={totalLessonsCount}
+              />
+
+              {/* Total lesson hours */}
+              <ClickableStatBlock
+                icon={<LessonIcon />}
+                label="Ore di lezione totali"
+                value={totalLessonHours.toFixed(1)}
+              />
 
             </Grid>
           </Box>
@@ -342,7 +359,7 @@ function AdminDashboardSummary({
                 />
               </ListItem>
 
-              {/* Dettagli aggiuntivi */}
+              {/* Additional details */}
               <ListItem>
                 <ListItemText
                   primary="Pacchetti in scadenza"
@@ -362,6 +379,40 @@ function AdminDashboardSummary({
                 />
               </ListItem>
             </List>
+
+            <Box mt={2} display="flex" flexDirection="column" gap={1}>
+              <Box display="flex" justifyContent="space-between">
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  onClick={() => navigateToPackages('expiring')}
+                  fullWidth
+                  sx={{ mr: 1 }}
+                  startIcon={<TimerIcon />}
+                >
+                  Pacchetti in scadenza
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => navigateToPackages('unpaid')}
+                  fullWidth
+                  sx={{ ml: 1 }}
+                  startIcon={<CancelIcon />}
+                >
+                  Pacchetti da saldare
+                </Button>
+              </Box>
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={() => navigateToLessons('unpaid')}
+                fullWidth
+                startIcon={<MoneyIcon />}
+              >
+                Lezioni da saldare
+              </Button>
+            </Box>
           </Box>
         )}
       </CardContent>

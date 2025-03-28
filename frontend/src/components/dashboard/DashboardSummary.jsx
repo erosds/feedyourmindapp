@@ -93,29 +93,6 @@ function DashboardSummary({
   };
 
   return (
-    <>
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Riepilogo Settimana
-          </Typography>
-          <Box mt={2}>
-            <Typography variant="body2" color="text.secondary">
-              Ore svolte questa settimana
-            </Typography>
-            <Typography variant="h4" color="primary">
-              {displayedWeekHours.toFixed(1)}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mt={2}>
-              Guadagni settimana in corso
-            </Typography>
-            <Typography variant="h4" color="primary">
-              €{displayedWeekEarnings.toFixed(2)}
-            </Typography>
-          </Box>
-        </CardContent>
-      </Card>
-
       <Paper sx={{ p: 2 }}>
         <Tabs
           value={currentTab}
@@ -205,7 +182,6 @@ function DashboardSummary({
           </Box>
         )}
       </Paper>
-    </>
   );
 }
 

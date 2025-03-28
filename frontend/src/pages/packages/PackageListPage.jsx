@@ -1,6 +1,6 @@
 // src/pages/packages/PackageListPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -64,6 +64,24 @@ function PackageListPage() {
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
   };
+
+  // Aggiungi queste righe all'inizio della funzione PackageListPage, dopo l'inizializzazione degli stati
+  const location = useLocation();
+
+  // Gestione dei filtri iniziali che arrivano dalla dashboard
+  useEffect(() => {
+    if (location.state) {
+      // Se c'è un filtro iniziale impostato dalla dashboard, applicalo
+      if (location.state.initialFilter === 'expiring') {
+        // Imposta il filtro per i pacchetti in scadenza
+        setTimeFilter(location.state.timeFilter || 'week');
+        setPaymentFilter('active'); // Solo pacchetti attivi
+      } else if (location.state.initialFilter === 'expired') {
+        // Imposta il filtro per i pacchetti scaduti
+        setPaymentFilter('expired');
+      }
+    }
+  }, [location.state]);
 
   // Helper function for sorting
   const descendingComparator = (a, b, orderBy) => {
@@ -499,7 +517,7 @@ function PackageListPage() {
                         sx={{
                           color: !pkg.is_paid || parseFloat(pkg.package_cost) === 0
                             ? "error.main"
-                            : "inherit",
+                            : "success.main",
                           fontWeight: !pkg.is_paid || parseFloat(pkg.package_cost) === 0
                             ? "bold"
                             : "normal"

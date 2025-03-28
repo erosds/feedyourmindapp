@@ -185,7 +185,7 @@ function LessonDetailPage() {
       {/* Card principale con informazioni organizzate in Grid */}
       <Card>
         <CardContent>
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             {/* Sezione Informazioni Lezione */}
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom color="primary">
@@ -194,7 +194,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Studente */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={2.5}>
               <Box display="flex" alignItems="center" mb={1}>
                 <StudentIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -209,7 +209,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Professore */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <Box display="flex" alignItems="center" mb={1}>
                 <ProfessorIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -224,7 +224,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Data */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <Box display="flex" alignItems="center" mb={1}>
                 <CalendarIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -237,7 +237,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Orario */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={2}>
               <Box display="flex" alignItems="center" mb={1}>
                 <TimeIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -250,7 +250,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Durata */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={1}>
               <Box display="flex" alignItems="center" mb={1}>
                 <TimeIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -275,7 +275,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Tipo di lezione */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={2.5}>
               <Box display="flex" alignItems="center" mb={1}>
                 <PackageIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -289,35 +289,9 @@ function LessonDetailPage() {
               )}
             </Grid>
 
-            {/* Tariffa oraria */}
-            <Grid item xs={12} md={4}>
-              <Box display="flex" alignItems="center" mb={1}>
-                <EuroIcon sx={{ mr: 1 }} color="primary" />
-                <Typography variant="body2" color="text.secondary">
-                  Tariffa oraria
-                </Typography>
-              </Box>
-              <Typography variant="body1" fontWeight="medium">
-                €{parseFloat(lesson.hourly_rate).toFixed(2)}
-              </Typography>
-            </Grid>
-
-            {/* Totale lezione */}
-            <Grid item xs={12} md={4}>
-              <Box display="flex" alignItems="center" mb={1}>
-                <EuroIcon sx={{ mr: 1 }} color="primary" />
-                <Typography variant="body2" color="text.secondary">
-                  Totale lezione
-                </Typography>
-              </Box>
-              <Typography variant="body1" fontWeight="bold" color="primary">
-                €{parseFloat(lesson.total_payment).toFixed(2)}
-              </Typography>
-            </Grid>
-
             {/* Stato pagamento (solo per lezioni singole) */}
             {!lesson.is_package && (
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <Box display="flex" alignItems="center" mb={1}>
                   <EuroIcon sx={{ mr: 1 }} color="primary" />
                   <Typography variant="body2" color="text.secondary">
@@ -332,73 +306,92 @@ function LessonDetailPage() {
                 />
               </Grid>
             )}
+
             {/* Add this Grid item for admins only */}
-{isAdmin() && (
-  <Grid item xs={12} md={4}>
-    <Box display="flex" alignItems="center" mb={1}>
-      <EuroIcon sx={{ mr: 1 }} color="primary" />
-      <Typography variant="body2" color="text.secondary">
-        Prezzo studente
-      </Typography>
-    </Box>
-    
-    {isEditingPrice ? (
-      <Box display="flex" alignItems="center" mt={1}>
-        <TextField
-          size="small"
-          type="number"
-          value={priceValue}
-          onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}
-          InputProps={{
-            startAdornment: <InputAdornment position="start">€</InputAdornment>,
-            inputProps: { min: 0, step: 0.5 }
-          }}
-          sx={{ width: '120px', mr: 1 }}
-        />
-        <Button size="small" variant="contained" onClick={handleSavePrice}>
-          Salva
-        </Button>
-        <Button size="small" onClick={() => setIsEditingPrice(false)} sx={{ ml: 1 }}>
-          Annulla
-        </Button>
-      </Box>
-    ) : (
-      <>
-        {lesson.is_package ? (
-          <Typography variant="body1" fontWeight="medium" color="success.main">
-            — <Typography variant="caption" color="success.main" sx={{ display: 'inline', ml: 1 }}>
-                (Incluso nel pacchetto)
-              </Typography>
-          </Typography>
-        ) : (
-          <Typography 
-            variant="body1" 
-            fontWeight="medium"
-            color={parseFloat(lesson.price) === 0 ? "error" : "inherit"}
-          >
-            €{parseFloat(lesson.price || 0).toFixed(2)}
-            {parseFloat(lesson.price) === 0 && (
-              <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
-                Prezzo da impostare
-              </Typography>
+            {isAdmin() && (
+              <Grid item xs={12} md={3}>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <EuroIcon sx={{ mr: 1 }} color="primary" />
+                  <Typography variant="body2" color="text.secondary">
+                    Prezzo studente
+                  </Typography>
+                </Box>
+
+                {isEditingPrice ? (
+                  <Box display="flex" alignItems="center" mt={1}>
+                    <TextField
+                      size="small"
+                      type="number"
+                      value={priceValue}
+                      onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                        inputProps: { min: 0, step: 0.5 }
+                      }}
+                      sx={{ width: '120px', mr: 1 }}
+                    />
+                    <Button size="small" variant="contained" onClick={handleSavePrice}>
+                      Salva
+                    </Button>
+                    <Button size="small" onClick={() => setIsEditingPrice(false)} sx={{ ml: 1 }}>
+                      Annulla
+                    </Button>
+                  </Box>
+                ) : (
+                  <>
+                    {lesson.is_package ? (
+                      <Typography variant="body1" fontWeight="medium" color="success.main">
+                        — <Typography variant="caption" color="success.main" sx={{ display: 'inline', ml: 1 }}>
+                          (Incluso nel pacchetto)
+                        </Typography>
+                      </Typography>
+                    ) : (
+                      <Typography
+                        variant="body1"
+                        fontWeight="medium"
+                        color={parseFloat(lesson.price) === 0 ? "error" : "inherit"}
+                      >
+                        €{parseFloat(lesson.price || 0).toFixed(2)}
+                        {parseFloat(lesson.price) === 0 && (
+                          <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+                            Prezzo da impostare
+                          </Typography>
+                        )}
+                      </Typography>
+                    )}
+                  </>
+                )}
+              </Grid>
             )}
-          </Typography>
-        )}
-        {!lesson.is_package && (
-          <Button 
-            size="small" 
-            variant="outlined" 
-            startIcon={<EditIcon />} 
-            onClick={handleEditPrice} 
-            sx={{ mt: 1 }}
-          >
-            Modifica prezzo
-          </Button>
-        )}
-      </>
-    )}
-  </Grid>
-)}
+
+            {/* Tariffa oraria */}
+            <Grid item xs={12} md={2}>
+              <Box display="flex" alignItems="center" mb={1}>
+                <EuroIcon sx={{ mr: 1 }} color="primary" />
+                <Typography variant="body2" color="text.secondary">
+                  Tariffa oraria
+                </Typography>
+              </Box>
+              <Typography variant="body1" fontWeight="medium">
+                €{parseFloat(lesson.hourly_rate).toFixed(2)}
+              </Typography>
+            </Grid>
+
+            {/* Totale lezione */}
+            <Grid item xs={12} md={1}>
+              <Box display="flex" alignItems="center" mb={1}>
+                <EuroIcon sx={{ mr: 1 }} color="primary" />
+                <Typography variant="body2" color="text.secondary">
+                  Totale
+                </Typography>
+              </Box>
+              <Typography variant="body1" fontWeight="bold" color="primary">
+                €{parseFloat(lesson.total_payment).toFixed(2)}
+              </Typography>
+            </Grid>
+
+
+
 
             {/* Data pagamento (solo per lezioni singole pagate) */}
             {!lesson.is_package && lesson.is_paid && lesson.payment_date && (
@@ -425,7 +418,7 @@ function LessonDetailPage() {
                   </Typography>
                 </Grid>
 
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={2.5}>
                   <Typography variant="body2" color="text.secondary">
                     Ore totali pacchetto
                   </Typography>
@@ -443,7 +436,7 @@ function LessonDetailPage() {
                   </Typography>
                 </Grid>
 
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={2}>
                   <Typography variant="body2" color="text.secondary">
                     Stato pacchetto
                   </Typography>
@@ -454,7 +447,7 @@ function LessonDetailPage() {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={2}>
                   <Typography variant="body2" color="text.secondary">
                     Costo totale pacchetto
                   </Typography>
