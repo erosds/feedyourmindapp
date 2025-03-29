@@ -28,11 +28,12 @@ app = FastAPI(
     description="API per la gestione di una scuola di ripetizioni private",
     version="0.1.0"
 )
+frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
 # Configurazione CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[frontend_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
