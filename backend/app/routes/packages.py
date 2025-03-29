@@ -197,6 +197,9 @@ def read_student_active_package(student_id: int, db: Session = Depends(get_db)):
     
     return active_package
 
+# In backend/app/routes/packages.py
+# Find the update_package function and modify the part that handles start_date changes
+
 @router.put("/{package_id}", response_model=models.PackageResponse)
 def update_package(package_id: int, package: models.PackageUpdate, db: Session = Depends(get_db)):
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
@@ -212,9 +215,18 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
     # Create a copy of the update data
     update_data = package.dict(exclude_unset=True)
     
-    # Handle start date change (recalculate expiry date)
+    # Handle start date change (recalculate expiry date while preserving extensions)
     if "start_date" in update_data:
-        update_data["expiry_date"] = calculate_expiry_date(update_data["start_date"])
+        # Calculate base expiry date
+        base_expiry_date = calculate_expiry_date(update_data["start_date"])
+        
+        # Apply extensions if any
+        if db_package.extension_count > 0:
+            base_expiry_date = base_expiry_date + timedelta(days=7 * db_package.extension_count)
+        
+        update_data["expiry_date"] = base_expiry_date
+    
+    # Rest of the function remains the same...
     
     # Validate total hours (must be >= hours used)
     if "total_hours" in update_data and update_data["total_hours"] < hours_used:
@@ -273,32 +285,34 @@ def extend_package_expiry(package_id: int, db: Session = Depends(get_db)):
     db.refresh(db_package)
     return db_package
 
+# Add this to backend/app/routes/packages.py
 @router.put("/{package_id}/cancel-extension", response_model=models.PackageResponse)
 def cancel_package_extension(package_id: int, db: Session = Depends(get_db)):
-    """Cancels the last extension of the package by reducing the expiry date by one week"""
+    """Cancella l'ultima estensione del pacchetto riducendo la data di scadenza di 7 giorni"""
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
     
-    # Check if there are any extensions to cancel
-    if db_package.extension_count <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No extensions to cancel"
-        )
+    # Calculate what the original expiry date would be (4 weeks from start)
+    base_expiry_date = calculate_expiry_date(db_package.start_date)
     
-    from datetime import timedelta
+    # If the current expiry date is not greater than the base, there's no extension to cancel
+    if db_package.expiry_date <= base_expiry_date:
+        raise HTTPException(status_code=400, detail="Non ci sono estensioni da annullare")
     
-    # Reduce the expiry date by one week
+    # Simply subtract 7 days from the current expiry date
     db_package.expiry_date = db_package.expiry_date - timedelta(days=7)
-    db_package.extension_count -= 1
     
-    # Update the status based on the new expiry date
+    # Make sure we don't go below the base expiry date
+    if db_package.expiry_date < base_expiry_date:
+        db_package.expiry_date = base_expiry_date
+    
+    # Update package status based on the new expiry date
     today = date.today()
-    if today > db_package.expiry_date:
-        db_package.status = "expired" if not db_package.is_paid else "completed"
-    else:
+    if today < db_package.expiry_date:
         db_package.status = "in_progress"
+    else:
+        db_package.status = "completed" if db_package.is_paid else "expired"
     
     db.commit()
     db.refresh(db_package)
