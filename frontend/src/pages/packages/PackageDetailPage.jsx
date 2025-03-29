@@ -236,6 +236,35 @@ function PackageDetailPage() {
     }
   };
 
+  const handleCancelExtension = async () => {
+    try {
+      // Verifica se ci sono lezioni nella settimana che verrebbe annullata
+      const lastWeekDate = new Date(expiryDate);
+      lastWeekDate.setDate(lastWeekDate.getDate() - 7); // La settimana precedente
+
+      // Controlla se ci sono lezioni in questa settimana
+      const hasLessonsInLastWeek = lessons.some(lesson => {
+        const lessonDate = parseISO(lesson.lesson_date);
+        return lessonDate > lastWeekDate && lessonDate <= expiryDate;
+      });
+
+      if (hasLessonsInLastWeek) {
+        alert('Non è possibile annullare l\'estensione perché ci sono lezioni programmate nella settimana da rimuovere.');
+        return;
+      }
+
+      // Chiamata API per annullare l'estensione
+      await packageService.cancelExtension(id);
+
+      // Ricarica i dati del pacchetto
+      const packageResponse = await packageService.getById(id);
+      setPackageData(packageResponse.data);
+    } catch (err) {
+      console.error('Error canceling extension:', err);
+      alert('Errore durante l\'annullamento dell\'estensione. Riprova più tardi.');
+    }
+  };
+
   const handleDeletePackage = async () => {
     try {
       let confirmMessage = `Sei sicuro di voler eliminare il pacchetto #${id}?`;
@@ -350,6 +379,20 @@ function PackageDetailPage() {
                 Estendi scadenza +1
               </Button>
             )}
+
+          {/* Pulsante per annullare l'estensione, visibile solo se ci sono estensioni */}
+          {packageData.extension_count > 0 && (
+            <Button
+              variant="outlined"
+              color="warning"
+              onClick={handleCancelExtension}
+              sx={{ mr: 1 }}
+              // Disabilita il pulsante se non ci sono estensioni o se ci sono lezioni nell'ultima settimana
+              disabled={packageData.extension_count === 0}
+            >
+              Annulla estensione (-1)
+            </Button>
+          )}
 
           <Button
             variant="outlined"
@@ -676,7 +719,7 @@ function PackageDetailPage() {
                               {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                             </TableCell>
                             <TableCell>
-                            {getProfessorNameById(lesson.professor_id)}
+                              {getProfessorNameById(lesson.professor_id)}
                             </TableCell>
                             <TableCell>{lesson.duration}</TableCell>
                             <TableCell>€{parseFloat(lesson.hourly_rate).toFixed(2)}</TableCell>

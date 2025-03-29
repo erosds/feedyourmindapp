@@ -273,6 +273,37 @@ def extend_package_expiry(package_id: int, db: Session = Depends(get_db)):
     db.refresh(db_package)
     return db_package
 
+@router.put("/{package_id}/cancel-extension", response_model=models.PackageResponse)
+def cancel_package_extension(package_id: int, db: Session = Depends(get_db)):
+    """Cancels the last extension of the package by reducing the expiry date by one week"""
+    db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
+    if db_package is None:
+        raise HTTPException(status_code=404, detail="Package not found")
+    
+    # Check if there are any extensions to cancel
+    if db_package.extension_count <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No extensions to cancel"
+        )
+    
+    from datetime import timedelta
+    
+    # Reduce the expiry date by one week
+    db_package.expiry_date = db_package.expiry_date - timedelta(days=7)
+    db_package.extension_count -= 1
+    
+    # Update the status based on the new expiry date
+    today = date.today()
+    if today > db_package.expiry_date:
+        db_package.status = "expired" if not db_package.is_paid else "completed"
+    else:
+        db_package.status = "in_progress"
+    
+    db.commit()
+    db.refresh(db_package)
+    return db_package
+
 @router.delete("/{package_id}", response_model=dict)
 def delete_package(package_id: int, db: Session = Depends(get_db)):
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
