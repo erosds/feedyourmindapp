@@ -131,7 +131,15 @@ function LessonForm({
                 <DatePicker
                   label="Data lezione"
                   value={values.lesson_date}
-                  onChange={(date) => setFieldValue('lesson_date', date)}
+                  onChange={(date) => {
+                    // Imposta la data della lezione
+                    setFieldValue('lesson_date', date);
+
+                    // Se la lezione è pagata e non fa parte di un pacchetto, aggiorna anche la data di pagamento
+                    if (values.is_paid && !values.is_package) {
+                      setFieldValue('payment_date', date);
+                    }
+                  }}
                   slotProps={{
                     textField: {
                       fullWidth: true,

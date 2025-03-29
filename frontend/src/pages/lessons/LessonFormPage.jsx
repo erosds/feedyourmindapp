@@ -60,7 +60,7 @@ function LessonFormPage() {
     duration: 1,
     is_package: location.state?.is_package || false,
     package_id: location.state?.package_id || null,
-    hourly_rate: '',
+    hourly_rate: '12.5',
     is_paid: true,
     payment_date: new Date(), // Default to today
     price: 20,

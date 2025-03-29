@@ -483,8 +483,12 @@ function PackageListPage() {
                       {format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it })}
                     </TableCell>
                     <TableCell>{pkg.total_hours}</TableCell>
-                    <TableCell>{parseFloat(pkg.remaining_hours).toFixed(1)}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ 
+  color: parseFloat(pkg.remaining_hours) > 0 ? 'primary.main' : 'text.primary',
+  fontWeight: parseFloat(pkg.remaining_hours) > 0 ? 'bold' : 'normal'
+}}>
+  {parseFloat(pkg.remaining_hours).toFixed(1)}
+</TableCell>                    <TableCell>
                       <Chip
                         label={
                           pkg.status === 'in_progress' ? 'In corso' :

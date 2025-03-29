@@ -72,7 +72,7 @@ function PackageDetailPage() {
     duration: 1,
     is_package: true,
     package_id: null,
-    hourly_rate: '',
+    hourly_rate: '12.5',
     is_paid: true,
     payment_date: new Date(), // Default oggi
   });

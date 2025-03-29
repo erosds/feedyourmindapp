@@ -3,7 +3,7 @@
 import axios from 'axios';
 
 // Configurazione base di axios
-const API_URL = 'https://reel-cellular-ipaq-cases.trycloudflare.com';  // Sostituisci con l'IP del tuo computer
+const API_URL = 'http://localhost:8000';  // Sostituisci con l'IP del tuo computer
 
 // Crea un'istanza di axios
 const api = axios.create({
