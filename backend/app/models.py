@@ -85,19 +85,6 @@ class ProfessorBase(BaseModel):
 
 class ProfessorCreate(ProfessorBase):
     password: str
-    
-    @field_validator('password')
-    @classmethod
-    def password_strength(cls, v):
-        if len(v) < 8:
-            raise ValueError("La password deve essere lunga almeno 8 caratteri")
-        if not any(c.isdigit() for c in v):
-            raise ValueError("La password deve contenere almeno un numero")
-        if not any(c.isupper() for c in v):
-            raise ValueError("La password deve contenere almeno una lettera maiuscola")
-        if not any(c.islower() for c in v):
-            raise ValueError("La password deve contenere almeno una lettera minuscola")
-        return v
 
 class ProfessorUpdate(BaseModel):
     first_name: Optional[str] = None
@@ -106,20 +93,6 @@ class ProfessorUpdate(BaseModel):
     is_admin: Optional[bool] = None
     password: Optional[str] = None
     
-    @field_validator('password')
-    @classmethod
-    def password_strength(cls, v):
-        if v is None:
-            return v
-        if len(v) < 8:
-            raise ValueError("La password deve essere lunga almeno 8 caratteri")
-        if not any(c.isdigit() for c in v):
-            raise ValueError("La password deve contenere almeno un numero")
-        if not any(c.isupper() for c in v):
-            raise ValueError("La password deve contenere almeno una lettera maiuscola")
-        if not any(c.islower() for c in v):
-            raise ValueError("La password deve contenere almeno una lettera minuscola")
-        return v
 
 class ProfessorResponse(ProfessorBase):
     id: int

@@ -71,7 +71,7 @@ export const authService = {
 // Professor service
 export const professorService = {
   getAll: async () => {
-    return api.get('/professors');
+    return api.get('/professors/');
   },
   
   getById: async (id) => {
@@ -79,7 +79,7 @@ export const professorService = {
   },
   
   create: async (data) => {
-    return api.post('/professors', data);
+    return api.post('/professors/', data);
   },
   
   update: async (id, data) => {
@@ -94,7 +94,7 @@ export const professorService = {
 // Student service - Usa l'istanza api comune
 export const studentService = {
   getAll: async () => {
-    return api.get('/students');
+    return api.get('/students/');
   },
   
   getById: async (id) => {
@@ -102,7 +102,7 @@ export const studentService = {
   },
   
   create: async (data) => {
-    return api.post('/students', data);
+    return api.post('/students/', data);
   },
   
   update: async (id, data) => {
@@ -121,7 +121,7 @@ export const studentService = {
 // Package service
 export const packageService = {
   getAll: async () => {
-    return api.get('/packages');
+    return api.get('/packages/');
   },
   
   getById: async (id) => {
@@ -137,7 +137,7 @@ export const packageService = {
   },
   
   create: async (data) => {
-    return api.post('/packages', data);
+    return api.post('/packages/', data);
   },
 
   create: async (data, allowMultiple = false) => {
@@ -165,7 +165,7 @@ export const packageService = {
 // Lesson service
 export const lessonService = {
   getAll: async () => {
-    return api.get('/lessons');
+    return api.get('/lessons/');
   },
   
   getById: async (id) => {
@@ -181,7 +181,7 @@ export const lessonService = {
   },
   
   create: async (data) => {
-    return api.post('/lessons', data);
+    return api.post('/lessons/', data);
   },
   
   update: async (id, data) => {
