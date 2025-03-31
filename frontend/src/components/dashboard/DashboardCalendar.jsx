@@ -134,7 +134,7 @@ function DashboardCalendar({
                     pb: 0.5
                   }}
                 >
-                  {format(day, "EEEE d", { locale: it })}
+                  {format(day, "EE d", { locale: it })}
                 </Typography>
 
                 <List dense disablePadding sx={{ flexGrow: 1 }}>

@@ -168,7 +168,7 @@ function AddLessonDialog({
         payment_date: lessonForm.is_paid && lessonForm.payment_date
           ? formatDateForAPI(lessonForm.payment_date)
           : null,
-        price: lessonForm.is_package ? 0 : (lessonForm.price || 20) // Set price to 0 for package lessons
+        price: lessonForm.is_package ? 0 : (lessonForm.price || 20*lessonForm.duration) // Set price to 0 for package lessons
 
       };
 
@@ -481,7 +481,7 @@ function AddLessonDialog({
                         ...prev,
                         is_paid: isPaid,
                         payment_date: isPaid ? prev.lesson_date : null,  // <-- Usa la data della lezione
-                        price: isPaid ? (prev.price || 20) : 0
+                        price: isPaid ? (prev.price || 20*lessonForm.duration) : 0
                       }));
                     }}
                     disabled={submitting || (lessonForm.is_package && localSelectedPackage)}
@@ -547,10 +547,10 @@ function AddLessonDialog({
                   fullWidth
                   label="Prezzo studente"
                   type="number"
-                  value={lessonForm.price || 20}
+                  value={lessonForm.price || 20*lessonForm.duration}
                   onChange={(e) => setLessonForm(prev => ({
                     ...prev,
-                    price: parseFloat(e.target.value) || 20
+                    price: parseFloat(e.target.value) || 20*lessonForm.duration
                   }))}
                   InputProps={{
                     startAdornment: <InputAdornment position="start">€</InputAdornment>,

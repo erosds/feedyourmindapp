@@ -50,8 +50,12 @@ import getProfessorNameById from '../../utils/professorMapping';
 // COMPONENTI MODULARI
 
 const StudentProfile = ({ student }) => (
-  <Card>
-    <CardContent sx={{ textAlign: 'center' }}>
+  <Card sx={{ height: '100%' }}>
+    <CardContent sx={{ textAlign: 'center', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      justifyContent: 'center',
+      flexGrow: 1}}>
       <Typography variant="h5" gutterBottom>
         {student.first_name} {student.last_name}
       </Typography>
@@ -223,7 +227,8 @@ const StudentCalendar = ({ currentMonth, lessons }) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: hasLesson ? 'grey.300' : 'transparent',
+                  backgroundColor: hasLesson ? 'primary.light' : 'transparent',
+                  color: hasLesson ? 'white' : 'black',
                   fontWeight: hasLesson ? 'bold' : 'normal',
                   cursor: 'default',
                   transition: 'all 0.3s ease',
@@ -244,7 +249,7 @@ const StudentCalendar = ({ currentMonth, lessons }) => {
                         top: -15,
                         left: '50%',
                         transform: 'translateX(-50%)',
-                        backgroundColor: 'grey.300',
+                        backgroundColor: 'primary.light',
                         borderRadius: 1.5,
                         px: 1.5,
                         py: 0.8,

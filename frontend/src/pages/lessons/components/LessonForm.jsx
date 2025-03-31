@@ -273,10 +273,10 @@ function LessonForm({
                             if (isPaid) {
                               setFieldValue('payment_date', new Date());
                               if (!values.price) {
-                                setFieldValue('price', 20);
+                                setFieldValue('price', 20*values.duration);
                               }
                             } else {
-                              setFieldValue('price', 0);
+                              setFieldValue('price', 20*values.duration);
                               setFieldValue('payment_date', null);
                             }
                           }}
@@ -313,7 +313,7 @@ function LessonForm({
                             name="price"
                             label="Prezzo studente"
                             type="number"
-                            value={values.price || 20}
+                            value={values.price|| 20*values.duration}
                             onChange={handleChange}
                             onBlur={handleBlur}
                             InputProps={{

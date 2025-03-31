@@ -54,8 +54,12 @@ import { useAuth } from '../../context/AuthContext';
 // COMPONENTI MODULARI
 
 const ProfessorProfile = ({ professor }) => (
-  <Card>
-    <CardContent sx={{ textAlign: 'center' }}>
+  <Card sx={{ height: '100%' }}>
+    <CardContent sx={{ textAlign: 'center', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      justifyContent: 'center',
+      flexGrow: 1}}>
       <Typography variant="h5">
         {professor.first_name} {professor.last_name}
       </Typography>
@@ -129,7 +133,7 @@ const TotalStatsCard = ({ totalLessons, totalHours, uniqueStudents, totalEarning
 );
 
 const WeeklyStatsCard = ({ weeklyLessons, weeklyHours, weeklyEarnings }) => (
-  <Card sx={{ mt: 2 }}>
+  <Card>
     <CardContent>
       <Typography variant="h6" gutterBottom>
         Statistiche Settimanali
@@ -242,6 +246,7 @@ const ProfessorCalendar = ({ currentMonth, lessons, studentsMap }) => {
                   justifyContent: 'center',
                   backgroundColor: hasLesson ? 'primary.light' : 'transparent',
                   fontWeight: hasLesson ? 'bold' : 'normal',
+                  color: hasLesson ? 'white' : 'black',
                   cursor: 'default',
                   transition: 'all 0.3s ease',
                   '&:hover': hasLesson ? {
