@@ -41,6 +41,11 @@ import { lessonService, studentService, professorService } from '../../services/
 import { format, parseISO, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuth } from '../../context/AuthContext';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import { DatePicker } from '@mui/x-date-pickers';
 
 function LessonListPage() {
   const navigate = useNavigate();
@@ -49,6 +54,7 @@ function LessonListPage() {
   const [students, setStudents] = useState({});
   const [professors, setProfessors] = useState({});
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -57,6 +63,9 @@ function LessonListPage() {
   const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, month
   const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid, package
   const [showOnlyMine, setShowOnlyMine] = useState(!isAdmin()); // Default: professori normali vedono solo le proprie lezioni
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState(null);
+  const [paymentDate, setPaymentDate] = useState(new Date());
 
   // Stato per l'ordinamento
   const [order, setOrder] = useState('desc');
@@ -143,20 +152,32 @@ function LessonListPage() {
     return stabilizedThis.map((el) => el[0]);
   };
 
+  // Funzione per aggiornare le lezioni
+  const fetchLessons = async () => {
+    try {
+      // Carica tutte le lezioni o solo quelle del professore corrente
+      let lessonsData;
+      if (isAdmin() && !showOnlyMine) {
+        const lessonsResponse = await lessonService.getAll();
+        lessonsData = lessonsResponse.data;
+      } else {
+        const lessonsResponse = await lessonService.getByProfessor(currentUser.id);
+        lessonsData = lessonsResponse.data;
+      }
+      return lessonsData;
+    } catch (err) {
+      console.error('Error fetching lessons:', err);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Carica tutte le lezioni o solo quelle del professore corrente
-        let lessonsData;
-        if (isAdmin() && !showOnlyMine) {
-          const lessonsResponse = await lessonService.getAll();
-          lessonsData = lessonsResponse.data;
-        } else {
-          const lessonsResponse = await lessonService.getByProfessor(currentUser.id);
-          lessonsData = lessonsResponse.data;
-        }
+        // Carica le lezioni
+        const lessonsData = await fetchLessons();
         setLessons(lessonsData);
         setFilteredLessons(lessonsData);
 
@@ -225,7 +246,7 @@ function LessonListPage() {
         }
       });
     }
-    
+
     // Filtra per stato del pagamento
     if (paymentFilter !== 'all') {
       filtered = filtered.filter(lesson => {
@@ -264,7 +285,7 @@ function LessonListPage() {
   const handleTimeFilterChange = (event) => {
     setTimeFilter(event.target.value);
   };
-  
+
   const handlePaymentFilterChange = (event) => {
     setPaymentFilter(event.target.value);
   };
@@ -286,6 +307,66 @@ function LessonListPage() {
     navigate('/lessons/new');
   };
 
+  const handleUpdatePaymentStatus = async (lesson, isPaid, paymentDate, updatedPrice) => {
+    try {
+      setUpdating(true);
+
+      // Prepara i dati da aggiornare
+      const updateData = {
+        is_paid: isPaid,
+        payment_date: paymentDate ? format(paymentDate, 'yyyy-MM-dd') : null,
+        price: updatedPrice !== undefined ? updatedPrice : lesson.price
+      };
+
+      // Chiama il servizio per aggiornare la lezione
+      await lessonService.update(lesson.id, updateData);
+
+      // Ricarica le lezioni
+      const lessonsData = await fetchLessons();
+      setLessons(lessonsData);
+
+    } catch (err) {
+      console.error('Error updating payment status:', err);
+      alert('Errore durante l\'aggiornamento dello stato di pagamento. Riprova più tardi.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleConfirmPayment = () => {
+    if (selectedLesson) {
+      handleUpdatePaymentStatus(
+        selectedLesson,
+        true,
+        paymentDate,
+        selectedLesson.price || 0
+      );
+    }
+    setPaymentDialogOpen(false);
+  };
+
+  const handleClosePaymentDialog = () => {
+    setPaymentDialogOpen(false);
+  };
+
+  // Nuova funzione per il toggle del pagamento
+  const handleTogglePayment = (lesson, event) => {
+    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
+
+    // Solo per lezioni singole (non da pacchetto)
+    if (lesson.is_package) return;
+
+    // Se è già pagata, cambia direttamente stato
+    if (lesson.is_paid) {
+      handleUpdatePaymentStatus(lesson, false, null);
+    } else {
+      // Apri dialog per impostare data pagamento
+      setSelectedLesson(lesson);
+      setPaymentDate(new Date());
+      setPaymentDialogOpen(true);
+    }
+  };
+
   const handleDeleteLesson = async (id, event) => {
     event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
 
@@ -293,16 +374,8 @@ function LessonListPage() {
       try {
         await lessonService.delete(id);
         // Aggiorna la lista dopo l'eliminazione
-        let lessonsData;
-        if (isAdmin() && !showOnlyMine) {
-          const lessonsResponse = await lessonService.getAll();
-          lessonsData = lessonsResponse.data;
-        } else {
-          const lessonsResponse = await lessonService.getByProfessor(currentUser.id);
-          lessonsData = lessonsResponse.data;
-        }
+        const lessonsData = await fetchLessons();
         setLessons(lessonsData);
-        setFilteredLessons(lessonsData);
       } catch (err) {
         console.error('Error deleting lesson:', err);
         alert('Errore durante l\'eliminazione della lezione. Riprova più tardi.');
@@ -457,7 +530,6 @@ function LessonListPage() {
               <SortableTableCell id="start_time" label="Orario" />
               <SortableTableCell id="duration" label="Durata" />
               <SortableTableCell id="professor_id" label="Professore" />
-              {/* <SortableTableCell id="is_package" label="Tipo" /> */}
               <SortableTableCell id="total_payment" label="Retribuzione" numeric />
               <SortableTableCell id="is_paid" label="Pagamento" />
               {isAdmin() && (
@@ -499,25 +571,8 @@ function LessonListPage() {
                     </TableCell>
                     <TableCell>{lesson.duration} ore</TableCell>
 
-                    
+
                     <TableCell>{professors[lesson.professor_id] || `Prof. #${lesson.professor_id}`}</TableCell>
-                    {/* <TableCell> 
-                      {lesson.is_package ? (
-                        <Chip
-                          label={`Pacchetto #${lesson.package_id}`}
-                          size="small"
-                          color="primary"
-                          variant="outlined"
-                        />
-                      ) : (
-                        <Chip
-                          label="Lezione singola"
-                          size="small"
-                          color="default"
-                          variant="outlined"
-                        />
-                      )}
-                    </TableCell> */}
                     <TableCell align="right">€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>
                     <TableCell>
                       {lesson.is_package ? (
@@ -534,7 +589,7 @@ function LessonListPage() {
                           title={
                             lesson.is_paid && lesson.payment_date
                               ? `Pagata il ${format(parseISO(lesson.payment_date), 'dd/MM/yyyy', { locale: it })}`
-                              : (lesson.is_paid ? "Pagata" : "Non pagata")
+                              : (lesson.is_paid ? "Clicca per segnare come non pagata" : "Clicca per segnare come pagata")
                           }
                         >
                           <Chip
@@ -542,6 +597,9 @@ function LessonListPage() {
                             color={lesson.is_paid ? "success" : "error"}
                             size="small"
                             variant="outlined"
+                            onClick={(e) => handleTogglePayment(lesson, e)}
+                            disabled={updating}
+                            sx={{ cursor: 'pointer' }}
                           />
                         </Tooltip>
                       )}
@@ -555,9 +613,9 @@ function LessonListPage() {
                             : (!lesson.is_paid || parseFloat(lesson.price || 0) === 0)
                               ? "error.main"
                               : "success.main",
-                          fontWeight: (!lesson.is_package && !lesson.is_paid) || 
-                                     (!lesson.is_package && parseFloat(lesson.price || 0) === 0) 
-                                     ? "bold" : "normal"
+                          fontWeight: (!lesson.is_package && !lesson.is_paid) ||
+                            (!lesson.is_package && parseFloat(lesson.price || 0) === 0)
+                            ? "bold" : "normal"
                         }}
                       >
                         {lesson.is_package ? (
@@ -614,6 +672,52 @@ function LessonListPage() {
           labelDisplayedRows={({ from, to, count }) => `${from}-${to} di ${count}`}
         />
       </TableContainer>
+
+      {/* Dialog per la data di pagamento */}
+      <Dialog open={paymentDialogOpen} onClose={handleClosePaymentDialog}>
+        <DialogTitle>Conferma Pagamento</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Prezzo Lezione"
+              type="number"
+              value={selectedLesson?.price || 0}
+              onChange={(e) => {
+                const updatedLesson = {
+                  ...selectedLesson,
+                  price: parseFloat(e.target.value) || 0
+                };
+                setSelectedLesson(updatedLesson);
+              }}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">€</InputAdornment>,
+              }}
+            />
+            <DatePicker
+              label="Data pagamento"
+              value={paymentDate}
+              onChange={(date) => setPaymentDate(date)}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  variant: "outlined"
+                }
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePaymentDialog}>Annulla</Button>
+          <Button
+            onClick={handleConfirmPayment}
+            variant="contained"
+            color="primary"
+          >
+            Conferma Pagamento
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

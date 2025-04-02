@@ -39,6 +39,14 @@ import { format, parseISO, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuth } from '../../context/AuthContext';
 
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import { DatePicker } from '@mui/x-date-pickers';
+
+
+
 
 function PackageListPage() {
   const navigate = useNavigate();
@@ -54,6 +62,11 @@ function PackageListPage() {
   const [statusFilter, setStatusFilter] = useState('all'); // all, in_progress, expiring, expired, completed
   const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid
   const { currentUser, isAdmin } = useAuth(); // Add isAdmin here
+  // Aggiungi questi stati
+  const [updating, setUpdating] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [paymentDate, setPaymentDate] = useState(new Date());
 
 
   // State for sorting
@@ -65,6 +78,56 @@ function PackageListPage() {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
+  };
+
+  const handleTogglePayment = (pkg, event) => {
+    event.stopPropagation(); // Impedisce la navigazione ai dettagli
+
+    if (pkg.is_paid) {
+      // Se è già pagato, imposta direttamente come non pagato
+      handleUpdatePaymentStatus(pkg, false, null);
+    } else {
+      // Se non è pagato, apri il dialog per impostare la data di pagamento
+      setSelectedPackage(pkg);
+      setPaymentDate(new Date());
+      setPaymentDialogOpen(true);
+    }
+  };
+
+  const handleUpdatePaymentStatus = async (pkg, isPaid, paymentDate, updatedPrice) => {
+    try {
+      setUpdating(true);
+  
+      // Prepara i dati da aggiornare
+      const updateData = {
+        is_paid: isPaid,
+        payment_date: paymentDate ? format(paymentDate, 'yyyy-MM-dd') : null,
+        package_cost: updatedPrice // Aggiungi il prezzo aggiornato
+      };
+  
+      // Chiama il servizio per aggiornare il pacchetto
+      await packageService.update(pkg.id, updateData);
+  
+      // Ricarica i pacchetti
+      const packagesResponse = await packageService.getAll();
+      setPackages(packagesResponse.data);
+    } catch (err) {
+      console.error('Error updating payment status:', err);
+      alert('Errore durante l\'aggiornamento dello stato di pagamento. Riprova più tardi.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleConfirmPayment = () => {
+    if (selectedPackage) {
+      handleUpdatePaymentStatus(selectedPackage, true, paymentDate, selectedPackage.package_cost);
+    }
+    setPaymentDialogOpen(false);
+  };
+
+  const handleClosePaymentDialog = () => {
+    setPaymentDialogOpen(false);
   };
 
   // Aggiungi queste righe all'inizio della funzione PackageListPage, dopo l'inizializzazione degli stati
@@ -582,11 +645,11 @@ function PackageListPage() {
                     <TableCell>{pkg.total_hours}</TableCell>
                     <TableCell sx={{
                       fontWeight: parseFloat(pkg.remaining_hours) > 0
-                      ? (pkg.status !== 'in_progress' ? 'bold' : '')
-                      : ''
+                        ? (pkg.status !== 'in_progress' ? 'bold' : '')
+                        : ''
                     }}>
                       {parseFloat(pkg.remaining_hours).toFixed(1)}
-                    </TableCell>                    
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={
@@ -611,10 +674,13 @@ function PackageListPage() {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={pkg.is_paid ? 'Saldato' : 'Non saldato'}
+                        label={pkg.is_paid ? 'Pagato' : 'Non pagato'}
                         color={pkg.is_paid ? 'success' : 'error'}
                         size="small"
                         variant="outlined"
+                        onClick={(e) => handleTogglePayment(pkg, e)}
+                        disabled={updating}
+                        sx={{ cursor: 'pointer' }}
                       />
                     </TableCell>
                     <TableCell>
@@ -675,6 +741,53 @@ function PackageListPage() {
           labelDisplayedRows={({ from, to, count }) => `${from}-${to} di ${count}`}
         />
       </TableContainer>
+
+      {/* Dialog per la data di pagamento */}
+      <Dialog open={paymentDialogOpen} onClose={handleClosePaymentDialog}>
+        <DialogTitle>Conferma Pagamento</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Prezzo Pacchetto"
+              type="number"
+              value={selectedPackage?.package_cost || 0}
+              onChange={(e) => {
+                // Se vuoi permettere la modifica del prezzo
+                const updatedPackage = {
+                  ...selectedPackage,
+                  package_cost: parseFloat(e.target.value) || 0
+                };
+                setSelectedPackage(updatedPackage);
+              }}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">€</InputAdornment>,
+              }}
+            />
+            <DatePicker
+              label="Data pagamento"
+              value={paymentDate}
+              onChange={(date) => setPaymentDate(date)}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  variant: "outlined"
+                }
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePaymentDialog}>Annulla</Button>
+          <Button
+            onClick={handleConfirmPayment}
+            variant="contained"
+            color="primary"
+          >
+            Conferma Pagamento
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
