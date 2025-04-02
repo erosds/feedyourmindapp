@@ -145,6 +145,7 @@ class Package(Base):
     remaining_hours = Column(DECIMAL(5, 2))
     expiry_date = Column(Date, nullable=False)
     extension_count = Column(Integer, default=0)  # Nuovo campo per tenere traccia delle estensioni
+    notes = Column(String, nullable=True)  # Campo per annotazioni generali
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     __table_args__ = (
@@ -163,6 +164,7 @@ class PackageBase(BaseModel):
     package_cost: Decimal
     is_paid: bool = False
     payment_date: Optional[date] = None
+    notes: Optional[str] = None
 
     @field_validator('total_hours')
     @classmethod
@@ -203,6 +205,7 @@ class PackageUpdate(BaseModel):
     package_cost: Optional[Decimal] = None
     is_paid: Optional[bool] = None
     payment_date: Optional[date] = None
+    notes: Optional[str] = None
     
     @field_validator('total_hours')
     @classmethod
@@ -243,6 +246,8 @@ class PackageResponse(BaseModel):
     remaining_hours: Decimal
     expiry_date: date
     extension_count: int
+    notes: Optional[str]  # Aggiungere questa riga
+
 
     created_at: datetime
     

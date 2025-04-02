@@ -1,0 +1,148 @@
+// src/components/packages/PackageNotes.jsx
+import React, { useState } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  CardHeader,
+  TextField,
+  IconButton,
+  Typography,
+  Alert,
+  CircularProgress
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon
+} from '@mui/icons-material';
+import { packageService } from '../../services/api';
+
+const PackageNotes = ({ packageId, initialNotes, onNotesUpdate }) => {
+  const [notes, setNotes] = useState(initialNotes || '');
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleToggleEdit = () => {
+    setIsEditing(!isEditing);
+  };
+
+  const handleCancel = () => {
+    setNotes(initialNotes || '');
+    setIsEditing(false);
+    setError('');
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      await packageService.update(packageId, { notes });
+      
+      setSuccess('Annotazioni salvate con successo');
+      setIsEditing(false);
+      
+      // Notifica il componente padre dell'aggiornamento
+      if (onNotesUpdate) {
+        onNotesUpdate(notes);
+      }
+      
+      // Nascondi il messaggio di successo dopo 3 secondi
+      setTimeout(() => {
+        setSuccess('');
+      }, 3000);
+    } catch (err) {
+      console.error('Errore durante il salvataggio delle note:', err);
+      setError('Si è verificato un errore durante il salvataggio. Riprova più tardi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card sx={{ mt: 1 }}>
+      <CardHeader 
+        title={<Typography variant="h6">Annotazioni Pacchetto</Typography>}
+        action={
+          !isEditing ? (
+            <IconButton color="primary" onClick={handleToggleEdit}>
+              <EditIcon />
+            </IconButton>
+          ) : (
+            <Box>
+              <IconButton color="error" onClick={handleCancel}>
+                <CancelIcon />
+              </IconButton>
+              <IconButton 
+                color="primary" 
+                onClick={handleSave}
+                disabled={loading}
+              >
+                {loading ? <CircularProgress size={24} /> : <SaveIcon />}
+              </IconButton>
+            </Box>
+          )
+        }
+      />
+      <CardContent>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {success}
+          </Alert>
+        )}
+        
+        {isEditing ? (
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            variant="outlined"
+            placeholder="Aggiungi qui le tue annotazioni sul pacchetto (es. informazioni sui pagamenti parziali, richieste specifiche, etc.)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        ) : notes ? (
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              whiteSpace: 'pre-wrap',
+              p: 2,
+              borderRadius: 1,
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider'
+            }}
+          >
+            {notes}
+          </Typography>
+        ) : (
+          <Typography 
+            variant="body2" 
+            color="text.secondary" 
+            sx={{ 
+              fontStyle: 'italic',
+              p: 2,
+              borderRadius: 1,
+              bgcolor: 'background.paper',
+              border: '1px dashed',
+              borderColor: 'divider'
+            }}
+          >
+            Nessuna annotazione presente. Clicca sull'icona di modifica per aggiungere delle note.
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default PackageNotes;

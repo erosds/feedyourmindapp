@@ -346,18 +346,29 @@ function LessonDetailPage() {
                         </Typography>
                       </Typography>
                     ) : (
-                      <Typography
-                        variant="body1"
-                        fontWeight="medium"
-                        color={parseFloat(lesson.price) === 0 ? "error" : "inherit"}
-                      >
-                        €{parseFloat(lesson.price || 0).toFixed(2)}
-                        {parseFloat(lesson.price) === 0 && (
-                          <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
-                            Prezzo da impostare
-                          </Typography>
-                        )}
-                      </Typography>
+                      <>
+                        <Typography
+                          variant="body1"
+                          fontWeight="medium"
+                          color={parseFloat(lesson.price) === 0 ? "error.main" : "inherit"}
+                        >
+                          €{parseFloat(lesson.price || 0).toFixed(2)}
+                          {parseFloat(lesson.price) === 0 && (
+                            <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+                              Prezzo da impostare
+                            </Typography>
+                          )}
+                        </Typography>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<EditIcon />}
+                          onClick={handleEditPrice}
+                          sx={{ mt: 1 }}
+                        >
+                          Modifica prezzo
+                        </Button>
+                      </>
                     )}
                   </>
                 )}

@@ -40,6 +40,8 @@ import PackageCalendar from '../../components/packages/PackageCalendar';
 import AddLessonDialog from '../../components/dashboard/AddLessonDialog';
 import { useAuth } from '../../context/AuthContext'; // Assicurati di importare useAuth
 import getProfessorNameById from '../../utils/professorMapping';
+import PackageNotes from '../../components/packages/PackageNotes';
+
 
 function PackageDetailPage() {
   const { id } = useParams();
@@ -142,6 +144,13 @@ function PackageDetailPage() {
       is_package: true
     }));
     setAddLessonDialogOpen(true);
+  };
+
+  const handleNotesUpdate = (updatedNotes) => {
+    setPackageData({
+      ...packageData,
+      notes: updatedNotes
+    });
   };
 
   // Funzione per calcolare le ore disponibili nel pacchetto
@@ -406,10 +415,10 @@ function PackageDetailPage() {
       {/* Main data */}
       <Grid container spacing={1}>
         {/* Header with basic package information */}
-        <Grid item xs={12} md={8}>
-          <Card>
+        <Grid item xs={12} md={8} >
+          <Card sx={{ height: '100%' }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" >
                 Informazioni Pacchetto
               </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -597,8 +606,9 @@ function PackageDetailPage() {
                 </Grid>
 
                 <Grid item xs={12}>
+                <Divider /> {/* Divisore aggiunto */}
                   <Box display="flex" flexDirection="column" >
-                    <Box display="flex" justifyContent="space-between" sx={{ mt: 2.5 }}>
+                    <Box display="flex" justifyContent="space-between" sx={{ mt: 13.5 }}>
                       <Typography variant="h6">Completamento:</Typography>
                       <Typography variant="h5" fontWeight="medium">
                         {completionPercentage.toFixed(0)}%
@@ -614,22 +624,9 @@ function PackageDetailPage() {
                     sx={{
                       height: 10,
                       borderRadius: 1,
-                      backgroundImage: `repeating-linear-gradient(
-      to right,
-      transparent,
-      transparent 24.5%,
-      #fff 24.5%,
-      #fff 25%,
-      transparent 25%,
-      transparent 49.5%,
-      #fff 49.5%,
-      #fff 50%,
-      transparent 50%,
-      transparent 74.5%,
-      #fff 74.5%,
-      #fff 75%,
-      transparent 75%
-    )`,
+                      backgroundImage: `repeating-linear-gradient(to right, transparent, transparent 24.5%, 
+                      #fff 24.5%, #fff 25%, transparent 25%, transparent 49.5%, #fff 49.5%, #fff 50%, 
+                      transparent 50%, transparent 74.5%, #fff 74.5%, #fff 75%, transparent 75%)`,
                       backgroundSize: '100% 100%',
                     }}
                   />
@@ -656,6 +653,11 @@ function PackageDetailPage() {
 
             </CardContent>
           </Card>
+          <PackageNotes
+            packageId={packageData.id}
+            initialNotes={packageData.notes}
+            onNotesUpdate={handleNotesUpdate}
+          />
         </Grid>
 
 

@@ -56,7 +56,8 @@ function PackageFormPage() {
     package_cost: '',
     is_paid: false,
     payment_date: null,
-    package_cost: '0'
+    package_cost: '0',
+    notes: ''
   });
 
   // Package validation schema
@@ -407,8 +408,28 @@ function PackageFormPage() {
                       required={values.is_paid}
                     />
                   </Grid>
-                ) : (  <input type="hidden" name="package_cost" value={values.package_cost || '0'} />
+                ) : (<input type="hidden" name="package_cost" value={values.package_cost || '0'} />
                 )}
+
+                {/* Notes Field */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="subtitle1" gutterBottom>
+                    Annotazioni
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    name="notes"
+                    label="Note sul pacchetto"
+                    placeholder="Aggiungi qui eventuali note sul pacchetto (es. informazioni sui pagamenti parziali, richieste specifiche, etc.)"
+                    value={values.notes}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    multiline
+                    rows={4}
+                    variant="outlined"
+                  />
+                </Grid>
 
                 {/* ROW 5: Package Status */}
                 <Grid item xs={12}>
