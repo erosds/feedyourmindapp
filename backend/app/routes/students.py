@@ -70,7 +70,7 @@ def create_student(student: models.StudentCreate, db: Session = Depends(get_db))
     return db_student
 
 @router.get("/", response_model=List[models.StudentResponse])
-def read_students(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_students(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):
     students = db.query(models.Student).offset(skip).limit(limit).all()
     return students
 

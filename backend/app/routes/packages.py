@@ -138,7 +138,7 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
     return db_package
 
 @router.get("/", response_model=List[models.PackageResponse])
-def read_packages(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_packages(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):
     packages = db.query(models.Package).offset(skip).limit(limit).all()
     return packages
 

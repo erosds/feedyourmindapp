@@ -41,7 +41,7 @@ def create_professor(professor: models.ProfessorCreate, db: Session = Depends(ge
     return db_professor
 
 @router.get("/", response_model=List[models.ProfessorResponse])
-def read_professors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: models.Professor = Depends(get_current_admin)):
+def read_professors(skip: int = 0, limit: int = 1000, db: Session = Depends(get_db), current_user: models.Professor = Depends(get_current_admin)):
     # Solo gli admin possono vedere tutti i professori
     professors = db.query(models.Professor).offset(skip).limit(limit).all()
     return professors

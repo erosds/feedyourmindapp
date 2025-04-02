@@ -462,7 +462,7 @@ def handle_lesson_overflow(overflow_data: dict, db: Session = Depends(get_db)):
         )
 
 @router.get("/", response_model=List[models.LessonResponse])
-def read_lessons(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_lessons(skip: int = 0, limit: int = 100000, db: Session = Depends(get_db)):
     lessons = db.query(models.Lesson).offset(skip).limit(limit).all()
     return lessons
 
