@@ -234,6 +234,12 @@ function PackageListPage() {
             return isThisWeek(startDate);
           case 'month':
             return isThisMonth(startDate);
+          case 'lastMonth': {
+            const now = new Date();
+            const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+            const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+            return startDate.getMonth() === lastMonth && startDate.getFullYear() === lastMonthYear;
+          }
           default:
             return true;
         }
@@ -426,7 +432,7 @@ function PackageListPage() {
 
       <Box mb={3}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3.5}>
             <TextField
               fullWidth
               variant="outlined"
@@ -440,14 +446,14 @@ function PackageListPage() {
           </Grid>
 
           {/* Filtro per periodo */}
-          <Grid item xs={12} md={2.5}>
+          <Grid item xs={12} md={3}>
             <FormControl fullWidth variant="outlined">
-              <InputLabel id="time-filter-label">Periodo</InputLabel>
+              <InputLabel id="time-filter-label">Data di Inizio</InputLabel>
               <Select
                 labelId="time-filter-label"
                 value={timeFilter}
                 onChange={handleTimeFilterChange}
-                label="Periodo"
+                label="Data di Inizio"
                 startAdornment={
                   <InputAdornment position="start">
                     <TodayIcon />
@@ -458,6 +464,7 @@ function PackageListPage() {
                 <MenuItem value="today">Oggi</MenuItem>
                 <MenuItem value="week">Questa settimana</MenuItem>
                 <MenuItem value="month">Questo mese</MenuItem>
+                <MenuItem value="lastMonth">Il mese scorso</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -465,21 +472,21 @@ function PackageListPage() {
           {/* Filtro per stato del pacchetto */}
           <Grid item xs={12} md={2.5}>
             <FormControl fullWidth variant="outlined">
-              <InputLabel id="status-filter-label">Stato Pacchetto</InputLabel>
+              <InputLabel id="status-filter-label">Stato</InputLabel>
               <Select
                 labelId="status-filter-label"
                 value={statusFilter}
                 onChange={handleStatusFilterChange}
-                label="Stato Pacchetto"
+                label="Stato"
                 startAdornment={
                   <InputAdornment position="start">
                     <TimerIcon />
                   </InputAdornment>
                 }
               >
-                <MenuItem value="all">Tutti gli stati</MenuItem>
-                <MenuItem value="in_progress">In corso</MenuItem>
+                <MenuItem value="all">Tutti</MenuItem>
                 <MenuItem value="expiring">In scadenza</MenuItem>
+                <MenuItem value="in_progress">In corso</MenuItem>
                 <MenuItem value="expired">Scaduti</MenuItem>
                 <MenuItem value="completed">Completati</MenuItem>
               </Select>
@@ -521,7 +528,7 @@ function PackageListPage() {
               <SortableTableCell id="total_hours" label="Totale Ore" />
               <SortableTableCell id="remaining_hours" label="Ore Rimanenti" />
               <SortableTableCell id="status" label="Stato" />
-              <SortableTableCell id="is_paid" label="Stato Pagamento" />
+              <SortableTableCell id="is_paid" label="Pagamento" />
               <SortableTableCell id="payment_date" label="Data Pagamento" />
               {isAdmin() && (
                 <SortableTableCell id="package_cost" label="Prezzo" numeric={true} />
@@ -557,7 +564,10 @@ function PackageListPage() {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        {format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it })}
+                        <Typography component="span" variant="inherit">
+                          {format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it })}
+                        </Typography>
+
                         {pkg.extension_count > 0 && (
                           <Chip
                             label={`+${pkg.extension_count}`}
@@ -568,10 +578,11 @@ function PackageListPage() {
                         )}
                       </Box>
                     </TableCell>
+
                     <TableCell>{pkg.total_hours}</TableCell>
                     <TableCell sx={{
                       color: parseFloat(pkg.remaining_hours) > 0
-                        ? (pkg.status === 'expired' ? 'warning.main' : 'primary.main')
+                        ? (pkg.status === 'expired' ? 'error.main' : 'primary.main')
                         : 'text.primary',
                       fontWeight: parseFloat(pkg.remaining_hours) > 0 ? 'bold' : 'normal'
                     }}>
@@ -579,18 +590,24 @@ function PackageListPage() {
                     </TableCell>                    <TableCell>
                       <Chip
                         label={
-                          pkg.status === 'in_progress' ? 'In corso' :
-                            pkg.status === 'completed' ? 'Terminato' :
-                              pkg.status === 'expired' ? 'Scaduto' :
-                                'In corso'
+                          pkg.status === 'in_progress'
+                            ? 'In corso'
+                            : pkg.status === 'completed'
+                              ? 'Terminato'
+                              : pkg.status === 'expired'
+                                ? 'Scaduto'
+                                : 'In corso'
                         }
                         color={
-                          pkg.status === 'in_progress' ? 'primary' :
-                            pkg.status === 'expired' ? 'warning' :
-                              'default'
+                          pkg.status === 'in_progress'
+                            ? (isPackageExpiring(pkg) ? 'warning' : 'primary')
+                            : pkg.status === 'expired'
+                              ? 'error'
+                              : 'default'
                         }
                         size="small"
                       />
+
                     </TableCell>
                     <TableCell>
                       <Chip

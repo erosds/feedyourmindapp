@@ -328,7 +328,7 @@ function PackageFormPage() {
 
                 <Grid item xs={12} md={6}>
                   <DatePicker
-                    label="Start Date"
+                    label="Data di Inizio"
                     value={values.start_date}
                     onChange={(date) => {
                       setFieldValue('start_date', date);
