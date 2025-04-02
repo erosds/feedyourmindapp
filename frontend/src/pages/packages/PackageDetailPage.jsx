@@ -438,7 +438,7 @@ function PackageDetailPage() {
                     }
                     color={
                       packageData.status === 'in_progress' ? 'primary' :
-                        packageData.status === 'expired' ? 'warning' :
+                        packageData.status === 'expired' ? 'error' :
                           'success'
                     }
                     size="small"
@@ -589,8 +589,8 @@ function PackageDetailPage() {
                   </Typography>
                   <Typography
                     variant="h6"
-                    fontWeight="bold"
-                    color={remainingHours > 0 ? 'primary.main' : 'error'}
+                    fontWeight={remainingHours > 0 ? '' : 'bold'}
+                    color={remainingHours > 0 ? '' : 'error'}
                   >
                     {remainingHours.toFixed(1)}
                   </Typography>

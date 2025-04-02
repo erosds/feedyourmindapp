@@ -581,13 +581,13 @@ function PackageListPage() {
 
                     <TableCell>{pkg.total_hours}</TableCell>
                     <TableCell sx={{
-                      color: parseFloat(pkg.remaining_hours) > 0
-                        ? (pkg.status === 'expired' ? 'error.main' : 'primary.main')
-                        : 'text.primary',
-                      fontWeight: parseFloat(pkg.remaining_hours) > 0 ? 'bold' : 'normal'
+                      fontWeight: parseFloat(pkg.remaining_hours) > 0
+                      ? (pkg.status !== 'in_progress' ? 'bold' : '')
+                      : ''
                     }}>
                       {parseFloat(pkg.remaining_hours).toFixed(1)}
-                    </TableCell>                    <TableCell>
+                    </TableCell>                    
+                    <TableCell>
                       <Chip
                         label={
                           pkg.status === 'in_progress'
