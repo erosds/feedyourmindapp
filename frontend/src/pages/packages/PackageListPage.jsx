@@ -31,7 +31,8 @@ import {
   Search as SearchIcon,
   Delete as DeleteIcon,
   Today as TodayIcon,
-  Payment as PaymentIcon
+  Payment as PaymentIcon,
+  Timer as TimerIcon,
 } from '@mui/icons-material';
 import { packageService, studentService, lessonService } from '../../services/api';
 import { format, parseISO, isToday, isThisWeek, isThisMonth } from 'date-fns';
@@ -50,6 +51,7 @@ function PackageListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPackages, setFilteredPackages] = useState([]);
   const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, month
+  const [statusFilter, setStatusFilter] = useState('all'); // all, in_progress, expiring, expired, completed
   const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid
   const { currentUser, isAdmin } = useAuth(); // Add isAdmin here
 
@@ -74,11 +76,23 @@ function PackageListPage() {
       // Se c'è un filtro iniziale impostato dalla dashboard, applicalo
       if (location.state.initialFilter === 'expiring') {
         // Imposta il filtro per i pacchetti in scadenza
-        setTimeFilter(location.state.timeFilter || 'week');
-        setPaymentFilter('active'); // Solo pacchetti attivi
+        setStatusFilter('expiring');
       } else if (location.state.initialFilter === 'expired') {
         // Imposta il filtro per i pacchetti scaduti
-        setPaymentFilter('expired');
+        setStatusFilter('expired');
+
+        // Se è specificato anche un filtro di pagamento, applicalo
+        if (location.state.paymentFilter) {
+          setPaymentFilter(location.state.paymentFilter);
+        }
+      }
+
+      // Applica filtri specifici se presenti
+      if (location.state.statusFilter) {
+        setStatusFilter(location.state.statusFilter);
+      }
+      if (location.state.paymentFilter) {
+        setPaymentFilter(location.state.paymentFilter);
       }
     }
   }, [location.state]);
@@ -131,6 +145,24 @@ function PackageListPage() {
     return 0;
   };
 
+  const isPackageExpiring = (pkg) => {
+    const expiryDate = parseISO(pkg.expiry_date);
+
+    // Ottieni il lunedì della settimana corrente
+    const today = new Date();
+    const dayOfWeek = today.getDay() || 7; // 0 per domenica, trasformato in 7
+    const mondayThisWeek = new Date(today);
+    mondayThisWeek.setDate(today.getDate() - dayOfWeek + 1); // Lunedì della settimana corrente
+    mondayThisWeek.setHours(0, 0, 0, 0); // Inizio della giornata
+
+    // Ottieni il lunedì della settimana prossima (7 giorni dopo)
+    const mondayNextWeek = new Date(mondayThisWeek);
+    mondayNextWeek.setDate(mondayThisWeek.getDate() + 7);
+
+    // Controlla se scade tra lunedì di questa settimana e lunedì della prossima
+    return expiryDate > mondayThisWeek && expiryDate <= mondayNextWeek;
+  };
+
   const getComparator = (order, orderBy) => {
     return order === 'desc'
       ? (a, b) => descendingComparator(a, b, orderBy)
@@ -181,7 +213,7 @@ function PackageListPage() {
   useEffect(() => {
     let filtered = [...packages];
 
-    // Filter by search term (student name)
+    // Filtra per termine di ricerca (nome studente)
     if (searchTerm.trim() !== '') {
       const lowercaseSearch = searchTerm.toLowerCase();
       filtered = filtered.filter((pkg) => {
@@ -190,10 +222,10 @@ function PackageListPage() {
       });
     }
 
-    // Filter by period
+    // Filtra per periodo
     if (timeFilter !== 'all') {
       filtered = filtered.filter(pkg => {
-        // Use start_date for period filtering
+        // Usa start_date per il filtro periodo
         const startDate = parseISO(pkg.start_date);
         switch (timeFilter) {
           case 'today':
@@ -208,7 +240,25 @@ function PackageListPage() {
       });
     }
 
-    // Filter by payment status
+    // Filtra per stato del pacchetto
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(pkg => {
+        switch (statusFilter) {
+          case 'in_progress':
+            return pkg.status === 'in_progress' && !isPackageExpiring(pkg);
+          case 'expiring':
+            return pkg.status === 'in_progress' && isPackageExpiring(pkg);
+          case 'expired':
+            return pkg.status === 'expired';
+          case 'completed':
+            return pkg.status === 'completed';
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filtra per stato pagamento
     if (paymentFilter !== 'all') {
       filtered = filtered.filter(pkg => {
         switch (paymentFilter) {
@@ -216,21 +266,21 @@ function PackageListPage() {
             return pkg.is_paid;
           case 'unpaid':
             return !pkg.is_paid;
-          case 'expired':
-            return pkg.status === 'expired';
-          case 'active':
-            return pkg.status === 'in_progress';
           default:
             return true;
         }
       });
     }
 
-    // Apply sorting
+    // Applica l'ordinamento
     const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
     setFilteredPackages(sortedFiltered);
-    setPage(0); // Reset to first page after filtering
-  }, [searchTerm, packages, students, timeFilter, paymentFilter, order, orderBy]);
+    setPage(0); // Reset alla prima pagina dopo il filtraggio
+  }, [searchTerm, packages, students, timeFilter, statusFilter, paymentFilter, order, orderBy]);
+
+  const handleStatusFilterChange = (event) => {
+    setStatusFilter(event.target.value);
+  };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -376,7 +426,7 @@ function PackageListPage() {
 
       <Box mb={3}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={3.5}>
+          <Grid item xs={12} md={4}>
             <TextField
               fullWidth
               variant="outlined"
@@ -388,7 +438,9 @@ function PackageListPage() {
               }}
             />
           </Grid>
-          <Grid item xs={12} md={3}>
+
+          {/* Filtro per periodo */}
+          <Grid item xs={12} md={2.5}>
             <FormControl fullWidth variant="outlined">
               <InputLabel id="time-filter-label">Periodo</InputLabel>
               <Select
@@ -409,25 +461,49 @@ function PackageListPage() {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={3}>
+
+          {/* Filtro per stato del pacchetto */}
+          <Grid item xs={12} md={2.5}>
             <FormControl fullWidth variant="outlined">
-              <InputLabel id="payment-filter-label">Stato</InputLabel>
+              <InputLabel id="status-filter-label">Stato Pacchetto</InputLabel>
+              <Select
+                labelId="status-filter-label"
+                value={statusFilter}
+                onChange={handleStatusFilterChange}
+                label="Stato Pacchetto"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <TimerIcon />
+                  </InputAdornment>
+                }
+              >
+                <MenuItem value="all">Tutti gli stati</MenuItem>
+                <MenuItem value="in_progress">In corso</MenuItem>
+                <MenuItem value="expiring">In scadenza</MenuItem>
+                <MenuItem value="expired">Scaduti</MenuItem>
+                <MenuItem value="completed">Completati</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Filtro per pagamento */}
+          <Grid item xs={12} md={2.5}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="payment-filter-label">Pagamento</InputLabel>
               <Select
                 labelId="payment-filter-label"
                 value={paymentFilter}
                 onChange={handlePaymentFilterChange}
-                label="Stato"
+                label="Pagamento"
                 startAdornment={
                   <InputAdornment position="start">
                     <PaymentIcon />
                   </InputAdornment>
                 }
               >
-                <MenuItem value="all">Tutti i pacchetti</MenuItem>
+                <MenuItem value="all">Tutti</MenuItem>
                 <MenuItem value="paid">Pagati</MenuItem>
                 <MenuItem value="unpaid">Non pagati</MenuItem>
-                <MenuItem value="active">In corso</MenuItem>
-                <MenuItem value="expired">Scaduti</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -480,13 +556,23 @@ function PackageListPage() {
                       {format(parseISO(pkg.start_date), 'dd/MM/yyyy', { locale: it })}
                     </TableCell>
                     <TableCell>
-                      {format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it })}
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it })}
+                        {pkg.extension_count > 0 && (
+                          <Chip
+                            label={`+${pkg.extension_count}`}
+                            color="secondary"
+                            size="small"
+                            sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
+                          />
+                        )}
+                      </Box>
                     </TableCell>
                     <TableCell>{pkg.total_hours}</TableCell>
                     <TableCell sx={{
-                      color: parseFloat(pkg.remaining_hours) > 0 
-                      ? (pkg.status === 'expired' ? 'warning.main' : 'primary.main') 
-                      : 'text.primary',
+                      color: parseFloat(pkg.remaining_hours) > 0
+                        ? (pkg.status === 'expired' ? 'warning.main' : 'primary.main')
+                        : 'text.primary',
                       fontWeight: parseFloat(pkg.remaining_hours) > 0 ? 'bold' : 'normal'
                     }}>
                       {parseFloat(pkg.remaining_hours).toFixed(1)}

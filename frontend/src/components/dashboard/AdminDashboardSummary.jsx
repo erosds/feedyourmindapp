@@ -64,24 +64,24 @@ function AdminDashboardSummary({
 
   // Function to navigate to packages page with proper filter
   const navigateToPackages = (filter) => {
-    // If a specific filter is provided, navigate with query params or state
     if (filter === 'expiring') {
-      // Navigate to packages page with filter for expiring packages
+      // Naviga alla pagina pacchetti con filtro per pacchetti in scadenza
       navigate('/packages', {
         state: {
           initialFilter: 'expiring',
-          timeFilter: periodFilter
+          statusFilter: 'expiring'
         }
       });
     } else if (filter === 'unpaid') {
-      // Navigate to packages page with filter for unpaid packages
+      // Naviga alla pagina pacchetti con filtro per pacchetti non pagati
       navigate('/packages', {
         state: {
-          initialFilter: 'expired'
+          initialFilter: 'expired',
+          paymentFilter: 'unpaid'
         }
       });
     } else {
-      // Default navigation without filters
+      // Navigazione di default senza filtri
       navigate('/packages');
     }
   };
@@ -130,16 +130,29 @@ function AdminDashboardSummary({
 
   // Calculate expiring packages
   const expiringPackages = useMemo(() => {
-    const { start, end } = getPeriodInterval();
+    // Ottieni il lunedì della settimana corrente
+    const today = new Date();
+    const dayOfWeek = today.getDay() || 7; // 0 per domenica, trasformato in 7
+    const mondayThisWeek = new Date(today);
+    mondayThisWeek.setDate(today.getDate() - dayOfWeek + 1); // Lunedì della settimana corrente
+    mondayThisWeek.setHours(0, 0, 0, 0); // Inizio della giornata
+    
+    // Ottieni il lunedì della settimana prossima (7 giorni dopo)
+    const mondayNextWeek = new Date(mondayThisWeek);
+    mondayNextWeek.setDate(mondayThisWeek.getDate() + 7);
+    
+    // Filtra i pacchetti in scadenza
     return allPackages.filter(pkg => {
       const expiryDate = parseISO(pkg.expiry_date);
-      // Packages expiring in the current period
+      
+      // Pacchetti la cui scadenza è compresa tra il lunedì di questa settimana e il lunedì della prossima (inclusi)
       return (
-        isWithinInterval(expiryDate, { start, end }) &&
-        (pkg.status === 'in_progress' || pkg.status === 'expired')
+        pkg.status === 'in_progress' && // Solo pacchetti in corso
+        expiryDate >= mondayThisWeek && 
+        expiryDate <= mondayNextWeek
       );
     });
-  }, [allPackages, periodFilter]);
+  }, [allPackages]);
 
   // Calculate expired unpaid packages
   const expiredPackages = useMemo(() => {

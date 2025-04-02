@@ -156,7 +156,6 @@ export const packageService = {
     return api.delete(`/packages/${id}`);
   },
 
-  // Add this to packageService object
   cancelExtension: async (packageId) => {
     return api.put(`/packages/${packageId}/cancel-extension`);
   },

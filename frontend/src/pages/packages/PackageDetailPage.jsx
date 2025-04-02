@@ -35,7 +35,7 @@ import {
 } from '@mui/icons-material';
 import { format, parseISO, isAfter, differenceInDays } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { packageService, studentService, lessonService, professorService } from '../../services/api';
+import { packageService, studentService, lessonService } from '../../services/api';
 import PackageCalendar from '../../components/packages/PackageCalendar';
 import AddLessonDialog from '../../components/dashboard/AddLessonDialog';
 import { useAuth } from '../../context/AuthContext'; // Assicurati di importare useAuth
@@ -161,36 +161,6 @@ function PackageDetailPage() {
     };
   };
 
-  const calculateExtensionWeeks = (startDate, expiryDate) => {
-    if (!startDate || !expiryDate) return 0;
-
-    // Parse dates if they're strings
-    const start = typeof startDate === 'string' ? parseISO(startDate) : startDate;
-    const expiry = typeof expiryDate === 'string' ? parseISO(expiryDate) : expiryDate;
-
-    // Calculate what the original expiry date would be (4 weeks from start)
-    const baseExpiryDate = calculateBaseExpiryDate(start);
-
-    // Calculate the difference in days
-    const diffDays = differenceInDays(expiry, baseExpiryDate);
-
-    // Return the number of weeks (rounded down)
-    return Math.floor(diffDays / 7);
-  };
-
-  const calculateBaseExpiryDate = (startDate) => {
-    // Find the Monday of the week
-    const weekday = startDate.getDay() || 7; // Convert Sunday (0) to 7
-    const monday = new Date(startDate);
-    monday.setDate(startDate.getDate() - weekday + 1); // Adjust to Monday
-
-    // Add 4 weeks (28 days)
-    const expiryDate = new Date(monday);
-    expiryDate.setDate(monday.getDate() + 28);
-
-    return expiryDate;
-  };
-
   const handleEditPrice = () => {
     setPriceValue(parseFloat(packageData.package_cost || 0));
     setIsEditingPrice(true);
@@ -268,44 +238,32 @@ function PackageDetailPage() {
 
   const handleCancelExtension = async () => {
     try {
-      // Calculate how many extension weeks are currently applied
-      const extensionWeeks = calculateExtensionWeeks(
-        parseISO(packageData.start_date), 
-        parseISO(packageData.expiry_date)
-      );
-      
-      // If there are no extensions, don't do anything
-      if (extensionWeeks <= 0) {
-        alert('Non ci sono estensioni da annullare.');
-        return;
-      }
-      
-      // Get the date of the week that will be removed
+      // Calcola la settimana di estensione
+      const expiryDate = parseISO(packageData.expiry_date);
       const lastWeekStart = new Date(expiryDate);
-      lastWeekStart.setDate(lastWeekStart.getDate() - 7); // 1 week before current expiry
-      
-      // Check if there are lessons in this week
+      lastWeekStart.setDate(lastWeekStart.getDate() - 7); // 1 settimana prima della scadenza
+
+      // Controlla se ci sono lezioni nella settimana da rimuovere
       const hasLessonsInLastWeek = lessons.some(lesson => {
         const lessonDate = parseISO(lesson.lesson_date);
         return lessonDate > lastWeekStart && lessonDate <= expiryDate;
       });
-  
+
       if (hasLessonsInLastWeek) {
         alert('Non è possibile annullare l\'estensione perché ci sono lezioni programmate nella settimana da rimuovere.');
         return;
       }
-  
-      // Call the cancelExtension endpoint
+
+      // Solo se non ci sono lezioni, prosegui con la cancellazione dell'estensione
       await packageService.cancelExtension(id);
-      
-      // Reload package data
       const packageResponse = await packageService.getById(id);
       setPackageData(packageResponse.data);
+
     } catch (err) {
-      console.error('Error canceling extension:', err);
       alert('Errore durante l\'annullamento dell\'estensione. Riprova più tardi.');
     }
-  }
+  };
+
 
   const handleDeletePackage = async () => {
     try {
@@ -423,7 +381,7 @@ function PackageDetailPage() {
             )}
 
           {/* Pulsante per annullare l'estensione, visibile solo se ci sono estensioni */}
-          {calculateExtensionWeeks(parseISO(packageData.start_date), parseISO(packageData.expiry_date)) > 0 && (
+          {packageData.extension_count > 0 && (
             <Button
               variant="outlined"
               color="warning"
@@ -516,6 +474,9 @@ function PackageDetailPage() {
                 </Grid>
 
                 <Grid item xs={12} md={4}>
+                  <Typography variant="body2" color="text.secondary">
+                    Data di Scadenza
+                  </Typography>
                   <Typography
                     variant="body1"
                     fontWeight="medium"
@@ -523,9 +484,9 @@ function PackageDetailPage() {
                     gutterBottom
                   >
                     {format(parseISO(packageData.expiry_date), 'dd MMMM yyyy', { locale: it })}
-                    {calculateExtensionWeeks(parseISO(packageData.start_date), parseISO(packageData.expiry_date)) > 0 && (
+                    {packageData.extension_count > 0 && (
                       <Chip
-                        label={`+${calculateExtensionWeeks(parseISO(packageData.start_date), parseISO(packageData.expiry_date))}`}
+                        label={`+${packageData.extension_count}`}
                         color="secondary"
                         size="small"
                         sx={{ ml: 1 }}

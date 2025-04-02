@@ -242,7 +242,7 @@ class PackageResponse(BaseModel):
     payment_date: Optional[date]
     remaining_hours: Decimal
     expiry_date: date
-    extension_count: int = 0
+    extension_count: int
 
     created_at: datetime
     

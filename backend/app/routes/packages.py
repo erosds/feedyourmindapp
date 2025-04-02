@@ -225,9 +225,7 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
             base_expiry_date = base_expiry_date + timedelta(days=7 * db_package.extension_count)
         
         update_data["expiry_date"] = base_expiry_date
-    
-    # Rest of the function remains the same...
-    
+        
     # Validate total hours (must be >= hours used)
     if "total_hours" in update_data and update_data["total_hours"] < hours_used:
         raise HTTPException(
@@ -266,9 +264,7 @@ def extend_package_expiry(package_id: int, db: Session = Depends(get_db)):
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
-    
-    from datetime import timedelta
-    
+        
     # Calcola il lunedì successivo
     current_expiry = db_package.expiry_date
     days_until_next_monday = 7  # Se siamo lunedì, andiamo al lunedì successivo
@@ -302,7 +298,10 @@ def cancel_package_extension(package_id: int, db: Session = Depends(get_db)):
     
     # Simply subtract 7 days from the current expiry date
     db_package.expiry_date = db_package.expiry_date - timedelta(days=7)
-    
+    # Nel backend, in cancel_package_extension()
+    if db_package.extension_count > 0:
+        db_package.extension_count -= 1
+
     # Make sure we don't go below the base expiry date
     if db_package.expiry_date < base_expiry_date:
         db_package.expiry_date = base_expiry_date

@@ -354,8 +354,6 @@ function AddLessonDialog({
           Aggiungi Lezione per {selectedDay ? format(selectedDay, "EEEE d MMMM yyyy", { locale: it }) : ""}
         </DialogTitle>
         <DialogContent>
-          {/* ...codice esistente... */}
-
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Selezione studente - nascondi o disabilita nel contesto del pacchetto */}
             <Grid item xs={12} md={6}>
