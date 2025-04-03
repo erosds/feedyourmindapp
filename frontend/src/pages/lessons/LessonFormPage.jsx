@@ -172,8 +172,7 @@ function LessonFormPage() {
       is_paid: lesson.is_paid !== undefined ? lesson.is_paid : true,
       payment_date: paymentDate,
       price: lesson.price || 0, // Use existing price or default to 0
-      is_online: lesson.is_online || false  // Add this line
-
+      is_online: lesson.is_online !== undefined ? lesson.is_online : false
     });
   };
 

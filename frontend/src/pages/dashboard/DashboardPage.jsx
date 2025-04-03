@@ -56,7 +56,6 @@ function DashboardPage() {
   const [packageLessons, setPackageLessons] = useState({});
 
   // Stato per il form di aggiunta lezione
-  // Stato per il form di aggiunta lezione
   const [lessonForm, setLessonForm] = useState({
     professor_id: selectedProfessor || (currentUser ? currentUser.id : ''), // Usa selectedProfessor se disponibile
     student_id: '',

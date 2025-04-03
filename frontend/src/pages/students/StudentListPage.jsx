@@ -121,27 +121,30 @@ function StudentListPage() {
     return stabilizedThis.map((el) => el[0]);
   };
 
-  // Funzione per caricare i pacchetti per tutti gli studenti
-  const fetchStudentPackages = async (studentsData) => {
-    try {
-      const packagesMap = {};
+  // Modificare fetchStudentPackages per usare Promise.all e ridurre le chiamate
+const fetchStudentPackages = async (studentsData) => {
+  try {
+    // Carica i pacchetti per TUTTI gli studenti in parallelo
+    const packagesResponses = await Promise.all(
+      studentsData.map(student => packageService.getByStudent(student.id))
+    );
+    
+    // Crea la mappa dei pacchetti
+    const packagesMap = packagesResponses.reduce((acc, response, index) => {
+      const student = studentsData[index];
+      const sortedPackages = response.data.sort((a, b) => 
+        new Date(b.start_date) - new Date(a.start_date)
+      );
       
-      for (const student of studentsData) {
-        const packagesResponse = await packageService.getByStudent(student.id);
-        
-        // Trova l'ultimo pacchetto
-        const sortedPackages = packagesResponse.data.sort((a, b) => 
-          new Date(b.start_date) - new Date(a.start_date)
-        );
-        
-        packagesMap[student.id] = sortedPackages.length > 0 ? sortedPackages[0] : null;
-      }
-      
-      setStudentPackages(packagesMap);
-    } catch (err) {
-      console.error('Error fetching student packages:', err);
-    }
-  };
+      acc[student.id] = sortedPackages.length > 0 ? sortedPackages[0] : null;
+      return acc;
+    }, {});
+    
+    setStudentPackages(packagesMap);
+  } catch (err) {
+    console.error('Error fetching student packages:', err);
+  }
+};
 
   // Funzione per ottenere lo stato del pacchetto come componente
   const getPackageStatusChip = (studentId) => {

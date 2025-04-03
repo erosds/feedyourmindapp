@@ -438,23 +438,23 @@ function AddLessonDialog({
             </Grid>
 
             {/* Toggle per lezione online */}
-            <Grid item xs={12} md={4}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    name="is_online"
-                    checked={lessonForm.is_online || false}
-                    onChange={(e) => {
-                      setLessonForm(prev => ({
-                        ...prev,
-                        is_online: e.target.checked
-                      }));
-                    }}
-                  />
-                }
-                label="Lezione online"
-              />
-            </Grid>
+<Grid item xs={12} md={4}>
+  <FormControlLabel
+    control={
+      <Switch
+        name="is_online"
+        checked={lessonForm.is_online || false}
+        onChange={(e) => {
+          setLessonForm(prev => ({
+            ...prev,
+            is_online: e.target.checked
+          }));
+        }}
+      />
+    }
+    label="Lezione online"
+  />
+</Grid>
 
             {/* Toggle per pacchetto - nascondi nel contesto del pacchetto */}
             {context !== 'packageDetail' && (
