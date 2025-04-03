@@ -136,18 +136,16 @@ export const packageService = {
     return api.get(`/packages/student/${studentId}/active`);
   },
   
-  create: async (data, allowMultiple = false, studentIds = null) => {
-    // Ensure student_ids is used consistently
+  create: async (data) => {
+    return api.post('/packages/', data);
+  },
+
+  create: async (data, allowMultiple = false) => {
+    // Assicura che student_ids sia un array nel caso di un solo studente
     if (data.student_id && !data.student_ids) {
       data.student_ids = [data.student_id];
       delete data.student_id;
     }
-    
-    // If additional student IDs are provided, use them
-    if (studentIds) {
-      data.student_ids = studentIds;
-    }
-
     return api.post(`/packages/?allow_multiple=${allowMultiple}`, data);
   },
   
@@ -156,12 +154,23 @@ export const packageService = {
   },
 
   update: async (id, data) => {
-    // Ensure student_ids is used consistently
+    // 1. Verifica se student_ids viene ricevuto correttamente
+    console.log('PackageService.update - data ricevuta:', data);
+    
+    // 2. Assicurati che student_ids sia un array
     if (data.student_id && !data.student_ids) {
       data.student_ids = [data.student_id];
       delete data.student_id;
     }
     
+    // 3. Assicurati che student_ids contenga valori numerici
+    if (data.student_ids) {
+      data.student_ids = data.student_ids.map(id => 
+        typeof id === 'string' ? parseInt(id, 10) : id
+      );
+    }
+    
+    console.log('PackageService.update - data modificata:', data);
     return api.put(`/packages/${id}`, data);
   },
   
