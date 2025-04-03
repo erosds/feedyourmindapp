@@ -66,7 +66,7 @@ function DashboardPage() {
     is_package: false,
     package_id: null,
     hourly_rate: '12.5',
-    is_paid: true,
+    is_paid: false,
     payment_date: new Date(), // Default oggi
   });
 

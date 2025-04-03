@@ -5,6 +5,7 @@ import {
   Alert,
   Box,
   CircularProgress,
+  duration,
   Paper,
   Typography,
 } from '@mui/material';
@@ -61,9 +62,9 @@ function LessonFormPage() {
     is_package: location.state?.is_package || false,
     package_id: location.state?.package_id || null,
     hourly_rate: '12.5',
-    is_paid: true,
+    is_paid: false,
     payment_date: new Date(), // Default to today
-    price: 20,
+    price: 20 * duration,
   });
 
   // Load required data
@@ -433,7 +434,7 @@ const navigateToNewPackage = () => {
         lesson_date: format(values.lesson_date, 'yyyy-MM-dd'),
         start_time: values.start_time ? format(values.start_time, 'HH:mm:ss') : null,
         payment_date: values.is_paid && values.payment_date ? format(values.payment_date, 'yyyy-MM-dd') : null,
-        price: values.is_package ? 0 : (values.price || 0), // Set to 0 for package, otherwise use provided price or default
+        price: values.is_package ? 0 : (values.price || values.duration * 20), // Set to 0 for package, otherwise use provided price or default
 
       };
 
