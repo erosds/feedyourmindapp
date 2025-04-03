@@ -418,7 +418,7 @@ function DayProfessorsDialog({ open, onClose, selectedDay, professorSchedules, h
                                   width: `${width}%`,
                                   height: `${barHeight}px`,
                                   top: `${topPosition}px`,
-                                  backgroundColor: 'primary.main',
+                                  backgroundColor: lesson.is_online ? 'secondary.main' : 'primary.main',
                                   borderRadius: '3px',
                                   opacity: 0.8,
                                   '&:hover': {

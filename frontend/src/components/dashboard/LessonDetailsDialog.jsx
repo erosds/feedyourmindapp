@@ -30,13 +30,13 @@ function LessonDetailsDialog({ open, onClose, selectedLesson, studentsMap }) {
     navigate(`/lessons/${selectedLesson.id}`);
     onClose(); // Chiudi il dialogo dopo la navigazione
   };
-  
+
   // Funzione per modificare la lezione
   const handleEditLesson = () => {
     navigate(`/lessons/edit/${selectedLesson.id}`);
     onClose(); // Chiudi il dialogo dopo la navigazione
   };
-  
+
   // Funzione per eliminare la lezione
   const handleDeleteLesson = async () => {
     if (window.confirm(`Sei sicuro di voler eliminare la lezione #${selectedLesson.id}? Questa azione non può essere annullata.`)) {
@@ -55,15 +55,15 @@ function LessonDetailsDialog({ open, onClose, selectedLesson, studentsMap }) {
   };
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={onClose}
       maxWidth="md"
       fullWidth
     >
       <DialogTitle>
         <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6">Dettagli Lezione #{selectedLesson.id}</Typography>
+          <Typography variant="h6">Dettagli lezione #{selectedLesson.id}</Typography>
           <Box>
             <Tooltip title="Modifica lezione">
               <IconButton color="primary" onClick={handleEditLesson} size="small" sx={{ mr: 1 }}>
@@ -87,14 +87,14 @@ function LessonDetailsDialog({ open, onClose, selectedLesson, studentsMap }) {
               {format(parseISO(selectedLesson.lesson_date), "EEEE d MMMM yyyy", { locale: it })}
             </Typography>
           </Grid>
-          
+
           <Grid item xs={12} md={3}>
             <Typography variant="subtitle2" color="text.secondary">Orario</Typography>
             <Typography variant="body1" fontWeight="medium">
               {selectedLesson.start_time ? selectedLesson.start_time.substring(0, 5) : '00:00'}
             </Typography>
           </Grid>
-          
+
           <Grid item xs={12} md={3}>
             <Typography variant="subtitle2" color="text.secondary">Studente</Typography>
             <Typography variant="body1" fontWeight="medium">
@@ -112,35 +112,47 @@ function LessonDetailsDialog({ open, onClose, selectedLesson, studentsMap }) {
           </Grid>
 
           {/* Seconda riga di informazioni */}
-          
-          
+
+
           <Grid item xs={12} md={3}>
             <Typography variant="subtitle2" color="text.secondary">Tipo</Typography>
             <Box>
               {selectedLesson.is_package ? (
-                <Chip 
-                  label={`Pacchetto #${selectedLesson.package_id}`} 
-                  color="primary" 
-                  variant="outlined" 
+                <Chip
+                  label={`Pacchetto #${selectedLesson.package_id}`}
+                  color="primary"
+                  variant="outlined"
                   size="small"
                 />
               ) : (
-                <Chip 
-                  label="Lezione singola" 
-                  variant="outlined" 
+                <Chip
+                  label="Lezione singola"
+                  variant="outlined"
                   size="small"
                 />
               )}
             </Box>
           </Grid>
-          
+
+          <Grid item xs={12} md={3}>
+            <Typography variant="subtitle2" color="text.secondary">Modalità</Typography>
+            <Box>
+              <Chip
+                label={selectedLesson.is_online ? "Online" : "In presenza"}
+                color={selectedLesson.is_online ? "secondary" : "default"}
+                variant="outlined"
+                size="small"
+              />
+            </Box>
+          </Grid>
+
           <Grid item xs={12} md={3}>
             <Typography variant="subtitle2" color="text.secondary">Tariffa oraria</Typography>
             <Typography variant="body1" fontWeight="medium">
               €{parseFloat(selectedLesson.hourly_rate).toFixed(2)}
             </Typography>
           </Grid>
-          
+
           <Grid item xs={12} md={3}>
             <Typography variant="subtitle2" color="text.secondary">Totale</Typography>
             <Typography variant="body1" fontWeight="bold" color="primary">
@@ -154,19 +166,19 @@ function LessonDetailsDialog({ open, onClose, selectedLesson, studentsMap }) {
               <Grid item xs={12}>
                 <Divider sx={{ my: 1 }} />
               </Grid>
-              
+
               <Grid item xs={12} md={3}>
                 <Typography variant="subtitle2" color="text.secondary">Stato pagamento</Typography>
                 <Box>
-                  <Chip 
-                    label={selectedLesson.is_paid ? "Pagata" : "Non pagata"} 
-                    color={selectedLesson.is_paid ? "success" : "error"} 
+                  <Chip
+                    label={selectedLesson.is_paid ? "Pagata" : "Non pagata"}
+                    color={selectedLesson.is_paid ? "success" : "error"}
                     variant="outlined"
                     size="small"
                   />
                 </Box>
               </Grid>
-              
+
               {selectedLesson.is_paid && selectedLesson.payment_date && (
                 <Grid item xs={12} md={3}>
                   <Typography variant="subtitle2" color="text.secondary">Data pagamento</Typography>

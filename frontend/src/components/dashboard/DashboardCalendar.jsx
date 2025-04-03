@@ -25,6 +25,7 @@ import {
   startOfWeek
 } from 'date-fns';
 import { it } from 'date-fns/locale';
+import WifiIcon from '@mui/icons-material/Wifi';
 
 function DashboardCalendar({
   currentWeekStart,
@@ -190,6 +191,27 @@ function DashboardCalendar({
                               height: 16,
                               fontSize: '0.650rem',
                               opacity: 0.8
+                            }}
+                          />
+                        )}
+                        {lesson.is_online && (
+                          <Chip
+                            icon={<WifiIcon style={{ fontSize: '0.7rem' }} />}
+                            size="small"
+                            color="secondary"
+                            sx={{
+                              position: 'absolute',
+                              bottom: 3,
+                              right: 3,
+                              borderRadius: 1,
+                              width: 'auto',
+                              height: 16,
+                              fontSize: '0.650rem',
+                              opacity: 0.8,
+                              '& .MuiChip-icon': {
+                                marginLeft: '5px',
+                                marginRight: '-10px'
+                              }
                             }}
                           />
                         )}

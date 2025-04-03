@@ -283,7 +283,7 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
                               width: `${width}%`,
                               height: `${barHeight}px`,
                               top: `${topPosition}px`,
-                              backgroundColor: 'primary.main',
+                              backgroundColor: lesson.is_online ? 'secondary.main' : 'primary.main',
                               borderRadius: '3px',
                               opacity: 0.85,
                               '&:hover': {
