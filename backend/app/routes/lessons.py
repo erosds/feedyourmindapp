@@ -334,7 +334,9 @@ def create_lesson(
             is_paid=True,  # Le lezioni da pacchetto sono considerate pagate
             start_time=start_time_obj,  # Usa l'oggetto time invece della stringa
             payment_date=payment_date,
-            price=Decimal('0')
+            price=Decimal('0'),
+            is_online=lesson.is_online  # Aggiungi questo campo
+
         )
         
         db.add(db_lesson)
@@ -365,8 +367,8 @@ def create_lesson(
             is_paid=lesson.is_paid,
             start_time=start_time_obj,  # Usa l'oggetto time invece della stringa
             payment_date=payment_date,
-            price=lesson.price if lesson.price is not None else Decimal('0')  # Use provided price or default to 0
-
+            price=lesson.price if lesson.price is not None else Decimal('0'),  # Use provided price or default to 0
+            is_online=lesson.is_online  # Aggiungi questo campo
         )
         
         db.add(db_lesson)
