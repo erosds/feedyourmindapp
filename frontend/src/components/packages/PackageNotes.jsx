@@ -40,23 +40,38 @@ const PackageNotes = ({ packageId, initialNotes, onNotesUpdate }) => {
       setLoading(true);
       setError('');
       
-      await packageService.update(packageId, { notes });
+      // Fetch the full package data before updating
+      const packageResponse = await packageService.getById(packageId);
+      const currentPackageData = packageResponse.data;
+      
+      // Update with full package data, just changing notes
+      await packageService.update(packageId, {
+        ...currentPackageData, // Spread existing package data
+        notes: notes.trim() // Only modify notes
+      });
       
       setSuccess('Annotazioni salvate con successo');
       setIsEditing(false);
       
-      // Notifica il componente padre dell'aggiornamento
       if (onNotesUpdate) {
-        onNotesUpdate(notes);
+        onNotesUpdate(notes.trim());
       }
       
-      // Nascondi il messaggio di successo dopo 3 secondi
       setTimeout(() => {
         setSuccess('');
       }, 3000);
     } catch (err) {
-      console.error('Errore durante il salvataggio delle note:', err);
-      setError('Si è verificato un errore durante il salvataggio. Riprova più tardi.');
+      console.error('Errore dettagliato durante il salvataggio delle note:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      
+      const errorMessage = err.response?.data?.detail 
+        || err.message 
+        || 'Si è verificato un errore durante il salvataggio. Riprova più tardi.';
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

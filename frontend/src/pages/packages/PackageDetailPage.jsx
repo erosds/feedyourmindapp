@@ -171,9 +171,19 @@ function PackageDetailPage() {
   };
 
   const handleNotesUpdate = (updatedNotes) => {
-    setPackageData({
-      ...packageData,
-      notes: updatedNotes
+    // Use functional update to ensure we're working with the most recent state
+    setPackageData(prevData => {
+      // Create a new object with updated notes
+      const newData = {
+        ...prevData,
+        notes: updatedNotes,
+        student_ids: prevData.student_ids
+      };
+      
+      // Optional: Log to help debug
+      console.log('Package data updated with new notes:', newData);
+      
+      return newData;
     });
   };
 
@@ -806,7 +816,6 @@ function PackageDetailPage() {
         selectedPackage={packageData}
         formError={null}
         formSubmitting={false}
-        handleStudentChange={() => { }} // Funzione vuota perché lo studente è fisso
         handlePackageChange={() => { }} // Funzione vuota perché il pacchetto è fisso
         calculatePackageHours={calculatePackageHours}
         currentUser={currentUser}
