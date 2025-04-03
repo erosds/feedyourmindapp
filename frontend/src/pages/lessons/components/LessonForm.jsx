@@ -31,7 +31,7 @@ const LessonSchema = Yup.object().shape({
   is_package: Yup.boolean(),
   package_id: Yup.number().nullable().when('is_package', {
     is: true,
-    then: () => Yup.number().required('Pacchetto obbligatorio'),
+    then: () => Yup.number().required('Hai scelto parte di un pacchetto, ora seleziona il pacchetto'),
     otherwise: () => Yup.number().nullable(),
   }),
   hourly_rate: Yup.number().positive('La tariffa oraria deve essere positiva').required('Tariffa oraria obbligatoria'),
