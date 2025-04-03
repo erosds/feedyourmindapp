@@ -1,5 +1,4 @@
 // src/services/api.js
-
 import axios from 'axios';
 
 // Configurazione base di axios
@@ -136,10 +135,6 @@ export const packageService = {
     return api.get(`/packages/student/${studentId}/active`);
   },
   
-  create: async (data) => {
-    return api.post('/packages/', data);
-  },
-
   create: async (data, allowMultiple = false) => {
     // Assicura che student_ids sia un array nel caso di un solo studente
     if (data.student_id && !data.student_ids) {
@@ -153,24 +148,40 @@ export const packageService = {
     return api.put(`/packages/${packageId}/extend`);
   },
 
+  // Versione corretta per packageService.update in api.js
   update: async (id, data) => {
-    // 1. Verifica se student_ids viene ricevuto correttamente
-    console.log('PackageService.update - data ricevuta:', data);
+    // 1. Conserva dati separati degli studenti se necessario
+    console.log('PackageService.update - dati ricevuti:', data);
     
-    // 2. Assicurati che student_ids sia un array
+    // 2. Prepara student_ids come array corretto
     if (data.student_id && !data.student_ids) {
+      // Caso 1: è stato fornito solo student_id
       data.student_ids = [data.student_id];
       delete data.student_id;
+    } else if (data.student_id_1 || data.student_id_2 || data.student_id_3) {
+      // Caso 2: sono stati forniti campi separati per ogni studente
+      data.student_ids = [];
+      if (data.student_id_1) data.student_ids.push(data.student_id_1);
+      if (data.student_id_2) data.student_ids.push(data.student_id_2);
+      if (data.student_id_3) data.student_ids.push(data.student_id_3);
+      
+      // Rimuovi i campi separati
+      delete data.student_id_1;
+      delete data.student_id_2;
+      delete data.student_id_3;
+    } else if (!data.student_ids) {
+      // Caso 3: nessun dato studente fornito
+      data.student_ids = [];
     }
     
-    // 3. Assicurati che student_ids contenga valori numerici
+    // 3. Assicurati che student_ids contenga solo valori numerici validi
     if (data.student_ids) {
-      data.student_ids = data.student_ids.map(id => 
-        typeof id === 'string' ? parseInt(id, 10) : id
-      );
+      data.student_ids = data.student_ids
+        .map(id => typeof id === 'string' ? parseInt(id, 10) : id)
+        .filter(id => id !== null && id !== undefined && id !== '' && !isNaN(id));
     }
     
-    console.log('PackageService.update - data modificata:', data);
+    console.log('PackageService.update - dati formattati:', data);
     return api.put(`/packages/${id}`, data);
   },
   

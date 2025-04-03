@@ -222,6 +222,7 @@ class PackageUpdate(BaseModel):
     is_paid: Optional[bool] = None
     payment_date: Optional[date] = None
     notes: Optional[str] = None
+    student_ids: Optional[List[int]] = None
     
     @field_validator('total_hours')
     @classmethod

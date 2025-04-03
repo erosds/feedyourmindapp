@@ -29,6 +29,9 @@ function StudentAutocomplete({
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [hasMoreResults, setHasMoreResults] = useState(false);
   
+  // Assicurati che disabled sia sempre un booleano
+  const isDisabled = disabled === true || disabled === "true";
+  
   // Carica gli studenti se non sono stati forniti come prop
   useEffect(() => {
     const fetchStudents = async () => {
@@ -117,7 +120,7 @@ function StudentAutocomplete({
       getOptionLabel={(option) => `${option.first_name} ${option.last_name}`}
       isOptionEqualToValue={(option, value) => option.id === value.id}
       loading={loading}
-      disabled={disabled}
+      disabled={isDisabled}
       filterOptions={filterOptions}
       ListboxProps={{
         sx: { maxHeight: 300 }

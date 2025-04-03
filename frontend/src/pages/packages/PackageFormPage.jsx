@@ -1,4 +1,4 @@
-// src/pages/packages/PackageFormPage.jsx - Sequential approach
+// src/pages/packages/PackageFormPage.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
@@ -32,9 +32,11 @@ const PackageSchema = Yup.object().shape({
     .positive('Seleziona uno studente valido'),
   student_id_2: Yup.number()
     .nullable()
+    .transform((value) => (isNaN(value) ? null : value))
     .positive('Seleziona uno studente valido'),
   student_id_3: Yup.number()
     .nullable()
+    .transform((value) => (isNaN(value) ? null : value))
     .positive('Seleziona uno studente valido'),
   start_date: Yup.date().required('La data di inizio è richiesta'),
   total_hours: Yup.number()
@@ -73,6 +75,9 @@ function PackageFormPage() {
   const [infoMessage, setInfoMessage] = useState('');
   const [students, setStudents] = useState([]);
   const [packageLessons, setPackageLessons] = useState([]);
+
+  // Track student deletions to warn about related lessons
+  const [hasLessonsPerStudent, setHasLessonsPerStudent] = useState({});
 
   // Initial form state - now with separate student fields
   const [initialValues, setInitialValues] = useState({
@@ -129,6 +134,16 @@ function PackageFormPage() {
           );
           setPackageLessons(filteredLessons);
 
+          // Track which students have lessons
+          const lessonsPerStudent = {};
+          filteredLessons.forEach(lesson => {
+            if (!lessonsPerStudent[lesson.student_id]) {
+              lessonsPerStudent[lesson.student_id] = [];
+            }
+            lessonsPerStudent[lesson.student_id].push(lesson);
+          });
+          setHasLessonsPerStudent(lessonsPerStudent);
+
           // Set form initial values with individual student IDs
           setInitialValues({
             student_id_1: studentIds[0] || '',
@@ -142,6 +157,20 @@ function PackageFormPage() {
             notes: packageData.notes || '',
           });
         }
+
+        // Set info message if we're coming from an overflow action
+        if (location.state?.overflow_from_lesson) {
+          setInfoMessage(`Stai creando un nuovo pacchetto per ${location.state.overflow_hours} ore in eccesso. Sono suggerite ${location.state.suggested_hours} ore totali, ma puoi modificare il valore.`);
+
+          // If a student ID is provided, set it
+          if (location.state.student_id) {
+            setInitialValues(prev => ({
+              ...prev,
+              student_id_1: location.state.student_id,
+              total_hours: location.state.suggested_hours.toString()
+            }));
+          }
+        }
       } catch (err) {
         console.error('Error loading data:', err);
         setError('Unable to load data. Please try refreshing the page.');
@@ -151,32 +180,67 @@ function PackageFormPage() {
     };
 
     fetchInitialData();
-  }, [id, isEditMode]);
+  }, [id, isEditMode, location.state]);
+
+  // Check if a student can be removed (has no lessons)
+  const canRemoveStudent = (studentId) => {
+    if (!isEditMode) return true; // Always allow in create mode
+
+    // Check if student has lessons
+    return !hasLessonsPerStudent[studentId] || hasLessonsPerStudent[studentId].length === 0;
+  };
+
+  // Warn if trying to remove a student with lessons
+  const handleStudentChange = (fieldName, value, currentValue, setFieldValue) => {
+    // If clearing a student with lessons, show warning
+    if (isEditMode && currentValue && !value) {
+      const studentId = currentValue;
+      if (hasLessonsPerStudent[studentId] && hasLessonsPerStudent[studentId].length > 0) {
+        // Find student name
+        const student = students.find(s => s.id === studentId);
+        const studentName = student ? `${student.first_name} ${student.last_name}` : `Studente #${studentId}`;
+
+        const lessonsCount = hasLessonsPerStudent[studentId].length;
+        const confirmMessage = `Attenzione: ${studentName} ha ${lessonsCount} lezioni associate a questo pacchetto. Rimuovendo lo studente, le lezioni rimarranno nel pacchetto ma dovranno essere riassegnate manualmente. Procedere?`;
+
+        if (!window.confirm(confirmMessage)) {
+          return; // Abort change if user cancels
+        }
+      }
+    }
+
+    // If we get here, make the change
+    setFieldValue(fieldName, value);
+  };
 
   // Modified handleSubmit function with improved error handling
+  // Modifica la funzione handleSubmit in PackageFormPage.jsx
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
       setError(null);
-      console.log("Form values at submit:", values);
 
-      // Collect student IDs into an array, filtering out empty values
+      // Migliora la raccolta degli IDs studente, assicurandosi che siano numeri
       const student_ids = [
         values.student_id_1,
         values.student_id_2,
         values.student_id_3
-      ].filter(id => id);
+      ]
+        .filter(id => id !== null && id !== undefined && id !== '')
+        .map(id => typeof id === 'string' ? parseInt(id, 10) : id);
 
-      // Check if total hours < used hours (for editing)
-      if (isEditMode && parseFloat(values.total_hours) < hoursUsed) {
-        setError(`Non puoi impostare meno di ${hoursUsed} ore (ore già utilizzate)`);
+      console.log("IDs studenti raccolti:", student_ids);
+
+      // Verifica che ci sia almeno uno studente
+      if (student_ids.length === 0) {
+        setError('È necessario specificare almeno uno studente');
         setSubmitting(false);
         return;
       }
 
-      // Prepare data for API
+      // Prepara i dati per l'API, assicurandosi che student_ids sia incluso
       const packageData = {
-        student_ids,
+        student_ids,  // Esplicitamente incluso
         start_date: format(new Date(values.start_date), 'yyyy-MM-dd'),
         total_hours: values.total_hours,
         package_cost: values.package_cost || '0',
@@ -187,11 +251,17 @@ function PackageFormPage() {
         notes: values.notes
       };
 
-      console.log("Package data sending to API:", packageData);
+      console.log("Dati pacchetto da inviare all'API:", packageData);
 
-      // API call
+      // Chiamata API con gestione migliorata degli errori
       if (isEditMode) {
-        await packageService.update(id, packageData);
+        try {
+          const response = await packageService.update(id, packageData);
+          console.log("Risposta aggiornamento:", response);
+        } catch (err) {
+          console.error("Dettagli errore API:", err.response?.data || err);
+          throw err;
+        }
       } else {
         const allowMultiple = location.state?.allow_multiple || false;
         await packageService.create(packageData, allowMultiple);
@@ -201,66 +271,28 @@ function PackageFormPage() {
     } catch (err) {
       console.error('Error saving package:', err);
 
-      // Improved error handling for specific cases
-      if (err.response?.status === 409) {
-        // HTTP 409 Conflict typically indicates duplicate package for the student
+      // Gestione errori migliorata
+      let errorMessage = 'Errore durante il salvataggio: ';
+
+      if (err.response?.data) {
         try {
-          const detail = err.response.data.detail;
+          const responseData = err.response.data;
 
-          // Check if detail is an object with a message property
-          if (typeof detail === 'object' && detail.message) {
-            // Get student name from the error message or ID
-            const studentIdMatch = detail.message.match(/Student with ID (\d+)/);
-            const studentId = studentIdMatch ? parseInt(studentIdMatch[1]) : null;
-
-            // Find student name if possible
-            let studentName = "Uno studente";
-            if (studentId) {
-              const student = students.find(s => s.id === studentId);
-              if (student) {
-                studentName = `${student.first_name} ${student.last_name}`;
-              }
-            }
-
-            // Create a user-friendly error message
-            const hoursRemaining = detail.active_package_remaining_hours !== undefined
-              ? ` (${detail.active_package_remaining_hours} ore rimanenti)`
-              : '';
-
-            setError(
-              `${studentName} ha già un pacchetto attivo${hoursRemaining}. ` +
-              `Non puoi creare un nuovo pacchetto finché quello esistente non è completato o scaduto. `
-            );
+          if (typeof responseData.detail === 'object') {
+            errorMessage += responseData.detail.message || JSON.stringify(responseData.detail);
+          } else if (responseData.detail) {
+            errorMessage += responseData.detail;
           } else {
-            setError(`Errore: Uno studente ha già un pacchetto attivo. ${JSON.stringify(detail)}`);
+            errorMessage += JSON.stringify(responseData);
           }
         } catch (e) {
-          setError("Errore: Uno studente ha già un pacchetto attivo. Non puoi creare un nuovo pacchetto finché quello esistente non è completato o scaduto.");
+          errorMessage += 'Errore nella validazione dei dati.';
         }
-      } else {
-        // Default error handling for other cases
-        let errorMessage = 'Errore durante il salvataggio: ';
-
-        if (err.response?.data) {
-          try {
-            const responseData = err.response.data;
-
-            if (typeof responseData.detail === 'object') {
-              errorMessage += responseData.detail.message || JSON.stringify(responseData.detail);
-            } else if (responseData.detail) {
-              errorMessage += responseData.detail;
-            } else {
-              errorMessage += JSON.stringify(responseData);
-            }
-          } catch (e) {
-            errorMessage += 'Errore nella validazione dei dati.';
-          }
-        } else if (err.message) {
-          errorMessage += err.message;
-        }
-
-        setError(errorMessage);
+      } else if (err.message) {
+        errorMessage += err.message;
       }
+
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -325,12 +357,22 @@ function PackageFormPage() {
                       <Grid item xs={12}>
                         <StudentAutocomplete
                           value={values.student_id_1}
-                          onChange={(studentId) => setFieldValue('student_id_1', studentId)}
+                          onChange={(studentId) => handleStudentChange(
+                            'student_id_1',
+                            studentId,
+                            values.student_id_1,
+                            setFieldValue
+                          )}
                           error={touched.student_id_1 && Boolean(errors.student_id_1)}
-                          helperText={(touched.student_id_1 && errors.student_id_1)}
-                          disabled={isEditMode}
+                          helperText={(touched.student_id_1 && errors.student_id_1) ||
+                            (isEditMode && !canRemoveStudent(values.student_id_1) ?
+                              "Questo studente ha lezioni associate" : "")}
+                          disabled={isEditMode && !canRemoveStudent(values.student_id_1)}
                           required={true}
-                          students={students}
+                          students={students.filter(student =>
+                            student.id !== values.student_id_2 &&
+                            student.id !== values.student_id_3
+                          )}
                         />
                       </Grid>
 
@@ -339,10 +381,18 @@ function PackageFormPage() {
                         <Grid item xs={12} >
                           <StudentAutocomplete
                             value={values.student_id_2}
-                            onChange={(studentId) => setFieldValue('student_id_2', studentId)}
+                            onChange={(studentId) => handleStudentChange(
+                              'student_id_2',
+                              studentId,
+                              values.student_id_2,
+                              setFieldValue
+                            )}
                             error={touched.student_id_2 && Boolean(errors.student_id_2)}
-                            helperText={(touched.student_id_2 && errors.student_id_2) || "Secondo studente (pacchetto condiviso)"}
-                            disabled={false}
+                            helperText={(touched.student_id_2 && errors.student_id_2) ||
+                              "Secondo studente (pacchetto condiviso)" ||
+                              (isEditMode && values.student_id_2 && !canRemoveStudent(values.student_id_2) ?
+                                "Questo studente ha lezioni associate" : "")}
+                            disabled={isEditMode && values.student_id_2 && !canRemoveStudent(values.student_id_2)}
                             required={false}
                             students={students.filter(student =>
                               student.id !== values.student_id_1 &&
@@ -357,10 +407,18 @@ function PackageFormPage() {
                         <Grid item xs={12}>
                           <StudentAutocomplete
                             value={values.student_id_3}
-                            onChange={(studentId) => setFieldValue('student_id_3', studentId)}
+                            onChange={(studentId) => handleStudentChange(
+                              'student_id_3',
+                              studentId,
+                              values.student_id_3,
+                              setFieldValue
+                            )}
                             error={touched.student_id_3 && Boolean(errors.student_id_3)}
-                            helperText={(touched.student_id_3 && errors.student_id_3) || "Terzo studente (pacchetto condiviso)"}
-                            disabled={false}
+                            helperText={(touched.student_id_3 && errors.student_id_3) ||
+                              "Terzo studente (pacchetto condiviso)" ||
+                              (isEditMode && values.student_id_3 && !canRemoveStudent(values.student_id_3) ?
+                                "Questo studente ha lezioni associate" : "")}
+                            disabled={isEditMode && values.student_id_3 && !canRemoveStudent(values.student_id_3)}
                             required={false}
                             students={students.filter(student =>
                               student.id !== values.student_id_1 &&
@@ -558,11 +616,11 @@ function PackageFormPage() {
                     </Button>
                   </Box>
                 </Grid>
-            </Grid>
+              </Grid>
             </Form>
           )}
-      </Formik>
-    </Paper>
+        </Formik>
+      </Paper>
     </Box >
   );
 }

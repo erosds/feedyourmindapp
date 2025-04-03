@@ -277,6 +277,7 @@ def read_student_active_package(student_id: int, db: Session = Depends(get_db)):
     
     return active_package
 
+# Modifica della funzione update_package in packages.py
 @router.put("/{package_id}", response_model=models.PackageResponse)
 def update_package(package_id: int, package: models.PackageUpdate, db: Session = Depends(get_db)):
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
@@ -321,9 +322,51 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
         if not update_data["is_paid"] and db_package.is_paid:
             update_data["payment_date"] = None
     
-    # Update all fields
+    # Estrai gli ID degli studenti in modo sicuro
+    student_ids = update_data.pop("student_ids", None)
+    
+    # Aggiorna i campi normali del pacchetto
     for key, value in update_data.items():
         setattr(db_package, key, value)
+    
+    # Aggiorna le relazioni con gli studenti solo se student_ids è stato fornito
+    if student_ids is not None:
+        # Verifica che tutti gli studenti esistano
+        for student_id in student_ids:
+            student = db.query(models.Student).filter(models.Student.id == student_id).first()
+            if not student:
+                raise HTTPException(status_code=404, detail=f"Student with ID {student_id} not found")
+        
+        # Controlla se stai cercando di rimuovere uno studente con lezioni esistenti
+        existing_student_ids = [student.id for student in db_package.students]
+        student_ids_to_remove = set(existing_student_ids) - set(student_ids)
+        
+        for student_id in student_ids_to_remove:
+            # Controlla se lo studente ha lezioni in questo pacchetto
+            has_lessons = db.query(models.Lesson).filter(
+                models.Lesson.package_id == package_id,
+                models.Lesson.student_id == student_id,
+                models.Lesson.is_package == True
+            ).count() > 0
+            
+            if has_lessons:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Non puoi rimuovere lo studente con ID {student_id} perché ha lezioni in questo pacchetto"
+                )
+        
+        # Elimina le relazioni pacchetto-studente esistenti
+        db.query(models.PackageStudent).filter(
+            models.PackageStudent.package_id == package_id
+        ).delete()
+        
+        # Aggiungi nuove relazioni pacchetto-studente
+        for student_id in student_ids:
+            db_package_student = models.PackageStudent(
+                package_id=package_id,
+                student_id=student_id
+            )
+            db.add(db_package_student)
     
     # Save changes
     db.commit()
@@ -333,7 +376,7 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
     
     # Refresh package data
     db.refresh(db_package)
-    return db_package
+    return package_orm_to_response(db_package)  # Use the helper function for consistent response format
 
 @router.put("/{package_id}/extend", response_model=models.PackageResponse)
 def extend_package_expiry(package_id: int, db: Session = Depends(get_db)):
