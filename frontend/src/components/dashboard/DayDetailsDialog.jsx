@@ -370,6 +370,15 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
                         sx={{ ml: 1, height: 18, '& .MuiChip-label': { px: 0.5, fontSize: '0.625rem' } }}
                       />
                     )}
+                    {lesson.is_online && (
+                      <Chip
+                        label="on-line"
+                        size="small"
+                        color="secondary"
+                        variant="outlined"
+                        sx={{ ml: 1, height: 18, '& .MuiChip-label': { px: 0.5, fontSize: '0.625rem' } }}
+                      />
+                    )}
                   </Box>
                   <Box display="flex" alignItems="center">
                     <Typography variant="body2" sx={{ mr: 2 }}>

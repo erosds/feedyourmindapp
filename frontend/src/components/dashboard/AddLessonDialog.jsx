@@ -431,7 +431,7 @@ useEffect(() => {
                 error={isDurationExceedingAvailable}
                 helperText={isDurationExceedingAvailable ?
                   `Attenzione: la durata supera le ore disponibili (${availableHours.toFixed(1)}).      
-                  Creare la lezione che va in overflow dal form apposito.` : ''}
+                  Creare la lezione dalla sezione Lezioni.` : ''}
               />
             </Grid>
             {/* Tariffa oraria */}
