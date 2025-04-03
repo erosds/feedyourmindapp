@@ -279,7 +279,7 @@ def read_student_active_package(student_id: int, db: Session = Depends(get_db)):
 
 # Modifica della funzione update_package in packages.py
 @router.put("/{package_id}", response_model=models.PackageResponse)
-def update_package(package_id: int, package: models.PackageUpdate, db: Session = Depends(get_db)):
+def update_package(package_id: int, package: models.PackageUpdate, allow_multiple: bool = False, db: Session = Depends(get_db)):
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
@@ -339,8 +339,33 @@ def update_package(package_id: int, package: models.PackageUpdate, db: Session =
         
         # Controlla se stai cercando di rimuovere uno studente con lezioni esistenti
         existing_student_ids = [student.id for student in db_package.students]
-        student_ids_to_remove = set(existing_student_ids) - set(student_ids)
+
+        # Identifica i nuovi studenti (non presenti nel pacchetto attuale)
+        new_student_ids = set(student_ids) - set(existing_student_ids)
+
+        # Verifica se i nuovi studenti hanno già pacchetti attivi (se allow_multiple è falso)
+        if not allow_multiple and new_student_ids:
+            for student_id in new_student_ids:
+                # Cerca pacchetti attivi per questo studente (escludendo il pacchetto corrente)
+                active_package = db.query(models.Package).join(
+                    models.PackageStudent
+                ).filter(
+                    models.PackageStudent.student_id == student_id,
+                    models.Package.status == "in_progress",
+                    models.Package.id != package_id  # Escludi il pacchetto corrente
+                ).first()
+                
+                if active_package:
+                    raise HTTPException(
+                        status_code=http_status.HTTP_409_CONFLICT,
+                        detail={
+                            "message": f"Student with ID {student_id} already has an active package",
+                            "active_package_id": active_package.id,
+                            "active_package_remaining_hours": float(active_package.remaining_hours)
+                        }
+                    )
         
+        student_ids_to_remove = set(existing_student_ids) - set(student_ids)
         for student_id in student_ids_to_remove:
             # Controlla se lo studente ha lezioni in questo pacchetto
             has_lessons = db.query(models.Lesson).filter(

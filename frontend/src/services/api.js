@@ -149,7 +149,7 @@ export const packageService = {
   },
 
   // Versione corretta per packageService.update in api.js
-  update: async (id, data) => {
+  update: async (id, data, allowMultiple = false) => {
     // 1. Conserva dati separati degli studenti se necessario
     console.log('PackageService.update - dati ricevuti:', data);
     
@@ -182,7 +182,7 @@ export const packageService = {
     }
     
     console.log('PackageService.update - dati formattati:', data);
-    return api.put(`/packages/${id}`, data);
+    return api.put(`/packages/${id}?allow_multiple=${allowMultiple}`, data);
   },
   
   delete: async (id) => {
