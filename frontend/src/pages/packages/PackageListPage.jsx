@@ -275,13 +275,16 @@ function PackageListPage() {
 
   useEffect(() => {
     let filtered = [...packages];
-
+  
     // Filtra per termine di ricerca (nome studente)
     if (searchTerm.trim() !== '') {
       const lowercaseSearch = searchTerm.toLowerCase();
       filtered = filtered.filter((pkg) => {
-        const studentName = students[pkg.student_id] || '';
-        return studentName.toLowerCase().includes(lowercaseSearch);
+        // Check if any of the students in the package match the search term
+        return pkg.student_ids.some(studentId => {
+          const studentName = students[studentId] || '';
+          return studentName.toLowerCase().includes(lowercaseSearch);
+        });
       });
     }
 
@@ -341,11 +344,27 @@ function PackageListPage() {
       });
     }
 
-    // Applica l'ordinamento
+    // Make sure sorting works with multi-student packages
+  if (orderBy === 'student_id' || orderBy === 'student_ids') {
+    filtered.sort((a, b) => {
+      // Get the first student name for each package (or empty string if none)
+      const studentNameA = a.student_ids.length > 0 ? (students[a.student_ids[0]] || '') : '';
+      const studentNameB = b.student_ids.length > 0 ? (students[b.student_ids[0]] || '') : '';
+      
+      // Compare based on the direction
+      return order === 'asc' 
+        ? studentNameA.localeCompare(studentNameB)
+        : studentNameB.localeCompare(studentNameA);
+    });
+  } else {
+    // Apply normal sorting for other fields
     const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
-    setFilteredPackages(sortedFiltered);
-    setPage(0); // Reset alla prima pagina dopo il filtraggio
-  }, [searchTerm, packages, students, timeFilter, statusFilter, paymentFilter, order, orderBy]);
+    filtered = sortedFiltered;
+  }
+  
+  setFilteredPackages(filtered);
+  setPage(0); // Reset to first page after filtering
+}, [searchTerm, packages, students, timeFilter, statusFilter, paymentFilter, order, orderBy]);
 
   const handleStatusFilterChange = (event) => {
     setStatusFilter(event.target.value);

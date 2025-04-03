@@ -79,11 +79,13 @@ def update_package_status(db: Session, package_id: int, commit: bool = True):
 
 # Aggiungi questa funzione helper
 def package_orm_to_response(package_orm):
-    """Converte un oggetto Package ORM in un oggetto PackageResponse"""
-    # Estrai gli ID degli studenti
-    student_ids = [student.id for student in package_orm.students]
+    """Converts a Package ORM object to a PackageResponse object"""
+    # Extract student IDs more safely
+    student_ids = []
+    if hasattr(package_orm, 'students'):
+        student_ids = [student.id for student in package_orm.students]
     
-    # Crea un dizionario con i dati
+    # Create a dictionary with all required fields
     package_dict = {
         "id": package_orm.id,
         "student_ids": student_ids,
@@ -175,7 +177,7 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
     db.commit()
     db.refresh(db_package)
     
-    return db_package
+    return package_orm_to_response(db_package)
 
 
 @router.get("/", response_model=List[models.PackageResponse])
@@ -200,15 +202,20 @@ def read_packages(skip: int = 0, limit: int = 10000, db: Session = Depends(get_d
 
 @router.get("/{package_id}", response_model=models.PackageResponse)
 def read_package(package_id: int, db: Session = Depends(get_db)):
+    """Get a specific package by ID with detailed information."""
+    # Find the package
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
     
     # Always update status when fetching a package
-    update_package_status(db, package_id)
+    update_package_status(db, package_id, commit=True)
+    
+    # Re-fetch the package to get up-to-date data
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     
-    return db_package
+    # Use the custom function to convert ORM to response model
+    return package_orm_to_response(db_package)
 
 @router.get("/student/{student_id}", response_model=List[models.PackageResponse])
 def read_student_packages(student_id: int, db: Session = Depends(get_db)):

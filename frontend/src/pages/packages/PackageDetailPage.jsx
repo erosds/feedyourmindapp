@@ -84,43 +84,67 @@ function PackageDetailPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-  
+
         // Load package data
         const packageResponse = await packageService.getById(id);
-        setPackageData(packageResponse.data);
-  
-        // Carica i dettagli di tutti gli studenti del pacchetto
-        const studentPromises = packageResponse.data.student_ids.map(studentId => 
-          studentService.getById(studentId)
-        );
-        const studentsData = await Promise.all(studentPromises);
-        const students = studentsData.map(response => response.data);
-        setStudents(students);
-  
-        // Imposta lo student_id nel form (usa il primo studente del pacchetto)
+        const packageData = packageResponse.data;
+
+        console.log("Package data loaded:", packageData);
+        setPackageData(packageData);
+
+        // Make sure student_ids is an array
+        const studentIds = Array.isArray(packageData.student_ids) ? packageData.student_ids : [];
+
+        if (studentIds.length === 0) {
+          console.error("No student IDs found in package data");
+          setError("Package data is incomplete. No students associated with this package.");
+          setLoading(false);
+          return;
+        }
+
+        // Load details for all students in the package
+        try {
+          const studentPromises = studentIds.map(studentId =>
+            studentService.getById(studentId)
+          );
+          const studentsResponses = await Promise.all(studentPromises);
+          const studentsData = studentsResponses.map(response => response.data);
+          setStudents(studentsData);
+        } catch (err) {
+          console.error("Error loading students:", err);
+          // Continue even if we can't load student details
+        }
+
+        // Set initial form data with the first student
+        const firstStudentId = studentIds[0];
         setLessonForm(prev => ({
           ...prev,
-          student_id: packageResponse.data.student_ids[0],
+          student_id: firstStudentId,
           package_id: parseInt(id),
           is_package: true
         }));
-  
+
         // Load lessons related to the package
         const lessonsResponse = await lessonService.getAll();
         const packageLessons = lessonsResponse.data.filter(
           lesson => lesson.package_id === parseInt(id) && lesson.is_package
         );
         setLessons(packageLessons);
-  
-        // Load student lessons for overlap checks (usa il primo studente)
-        const studentLessonsResponse = await lessonService.getByStudent(packageResponse.data.student_ids[0]);
-        setStudentLessons(studentLessonsResponse.data);
-  
+
+        // Load student lessons for overlap checks (use first student)
+        try {
+          const studentLessonsResponse = await lessonService.getByStudent(firstStudentId);
+          setStudentLessons(studentLessonsResponse.data);
+        } catch (err) {
+          console.error("Error loading student lessons:", err);
+          // Continue even if we can't load student lessons
+        }
+
         // Set current month to the month of the first lesson or today if no lessons
         if (packageLessons.length > 0) {
           setCurrentMonth(parseISO(packageLessons[0].lesson_date));
         }
-  
+
       } catch (err) {
         console.error('Error fetching package data:', err);
         setError('Unable to load package data. Please try refreshing the page.');
@@ -128,7 +152,7 @@ function PackageDetailPage() {
         setLoading(false);
       }
     };
-  
+
     fetchData();
   }, [id]);
 
@@ -325,7 +349,7 @@ function PackageDetailPage() {
     );
   }
 
-  if (!packageData || !student) {
+  if (!packageData) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
         <Typography>Package not found</Typography>
@@ -709,6 +733,9 @@ function PackageDetailPage() {
                       <TableRow>
                         <TableCell>ID</TableCell>
                         <TableCell>Data</TableCell>
+                        {packageData.student_ids.length > 1 && (
+                          <TableCell>Studente</TableCell>
+                        )}
                         <TableCell>Professore</TableCell>
                         <TableCell>Durata (ore)</TableCell>
                         <TableCell>Tariffa Oraria</TableCell>
@@ -733,9 +760,17 @@ function PackageDetailPage() {
                             <TableCell>
                               {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                             </TableCell>
+                            {packageData.student_ids.length > 1 && (
+                              <TableCell>
+                                {students.find(s => s.id === lesson.student_id)
+                                  ? `${students.find(s => s.id === lesson.student_id).first_name} ${students.find(s => s.id === lesson.student_id).last_name}`
+                                  : `Studente #${lesson.student_id}`}
+                              </TableCell>
+                            )}
                             <TableCell>
                               {getProfessorNameById(lesson.professor_id)}
                             </TableCell>
+                            
                             <TableCell>{lesson.duration}</TableCell>
                             <TableCell>€{parseFloat(lesson.hourly_rate).toFixed(2)}</TableCell>
                             <TableCell align="right">€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>

@@ -263,36 +263,54 @@ class PackageResponse(BaseModel):
     expiry_date: date
     extension_count: int
     notes: Optional[str]
-
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode='before')
+    @classmethod
     def set_student_data(cls, values):
-        # If values is a SQLAlchemy model
-        try:
-            # Try to get student_id directly
-            student_id = values.get('student_id') or getattr(values, 'student_id', None)
+        """
+        Ensures that student_ids is always properly set in the response.
+        Handles both ORM objects and dictionaries.
+        """
+        if isinstance(values, dict):
+            # If it's already a dict with student_ids, we're good
+            if 'student_ids' in values and values['student_ids'] is not None:
+                return values
+                
+            # If there's a single student_id, convert it to student_ids
+            if 'student_id' in values and values['student_id'] is not None:
+                values['student_ids'] = [values['student_id']]
+                return values
+                
+            # Default to empty array if nothing was found
+            values['student_ids'] = []
+            return values
             
-            # If no student_id found, look for alternative ways
-            if student_id is None:
-                # Check if there's a relationship with student
-                student = getattr(values, 'student', None)
-                if student:
-                    student_id = student.id
-            
-            # Set student_ids if not already set
-            if not hasattr(values, 'student_ids'):
-                values.student_ids = [student_id] if student_id is not None else []
-            
-            # Ensure student_id is set
-            if student_id is not None:
-                values.student_id = student_id
-        except Exception as e:
-            # Log the error or handle it gracefully
-            print(f"Error processing student data: {e}")
+        # If it's an ORM object (has students relationship)
+        if hasattr(values, 'students') and values.students:
+            student_ids = [student.id for student in values.students]
+            # Create a dictionary with all attributes
+            return {
+                'id': getattr(values, 'id', None),
+                'student_ids': student_ids,
+                'start_date': getattr(values, 'start_date', None),
+                'total_hours': getattr(values, 'total_hours', None),
+                'package_cost': getattr(values, 'package_cost', None),
+                'status': getattr(values, 'status', None),
+                'is_paid': getattr(values, 'is_paid', None),
+                'payment_date': getattr(values, 'payment_date', None),
+                'remaining_hours': getattr(values, 'remaining_hours', None),
+                'expiry_date': getattr(values, 'expiry_date', None),
+                'extension_count': getattr(values, 'extension_count', None),
+                'notes': getattr(values, 'notes', None),
+                'created_at': getattr(values, 'created_at', None),
+            }
         
+        # Default fallback
+        values = dict(values) if not isinstance(values, dict) else values
+        values['student_ids'] = []
         return values
 
 class LessonBase(BaseModel):

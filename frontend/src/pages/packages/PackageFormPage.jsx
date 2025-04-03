@@ -68,24 +68,25 @@ function PackageFormPage() {
     student_ids: Yup.array()
       .min(1, 'Almeno uno studente è richiesto')
       .max(3, 'Massimo 3 studenti per pacchetto')
-      .required('Gli studenti sono richiesti'),
-    start_date: Yup.date().required('Start date is required'),
+      .required('Seleziona almeno uno studente'),
+    start_date: Yup.date().required('La data di inizio è richiesta'),
     total_hours: Yup.number()
       .transform((value, originalValue) => originalValue === '' ? null : value)
-      .positive('Hours must be positive')
-      .required('Hours are required'),
+      .positive('Le ore devono essere positive')
+      .required('Le ore sono richieste'),
     package_cost: Yup.number()
       .transform((value, originalValue) => originalValue === '' ? null : value)
-      .min(0, 'Cost cannot be negative')
+      .min(0, 'Il costo non può essere negativo')
       .when('is_paid', {
         is: true,
-        then: () => Yup.number().required('Cost is required'),
-        otherwise: () => Yup.number().optional()
+        then: (schema) => schema.required('Il costo è richiesto se il pacchetto è pagato'),
+        otherwise: (schema) => schema.optional()
       }),
     is_paid: Yup.boolean(),
     payment_date: Yup.date().nullable().when('is_paid', {
       is: true,
-      then: () => Yup.date().nullable().required('Payment date is required when paid')
+      then: (schema) => schema.required('La data di pagamento è richiesta se il pacchetto è pagato'),
+      otherwise: (schema) => schema.nullable()
     }),
   });
 
@@ -135,6 +136,10 @@ function PackageFormPage() {
         .then(packageResponse => {
           if (packageResponse) {
             const packageData = packageResponse.data;
+
+            // Ensure student_ids is an array
+            const studentIds = packageData.student_ids || [];
+
             return lessonService.getAll()
               .then(lessonsResponse => {
                 const filteredLessons = lessonsResponse.data.filter(
@@ -142,12 +147,13 @@ function PackageFormPage() {
                 );
                 setPackageLessons(filteredLessons);
                 setInitialValues({
-                  student_ids: [packageData.student_id],
+                  student_ids: studentIds,
                   start_date: parseISO(packageData.start_date),
                   total_hours: packageData.total_hours.toString(),
                   package_cost: packageData.package_cost.toString(),
                   is_paid: packageData.is_paid,
                   payment_date: packageData.payment_date ? parseISO(packageData.payment_date) : null,
+                  notes: packageData.notes || '',
                 });
               });
           }
@@ -201,6 +207,8 @@ function PackageFormPage() {
     // Prepare data for API
     const packageData = {
       ...values,
+      // Ensure student_ids is properly passed (not student_id)
+      student_ids: values.student_ids,
       // Format start date
       start_date: format(new Date(values.start_date), 'yyyy-MM-dd'),
       // Format payment date if present
@@ -208,33 +216,21 @@ function PackageFormPage() {
         ? format(new Date(values.payment_date), 'yyyy-MM-dd')
         : null,
       package_cost: values.package_cost || '0',
-
     };
+
+    // Remove student_id if it exists to avoid confusion
+    if (packageData.student_id) {
+      delete packageData.student_id;
+    }
 
     // API call
     let submitPromise;
-    // In the handleSubmit function:
     if (isEditMode) {
       submitPromise = packageService.update(id, packageData);
     } else {
       // Pass the allow_multiple flag if it exists in location.state
       const allowMultiple = location.state?.allow_multiple || false;
-
-      submitPromise = packageService.create(packageData, allowMultiple).then(response => {
-        if (location.state?.create_lesson_after && location.state?.lesson_data) {
-
-          const lessonData = {
-            ...location.state.lesson_data,
-            student_id: values.student_id,
-            is_package: true,
-            package_id: response.data.id,
-            lesson_date: format(new Date(location.state.lesson_data.lesson_date), 'yyyy-MM-dd'),
-            total_payment: location.state.lesson_data.duration * location.state.lesson_data.hourly_rate
-          };
-          return lessonService.create(lessonData);
-        }
-        return response;
-      });
+      submitPromise = packageService.create(packageData, allowMultiple);
     }
 
     submitPromise
@@ -319,7 +315,10 @@ function PackageFormPage() {
                 <Grid item xs={12} md={6}>
                   <StudentMultiAutocomplete
                     values={values.student_ids}
-                    onChange={(selectedStudents) => setFieldValue("student_ids", selectedStudents)}
+                    onChange={(selectedIds) => {
+                      console.log("Selected student IDs:", selectedIds);
+                      setFieldValue("student_ids", selectedIds);
+                    }}
                     error={touched.student_ids && Boolean(errors.student_ids)}
                     helperText={touched.student_ids && errors.student_ids}
                     disabled={isEditMode}

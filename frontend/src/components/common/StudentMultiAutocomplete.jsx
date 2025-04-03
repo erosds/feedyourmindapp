@@ -1,4 +1,5 @@
-// src/components/common/StudentMultiAutocomplete.jsx
+// Updated StudentMultiAutocomplete.jsx
+
 import React, { useState, useEffect } from 'react';
 import { Autocomplete, TextField, CircularProgress, Chip } from '@mui/material';
 import { studentService } from '../../services/api';
@@ -42,7 +43,7 @@ function StudentMultiAutocomplete({
 
   // Aggiorna gli studenti selezionati quando cambiano i valori o le opzioni
   useEffect(() => {
-    if (values.length && options.length) {
+    if (values && values.length && options.length) {
       const selectedOptions = values.map(id => 
         options.find(student => student.id === parseInt(id))
       ).filter(Boolean);
