@@ -1,4 +1,3 @@
-// src/pages/lessons/components/LessonForm.jsx
 import React from 'react';
 import {
   Box,
@@ -21,28 +20,6 @@ import * as Yup from 'yup';
 import EntityAutocomplete from '../../../components/common/EntityAutocomplete';
 import { studentService, professorService } from '../../../services/api';
 
-// Schema di validazione
-const LessonSchema = Yup.object().shape({
-  professor_id: Yup.number().required('Professore obbligatorio'),
-  student_id: Yup.number().required('Studente obbligatorio'),
-  lesson_date: Yup.date().required('Data obbligatoria'),
-  start_time: Yup.date().required('Orario di inizio obbligatorio'),
-  duration: Yup.number().positive('La durata deve essere positiva').required('Durata obbligatoria'),
-  is_package: Yup.boolean(),
-  package_id: Yup.number().nullable().when('is_package', {
-    is: true,
-    then: () => Yup.number().required('Hai scelto parte di un pacchetto, ora seleziona il pacchetto'),
-    otherwise: () => Yup.number().nullable(),
-  }),
-  hourly_rate: Yup.number().positive('La tariffa oraria deve essere positiva').required('Tariffa oraria obbligatoria'),
-  is_paid: Yup.boolean(),
-  payment_date: Yup.date().nullable().when('is_paid', {
-    is: true,
-    then: () => Yup.date().required('Data di pagamento obbligatoria'),
-    otherwise: () => Yup.date().nullable(),
-  }),
-});
-
 function LessonForm({
   initialValues,
   professors,
@@ -57,10 +34,56 @@ function LessonForm({
   calculatePackageHours,
   originalLesson
 }) {
+  // Create a validation schema that doesn't rely on complex context
+  const createLessonSchema = (packageList) => {
+    return Yup.object().shape({
+      professor_id: Yup.number().required('Professore obbligatorio'),
+      student_id: Yup.number().required('Studente obbligatorio'),
+      lesson_date: Yup.date()
+        .required('Data obbligatoria')
+        .test(
+          'is-before-package-expiry',
+          'La data della lezione supera la data di scadenza del pacchetto',
+          function(lessonDate) {
+            const { is_package, package_id } = this.parent;
+            
+            // If not a package lesson, skip this validation
+            if (!is_package || !package_id) return true;
+
+            // Find the package
+            const selectedPackage = packageList.find(
+              pkg => pkg.id === parseInt(package_id)
+            );
+
+            // If no package found or no expiry date, consider valid
+            if (!selectedPackage || !selectedPackage.expiry_date) return true;
+
+            // Check if lesson date is before or on expiry date
+            return lessonDate <= new Date(selectedPackage.expiry_date);
+          }
+        ),
+      start_time: Yup.date().required('Orario di inizio obbligatorio'),
+      duration: Yup.number().positive('La durata deve essere positiva').required('Durata obbligatoria'),
+      is_package: Yup.boolean(),
+      package_id: Yup.number().nullable().when('is_package', {
+        is: true,
+        then: () => Yup.number().required('Hai scelto parte di un pacchetto, ora seleziona il pacchetto'),
+        otherwise: () => Yup.number().nullable(),
+      }),
+      hourly_rate: Yup.number().positive('La tariffa oraria deve essere positiva').required('Tariffa oraria obbligatoria'),
+      is_paid: Yup.boolean(),
+      payment_date: Yup.date().nullable().when('is_paid', {
+        is: true,
+        then: () => Yup.date().required('Data di pagamento obbligatoria'),
+        otherwise: () => Yup.date().nullable(),
+      }),
+    });
+  };
+
   return (
     <Formik
       initialValues={initialValues}
-      validationSchema={LessonSchema}
+      validationSchema={() => createLessonSchema(packages)}
       onSubmit={async (values, { setSubmitting }) => {
         const success = await onSubmit(values);
         if (!success) {
@@ -86,6 +109,7 @@ function LessonForm({
         const { availableHours, totalAvailable } = selectedPackage ?
           calculatePackageHours(values.package_id, selectedPackage.total_hours) :
           { availableHours: 0, totalAvailable: 0 };
+
 
         return (
           <Form>
