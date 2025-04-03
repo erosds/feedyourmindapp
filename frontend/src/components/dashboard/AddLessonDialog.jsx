@@ -312,53 +312,54 @@ function AddLessonDialog({
     parseFloat(lessonForm.duration) > availableHours;
   const totalAmount = ((parseFloat(lessonForm.duration) || 0) * (parseFloat(lessonForm.hourly_rate) || 0)).toFixed(2);
 
-  // Inizializzazione dei pacchetti locali all'apertura del dialogo
-  useEffect(() => {
-    if (open) {
-      setError('');
-      
-      // Se stiamo usando il dialogo dal dettaglio pacchetto, imposta alcuni valori di default
-      if (context === 'packageDetail' && fixedPackageId) {
-        // Forza sempre l'utilizzo del pacchetto corrente
-        setLessonForm(prev => ({
-          ...prev,
-          is_package: true,
-          package_id: fixedPackageId
-        }));
+  // Modifica questo useEffect in AddLessonDialog.jsx
+useEffect(() => {
+  if (open) {
+    setError('');
+    
+    // Se stiamo usando il dialogo dal dettaglio pacchetto, imposta alcuni valori di default
+    if (context === 'packageDetail' && fixedPackageId) {
+      // Forza sempre l'utilizzo del pacchetto corrente
+      setLessonForm(prev => ({
+        ...prev,
+        is_package: true,
+        package_id: fixedPackageId
+      }));
 
-        // Trova il pacchetto corrente nella lista
-        const currentPackage = studentPackages.find(pkg => pkg.id === fixedPackageId);
-        if (currentPackage) {
-          setLocalSelectedPackage(currentPackage);
-          
-          // Estrai gli studenti dal pacchetto corrente
-          if (students && Array.isArray(students)) {
-            // Filtriamo gli studenti che sono associati a questo pacchetto
-            const pkgStudents = students.filter(student => 
-              currentPackage.student_ids && 
-              currentPackage.student_ids.includes(student.id)
-            );
-            setPackageStudents(pkgStudents);
-          }
-        }
-      } else {
-        const activePackages = Array.isArray(studentPackages)
-          ? studentPackages.filter(pkg => pkg && pkg.status === 'in_progress')
-          : [];
-        console.log("Setting local packages:", activePackages.length);
-        setLocalPackages(activePackages);
-        if (selectedPackage) {
-          setLocalSelectedPackage(selectedPackage);
-        } else {
-          setLocalSelectedPackage(null);
+      // Trova il pacchetto corrente nella lista
+      const currentPackage = studentPackages.find(pkg => pkg.id === fixedPackageId);
+      if (currentPackage) {
+        setLocalSelectedPackage(currentPackage);
+        
+        // Estrai gli studenti dal pacchetto corrente - esegui solo una volta
+        if (packageStudents.length === 0 && students && Array.isArray(students)) {
+          // Filtriamo gli studenti che sono associati a questo pacchetto
+          const pkgStudents = students.filter(student => 
+            currentPackage.student_ids && 
+            currentPackage.student_ids.includes(student.id)
+          );
+          setPackageStudents(pkgStudents);
         }
       }
-      // If student_id is already set, load their lessons
-      if (lessonForm.student_id) {
-        loadStudentLessons(lessonForm.student_id);
+    } else {
+      const activePackages = Array.isArray(studentPackages)
+        ? studentPackages.filter(pkg => pkg && pkg.status === 'in_progress')
+        : [];
+      setLocalPackages(activePackages);
+      if (selectedPackage) {
+        setLocalSelectedPackage(selectedPackage);
+      } else {
+        setLocalSelectedPackage(null);
       }
     }
-  }, [open, studentPackages, selectedPackage, lessonForm.student_id, context, fixedPackageId, students]);
+    
+    // Carica le lezioni dello studente solo se non è già stato fatto
+    if (lessonForm.student_id && studentLessons.length === 0) {
+      loadStudentLessons(lessonForm.student_id);
+    }
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [open, context, fixedPackageId, selectedPackage, lessonForm.student_id, context, fixedPackageId, students]); // Rimuovi le dipendenze che causano re-render continui
 
   return (
     <>
@@ -515,17 +516,17 @@ function AddLessonDialog({
                 control={
                   <Switch
                     name="is_paid"
-                    checked={lessonForm.is_paid}
+                    checked={lessonForm.is_package ? true : lessonForm.is_paid}
                     onChange={(e) => {
                       const isPaid = e.target.checked;
                       setLessonForm(prev => ({
                         ...prev,
                         is_paid: isPaid,
-                        payment_date: isPaid ? prev.lesson_date : null,  // <-- Usa la data della lezione
+                        payment_date: isPaid ? prev.lesson_date : null,
                         price: isPaid ? (prev.price || 20 * lessonForm.duration) : 0
                       }));
                     }}
-                    disabled={submitting || (lessonForm.is_package && localSelectedPackage)}
+                    disabled={submitting || lessonForm.is_package}
                   />
                 }
                 label="Lezione pagata"
@@ -536,6 +537,7 @@ function AddLessonDialog({
                 </FormHelperText>
               )}
             </Grid>
+
             {/* Selezione pacchetto - nascondi nel contesto del pacchetto */}
             {lessonForm.is_package && context !== 'packageDetail' && (
               <Grid item xs={12}>
@@ -604,13 +606,13 @@ function AddLessonDialog({
                 </FormHelperText>
               </Grid>
             )}
-            
+
             {/* Mostare un messaggio informativo nel contesto packageDetail */}
             {context === 'packageDetail' && (
               <Grid item xs={12}>
                 <Box sx={{ bgcolor: 'info.light', p: 2, borderRadius: 1, color: 'info.contrastText' }}>
                   <FormHelperText sx={{ color: 'inherit', mb: 0 }}>
-                    Stai creando una lezione associata al pacchetto #{fixedPackageId}. 
+                    Stai creando una lezione associata al pacchetto #{fixedPackageId}.
                     La lezione sarà automaticamente configurata come parte del pacchetto.
                   </FormHelperText>
                 </Box>
