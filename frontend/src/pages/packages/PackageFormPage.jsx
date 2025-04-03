@@ -366,7 +366,7 @@ function PackageFormPage() {
 
                   {/* Left column for students */}
                   <Grid item xs={12} md={6}>
-                    <Grid container spacing={4}>
+                    <Grid container spacing={3}>
                       {/* First Student - Always visible */}
                       <Grid item xs={12}>
                         <StudentAutocomplete
@@ -442,7 +442,7 @@ function PackageFormPage() {
 
                   {/* Right column for dates and hours - always the same height */}
                   <Grid item xs={12} md={6}>
-                    <Grid container spacing={4}>
+                    <Grid container spacing={3}>
                       <Grid item xs={12}>
                         <DatePicker
                           label="Data di Inizio"
@@ -524,6 +524,9 @@ function PackageFormPage() {
                 {/* Payment section */}
                 <Grid item xs={12}>
                   <Divider sx={{ my: 2 }} />
+                  <Typography variant="subtitle1" gutterBottom>
+                    Pagamento
+                  </Typography>
                 </Grid>
 
                 {/* Package Cost - only show for admins */}
@@ -589,19 +592,6 @@ function PackageFormPage() {
                     />
                   </Grid>
                 )}
-
-                <Grid item xs={12}>
-                  <Alert severity="info" sx={{ mt: 1 }}>
-                    <Typography variant="body2">
-                      Lo stato del pacchetto verrà aggiornato automaticamente:
-                      <ul>
-                        <li><strong>In corso</strong>: non è ancora arrivata la data di scadenza.</li>
-                        <li><strong>Terminato</strong>: la data di scadenza è passata, ma il pacchetto è stato saldato.</li>
-                        <li><strong>Scaduto</strong>: la data odierna è successiva alla data di scadenza e il pacchetto non è pagato.</li>
-                      </ul>
-                    </Typography>
-                  </Alert>
-                </Grid>
 
                 {/* Action Buttons */}
                 <Grid item xs={12}>

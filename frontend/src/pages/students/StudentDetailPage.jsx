@@ -40,7 +40,7 @@ import {
   AddTask as AddLessonIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
-import { format, parseISO, startOfWeek, endOfWeek, addWeeks, subWeeks, isWithinInterval } from 'date-fns';
+import { format, addMonths, subMonths, parseISO, startOfWeek, endOfWeek, addWeeks, subWeeks, isWithinInterval } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { studentService, packageService, lessonService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -158,9 +158,11 @@ const StudentCalendar = ({ currentMonth, lessons }) => {
   const [displayMonth, setDisplayMonth] = useState(currentMonth);
 
   const changeMonth = (offset) => {
-    const newMonth = new Date(displayMonth);
-    newMonth.setMonth(newMonth.getMonth() + offset);
-    setDisplayMonth(newMonth);
+    if (offset === 1) {
+      setDisplayMonth(addMonths(displayMonth, 1));
+    } else {
+      setDisplayMonth(subMonths(displayMonth, 1));
+    }
   };
 
   const year = displayMonth.getFullYear();

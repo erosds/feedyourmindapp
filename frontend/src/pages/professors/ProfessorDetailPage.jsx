@@ -39,7 +39,9 @@ import {
   CalendarMonth as CalendarIcon
 } from '@mui/icons-material';
 import { 
-  format, 
+  format,
+  addMonths,
+  subMonths, 
   parseISO, 
   startOfWeek, 
   endOfWeek, 
@@ -175,9 +177,11 @@ const ProfessorCalendar = ({ currentMonth, lessons, studentsMap }) => {
   const [displayMonth, setDisplayMonth] = useState(currentMonth);
 
   const changeMonth = (offset) => {
-    const newMonth = new Date(displayMonth);
-    newMonth.setMonth(newMonth.getMonth() + offset);
-    setDisplayMonth(newMonth);
+    if (offset === 1) {
+      setDisplayMonth(addMonths(displayMonth, 1));
+    } else {
+      setDisplayMonth(subMonths(displayMonth, 1));
+    }
   };
 
   const year = displayMonth.getFullYear();
