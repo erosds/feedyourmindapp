@@ -1,3 +1,4 @@
+// src/pages/lessons/components/LessonForm.jsx
 import React from 'react';
 import {
   Box,
@@ -18,7 +19,30 @@ import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import EntityAutocomplete from '../../../components/common/EntityAutocomplete';
+import PackageStudentSelector from '../../../components/common/PackageStudentSelector';
 import { studentService, professorService } from '../../../services/api';
+
+// Schema di validazione
+const LessonSchema = Yup.object().shape({
+  professor_id: Yup.number().required('Professore obbligatorio'),
+  student_id: Yup.number().required('Studente obbligatorio'),
+  lesson_date: Yup.date().required('Data obbligatoria'),
+  start_time: Yup.date().required('Orario di inizio obbligatorio'),
+  duration: Yup.number().positive('La durata deve essere positiva').required('Durata obbligatoria'),
+  is_package: Yup.boolean(),
+  package_id: Yup.number().nullable().when('is_package', {
+    is: true,
+    then: () => Yup.number().required('Hai scelto parte di un pacchetto, ora seleziona il pacchetto'),
+    otherwise: () => Yup.number().nullable(),
+  }),
+  hourly_rate: Yup.number().positive('La tariffa oraria deve essere positiva').required('Tariffa oraria obbligatoria'),
+  is_paid: Yup.boolean(),
+  payment_date: Yup.date().nullable().when('is_paid', {
+    is: true,
+    then: () => Yup.date().required('Data di pagamento obbligatoria'),
+    otherwise: () => Yup.date().nullable(),
+  }),
+});
 
 function LessonForm({
   initialValues,
@@ -32,58 +56,16 @@ function LessonForm({
   onStudentChange,
   onPackageChange,
   calculatePackageHours,
-  originalLesson
+  originalLesson,
+  // New props for package context
+  context = 'default', // 'default' or 'packageDetail'
+  fixedPackageId = null,
+  packageStudents = [] // Students associated with the current package when coming from package detail
 }) {
-  // Create a validation schema that doesn't rely on complex context
-  const createLessonSchema = (packageList) => {
-    return Yup.object().shape({
-      professor_id: Yup.number().required('Professore obbligatorio'),
-      student_id: Yup.number().required('Studente obbligatorio'),
-      lesson_date: Yup.date()
-        .required('Data obbligatoria')
-        .test(
-          'is-before-package-expiry',
-          'La data della lezione supera la data di scadenza del pacchetto',
-          function(lessonDate) {
-            const { is_package, package_id } = this.parent;
-            
-            // If not a package lesson, skip this validation
-            if (!is_package || !package_id) return true;
-
-            // Find the package
-            const selectedPackage = packageList.find(
-              pkg => pkg.id === parseInt(package_id)
-            );
-
-            // If no package found or no expiry date, consider valid
-            if (!selectedPackage || !selectedPackage.expiry_date) return true;
-
-            // Check if lesson date is before or on expiry date
-            return lessonDate <= new Date(selectedPackage.expiry_date);
-          }
-        ),
-      start_time: Yup.date().required('Orario di inizio obbligatorio'),
-      duration: Yup.number().positive('La durata deve essere positiva').required('Durata obbligatoria'),
-      is_package: Yup.boolean(),
-      package_id: Yup.number().nullable().when('is_package', {
-        is: true,
-        then: () => Yup.number().required('Hai scelto parte di un pacchetto, ora seleziona il pacchetto'),
-        otherwise: () => Yup.number().nullable(),
-      }),
-      hourly_rate: Yup.number().positive('La tariffa oraria deve essere positiva').required('Tariffa oraria obbligatoria'),
-      is_paid: Yup.boolean(),
-      payment_date: Yup.date().nullable().when('is_paid', {
-        is: true,
-        then: () => Yup.date().required('Data di pagamento obbligatoria'),
-        otherwise: () => Yup.date().nullable(),
-      }),
-    });
-  };
-
   return (
     <Formik
       initialValues={initialValues}
-      validationSchema={() => createLessonSchema(packages)}
+      validationSchema={LessonSchema}
       onSubmit={async (values, { setSubmitting }) => {
         const success = await onSubmit(values);
         if (!success) {
@@ -110,27 +92,47 @@ function LessonForm({
           calculatePackageHours(values.package_id, selectedPackage.total_hours) :
           { availableHours: 0, totalAvailable: 0 };
 
+        // Determine if we're in package detail context and should use the specialized student selector
+        const isPackageDetailContext = context === 'packageDetail' && fixedPackageId && packageStudents.length > 0;
 
         return (
           <Form>
             <Grid container spacing={3}>
-              {/* Studente */}
+              {/* Studente - Using either PackageStudentSelector or EntityAutocomplete based on context */}
               <Grid item xs={12} md={4}>
-                <EntityAutocomplete
-                  value={values.student_id}
-                  onChange={(studentId) => {
-                    setFieldValue('student_id', studentId);
-                    if (onStudentChange) {
-                      onStudentChange(studentId, setFieldValue);
-                    }
-                  }}
-                  label="Studente"
-                  fetchEntities={studentService.getAll}
-                  items={students}
-                  error={touched.student_id && Boolean(errors.student_id)}
-                  helperText={touched.student_id && errors.student_id}
-                  required={true}
-                />
+                {isPackageDetailContext ? (
+                  // Use specialized selector when in package detail context
+                  <PackageStudentSelector
+                    packageStudents={packageStudents}
+                    value={values.student_id}
+                    onChange={(studentId) => {
+                      setFieldValue('student_id', studentId);
+                      if (onStudentChange) {
+                        onStudentChange(studentId, setFieldValue);
+                      }
+                    }}
+                    error={touched.student_id && Boolean(errors.student_id)}
+                    helperText={touched.student_id && errors.student_id}
+                    required={true}
+                  />
+                ) : (
+                  // Use regular student autocomplete in other contexts
+                  <EntityAutocomplete
+                    value={values.student_id}
+                    onChange={(studentId) => {
+                      setFieldValue('student_id', studentId);
+                      if (onStudentChange) {
+                        onStudentChange(studentId, setFieldValue);
+                      }
+                    }}
+                    label="Studente"
+                    fetchEntities={studentService.getAll}
+                    items={students}
+                    error={touched.student_id && Boolean(errors.student_id)}
+                    helperText={touched.student_id && errors.student_id}
+                    required={true}
+                  />
+                )}
               </Grid>
 
               {/* Professore */}
@@ -274,29 +276,31 @@ function LessonForm({
                 />
               </Grid>
 
-              {/* Checkbox pacchetto */}
-              <Grid item xs={12} md={4}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="is_package"
-                      checked={values.is_package}
-                      onChange={(e) => {
-                        setFieldValue('is_package', e.target.checked);
-                        if (!e.target.checked) {
-                          setFieldValue('package_id', null);
-                        }
-                      }}
-                    />
-                  }
-                  label="Parte di un pacchetto"
-                />
-                {values.student_id && packages.length > 0 && (
-                  <FormHelperText sx={{ color: 'primary.main', ml: 2 }}>
-                    {packages.length} pacchetto{packages.length !== 1 ? 'i' : ''} disponibile{packages.length !== 1 ? 'i' : ''}
-                  </FormHelperText>
-                )}
-              </Grid>
+              {/* Checkbox pacchetto - Hide in package detail context since it's always a package lesson */}
+              {!isPackageDetailContext && (
+                <Grid item xs={12} md={4}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name="is_package"
+                        checked={values.is_package}
+                        onChange={(e) => {
+                          setFieldValue('is_package', e.target.checked);
+                          if (!e.target.checked) {
+                            setFieldValue('package_id', null);
+                          }
+                        }}
+                      />
+                    }
+                    label="Parte di un pacchetto"
+                  />
+                  {values.student_id && packages.length > 0 && (
+                    <FormHelperText sx={{ color: 'primary.main', ml: 2 }}>
+                      {packages.length} pacchetto{packages.length !== 1 ? 'i' : ''} disponibile{packages.length !== 1 ? 'i' : ''}
+                    </FormHelperText>
+                  )}
+                </Grid>
+              )}
 
               {/* Stato pagamento (solo per lezioni singole) */}
               {!values.is_package && (
@@ -374,8 +378,8 @@ function LessonForm({
                 </>
               )}
 
-              {/* Selezione pacchetto */}
-              {values.is_package && (
+              {/* Selezione pacchetto - Hide in package detail context or show but disabled */}
+              {values.is_package && !isPackageDetailContext ? (
                 <Grid item xs={12}>
                   <FormControl
                     fullWidth
@@ -408,7 +412,27 @@ function LessonForm({
                     )}
                   </FormControl>
                 </Grid>
-              )}
+              ) : isPackageDetailContext ? (
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel id="package-label">Pacchetto</InputLabel>
+                    <Select
+                      labelId="package-label"
+                      name="package_id"
+                      value={fixedPackageId}
+                      disabled={true}
+                      label="Pacchetto"
+                    >
+                      <MenuItem value={fixedPackageId}>
+                        {`Pacchetto #${fixedPackageId}`}
+                      </MenuItem>
+                    </Select>
+                    <FormHelperText>
+                      Pacchetto selezionato automaticamente
+                    </FormHelperText>
+                  </FormControl>
+                </Grid>
+              ) : null}
 
               {/* Pulsanti di azione */}
               <Grid item xs={12}>

@@ -257,13 +257,19 @@ function PackageDetailPage() {
   };
 
   const handleAddLesson = () => {
-    navigate('/lessons/new', {
-      state: {
-        student_id: packageData?.student_id,
-        package_id: packageData?.id,
-        is_package: true
-      }
-    });
+    // Imposta la data corrente
+    setSelectedDay(new Date());
+    // Imposta il form con i valori predefiniti, usando la data corrente
+    setLessonForm(prev => ({
+      ...prev,
+      lesson_date: new Date(),
+      professor_id: currentUser?.id || '',
+      student_id: packageData.student_ids[0] || '',
+      package_id: parseInt(id),
+      is_package: true
+    }));
+    // Apri il dialogo
+    setAddLessonDialogOpen(true);
   };
 
   // Aggiungi questa funzione handleExtendPackage
@@ -721,7 +727,7 @@ function PackageDetailPage() {
                 <Button
                   variant="contained"
                   color="primary"
-                  startIcon={<AddLessonIcon />}
+                  startIcon={<AddLessonIcon/>}
                   onClick={handleAddLesson}
                   sx={{ mr: 1 }}
                   size='small'

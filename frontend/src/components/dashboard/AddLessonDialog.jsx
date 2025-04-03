@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { lessonService, packageService } from '../../services/api';
 import StudentAutocomplete from '../common/StudentAutocomplete';
+import PackageStudentSelector from '../common/PackageStudentSelector'; // Import the new component
 import LessonOverlapDialog from '../lessons/LessonOverlapDialog';
 import { checkLessonOverlap } from '../../utils/lessonOverlapUtils';
 
@@ -59,6 +60,7 @@ function AddLessonDialog({
   const [overlapWarningOpen, setOverlapWarningOpen] = useState(false);
   const [overlappingLesson, setOverlappingLesson] = useState(null);
   const [studentLessons, setStudentLessons] = useState([]);
+  const [packageStudents, setPackageStudents] = useState([]);
 
   // Funzioni helper per formattare date e orari
   const formatDateForAPI = (date) => {
@@ -314,6 +316,7 @@ function AddLessonDialog({
   useEffect(() => {
     if (open) {
       setError('');
+      
       // Se stiamo usando il dialogo dal dettaglio pacchetto, imposta alcuni valori di default
       if (context === 'packageDetail' && fixedPackageId) {
         // Forza sempre l'utilizzo del pacchetto corrente
@@ -327,6 +330,16 @@ function AddLessonDialog({
         const currentPackage = studentPackages.find(pkg => pkg.id === fixedPackageId);
         if (currentPackage) {
           setLocalSelectedPackage(currentPackage);
+          
+          // Estrai gli studenti dal pacchetto corrente
+          if (students && Array.isArray(students)) {
+            // Filtriamo gli studenti che sono associati a questo pacchetto
+            const pkgStudents = students.filter(student => 
+              currentPackage.student_ids && 
+              currentPackage.student_ids.includes(student.id)
+            );
+            setPackageStudents(pkgStudents);
+          }
         }
       } else {
         const activePackages = Array.isArray(studentPackages)
@@ -345,7 +358,7 @@ function AddLessonDialog({
         loadStudentLessons(lessonForm.student_id);
       }
     }
-  }, [open, studentPackages, selectedPackage, lessonForm.student_id, context, fixedPackageId]);
+  }, [open, studentPackages, selectedPackage, lessonForm.student_id, context, fixedPackageId, students]);
 
   return (
     <>
@@ -355,16 +368,27 @@ function AddLessonDialog({
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
-            {/* Selezione studente - nascondi o disabilita nel contesto del pacchetto */}
+            {/* Selezione studente - Condizionale in base al contesto */}
             <Grid item xs={12} md={6}>
-              <StudentAutocomplete
-                students={students}
-                value={lessonForm.student_id}
-                onChange={handleStudentAutocomplete}
-                disabled={submitting || context === 'packageDetail'}
-                required
-                helperText={!lessonForm.student_id ? "Seleziona uno studente" : ""}
-              />
+              {context === 'packageDetail' ? (
+                <PackageStudentSelector
+                  packageStudents={packageStudents}
+                  value={lessonForm.student_id}
+                  onChange={handleStudentAutocomplete}
+                  disabled={submitting}
+                  required
+                  error={!lessonForm.student_id}
+                />
+              ) : (
+                <StudentAutocomplete
+                  students={students}
+                  value={lessonForm.student_id}
+                  onChange={handleStudentAutocomplete}
+                  disabled={submitting || context === 'packageDetail'}
+                  required
+                  helperText={!lessonForm.student_id ? "Seleziona uno studente" : ""}
+                />
+              )}
             </Grid>
             {/* Data lezione */}
             <Grid item xs={12} md={6}>
@@ -438,23 +462,23 @@ function AddLessonDialog({
             </Grid>
 
             {/* Toggle per lezione online */}
-<Grid item xs={12} md={4}>
-  <FormControlLabel
-    control={
-      <Switch
-        name="is_online"
-        checked={lessonForm.is_online || false}
-        onChange={(e) => {
-          setLessonForm(prev => ({
-            ...prev,
-            is_online: e.target.checked
-          }));
-        }}
-      />
-    }
-    label="Lezione online"
-  />
-</Grid>
+            <Grid item xs={12} md={4}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    name="is_online"
+                    checked={lessonForm.is_online || false}
+                    onChange={(e) => {
+                      setLessonForm(prev => ({
+                        ...prev,
+                        is_online: e.target.checked
+                      }));
+                    }}
+                  />
+                }
+                label="Lezione online"
+              />
+            </Grid>
 
             {/* Toggle per pacchetto - nascondi nel contesto del pacchetto */}
             {context !== 'packageDetail' && (
@@ -557,7 +581,7 @@ function AddLessonDialog({
                 />
               </Grid>
             )}
-            {/* 4. Add the price field for admin users */}
+            {/* Prezzo campo per gli admin */}
             {!lessonForm.is_package && lessonForm.is_paid && currentUser?.is_admin && (
               <Grid item xs={12}>
                 <TextField
@@ -578,6 +602,18 @@ function AddLessonDialog({
                 <FormHelperText>
                   Prezzo pagato dallo studente all'associazione
                 </FormHelperText>
+              </Grid>
+            )}
+            
+            {/* Mostare un messaggio informativo nel contesto packageDetail */}
+            {context === 'packageDetail' && (
+              <Grid item xs={12}>
+                <Box sx={{ bgcolor: 'info.light', p: 2, borderRadius: 1, color: 'info.contrastText' }}>
+                  <FormHelperText sx={{ color: 'inherit', mb: 0 }}>
+                    Stai creando una lezione associata al pacchetto #{fixedPackageId}. 
+                    La lezione sarà automaticamente configurata come parte del pacchetto.
+                  </FormHelperText>
+                </Box>
               </Grid>
             )}
           </Grid>

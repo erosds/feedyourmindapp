@@ -5,7 +5,6 @@ import {
   Alert,
   Box,
   CircularProgress,
-  duration,
   Paper,
   Typography,
 } from '@mui/material';
@@ -24,6 +23,11 @@ function LessonFormPage() {
   const navigate = useNavigate();
   const { currentUser, isAdmin } = useAuth();
   const isEditMode = !!id;
+
+  // Determine if we're in a package detail context
+  const isPackageDetailContext = location.state?.fromPackageDetail === true;
+  const fixedPackageId = isPackageDetailContext ? parseInt(location.state?.package_id) : null;
+  const [packageStudents, setPackageStudents] = useState([]); // Store students from the package
 
   const [loading, setLoading] = useState(isEditMode);
   const [error, setError] = useState(null);
@@ -59,13 +63,13 @@ function LessonFormPage() {
     lesson_date: new Date(),
     start_time: new Date(new Date().setHours(9, 0, 0, 0)), // Default to 9:00
     duration: 1,
-    is_package: location.state?.is_package || false,
-    package_id: location.state?.package_id || null,
+    is_package: isPackageDetailContext ? true : (location.state?.is_package || false),
+    package_id: isPackageDetailContext ? fixedPackageId : (location.state?.package_id || null),
     hourly_rate: '12.5',
-    is_paid: false,
+    is_paid: isPackageDetailContext ? true : false,
     payment_date: new Date(), // Default to today
-    price: 20 * duration,
-    is_online: false  // Add this line
+    price: 20, // Default price
+    is_online: false
   });
 
   // Load required data
@@ -86,8 +90,34 @@ function LessonFormPage() {
         const studentsResponse = await studentService.getAll();
         setStudents(studentsResponse.data);
 
-        // Load packages for the selected student
-        if (location.state?.student_id) {
+        // Special handling for package detail context
+        if (isPackageDetailContext && fixedPackageId) {
+          // Load the specific package
+          const packageResponse = await packageService.getById(fixedPackageId);
+          setPackages([packageResponse.data]);
+          
+          // Extract student IDs from the package and fetch their details
+          const studentIds = packageResponse.data.student_ids || [];
+          if (studentIds.length > 0) {
+            // Find the students from all students that match the IDs in the package
+            const packageStudentsList = studentsResponse.data.filter(student => 
+              studentIds.includes(student.id)
+            );
+            setPackageStudents(packageStudentsList);
+            
+            // If student_id is not set in location.state, use the first student from package
+            if (!location.state?.student_id && packageStudentsList.length > 0) {
+              setInitialValues(prev => ({
+                ...prev,
+                student_id: packageStudentsList[0].id
+              }));
+            }
+          }
+
+          // Load lessons for the package
+          await loadPackageLessons(fixedPackageId);
+        } else if (location.state?.student_id) {
+          // Load packages for the selected student (non-package-detail flow)
           await loadStudentPackages(location.state.student_id);
 
           // Load lessons for the selected package
@@ -109,7 +139,7 @@ function LessonFormPage() {
     };
 
     fetchData();
-  }, [id, isEditMode, currentUser, isAdmin, location.state]);
+  }, [id, isEditMode, currentUser, isAdmin, location.state, isPackageDetailContext, fixedPackageId]);
 
   // Handle case of lesson created from overflow
   useEffect(() => {
@@ -228,12 +258,12 @@ function LessonFormPage() {
       duration: overflow_hours,
       is_package: false,
       package_id: null,
-      hourly_rate: original_hourly_rate || '',
+      hourly_rate: original_hourly_rate || '12.5',
       is_paid: false,
       payment_date: null,
     });
 
-    setInfoMessage(`You're creating a single lesson for ${overflow_hours} excess hours from another lesson. You can modify the hourly rate or other details if needed.`);
+    setInfoMessage(`Stai creando una lezione singola per ${overflow_hours} ore in eccesso da un'altra lezione. Puoi modificare la tariffa oraria o altri dettagli se necessario.`);
   };
 
   // Handle student change
@@ -242,11 +272,15 @@ function LessonFormPage() {
 
     try {
       setFieldValue('student_id', studentId);
-      setFieldValue('package_id', null);
-      setLessonsInPackage([]);
+      
+      // If we're in package detail context, don't reset package_id
+      if (!isPackageDetailContext) {
+        setFieldValue('package_id', null);
+        setLessonsInPackage([]);
 
-      // Load student packages
-      await loadStudentPackages(studentId);
+        // Load student packages
+        await loadStudentPackages(studentId);
+      }
 
       // Load student lessons to check for overlaps
       await loadStudentLessons(studentId);
@@ -317,26 +351,26 @@ function LessonFormPage() {
     });
   };
 
-// Navigate to create a new package for excess hours
-const navigateToNewPackage = () => {
-  navigate('/packages/new', {
-    state: {
-      student_id: overflowLessonData.student_id,
-      overflow_from_lesson: true,
-      overflow_hours: overflowDetails.overflowHours,
-      suggested_hours: Math.ceil(overflowDetails.overflowHours * 2),
-      create_lesson_after: true,
-      allow_multiple: true,  // Add this flag
-      lesson_data: {
-        professor_id: overflowLessonData.professor_id,
-        lesson_date: overflowLessonData.lesson_date,
-        start_time: overflowLessonData.start_time,
-        duration: overflowDetails.overflowHours,
-        hourly_rate: overflowLessonData.hourly_rate
+  // Navigate to create a new package for excess hours
+  const navigateToNewPackage = () => {
+    navigate('/packages/new', {
+      state: {
+        student_id: overflowLessonData.student_id,
+        overflow_from_lesson: true,
+        overflow_hours: overflowDetails.overflowHours,
+        suggested_hours: Math.ceil(overflowDetails.overflowHours * 2),
+        create_lesson_after: true,
+        allow_multiple: true,  // Add this flag
+        lesson_data: {
+          professor_id: overflowLessonData.professor_id,
+          lesson_date: overflowLessonData.lesson_date,
+          start_time: overflowLessonData.start_time,
+          duration: overflowDetails.overflowHours,
+          hourly_rate: overflowLessonData.hourly_rate
+        }
       }
-    }
-  });
-};
+    });
+  };
 
   // Save lesson with duration limited to available hours in the package
   const savePartialLesson = async () => {
@@ -358,7 +392,7 @@ const navigateToNewPackage = () => {
       return true;
     } catch (err) {
       console.error('Error saving partial lesson:', err);
-      alert('An error occurred while saving the main lesson. Please check and try again.');
+      alert('Si è verificato un errore durante il salvataggio della lezione principale. Si prega di verificare e riprovare.');
       return false;
     } finally {
       setLoading(false);
@@ -416,8 +450,10 @@ const navigateToNewPackage = () => {
       await lessonService.create(formattedValues);
     }
 
-    // If we returned from package, go back to package page
-    if (location.state?.returnToPackage && formattedValues.is_package && formattedValues.package_id) {
+    // Return to the appropriate page based on context
+    if (isPackageDetailContext && fixedPackageId) {
+      navigate(`/packages/${fixedPackageId}`);
+    } else if (location.state?.returnToPackage && formattedValues.is_package && formattedValues.package_id) {
       navigate(`/packages/${formattedValues.package_id}`, { state: { refreshPackage: true } });
     } else {
       navigate('/lessons');
@@ -439,8 +475,12 @@ const navigateToNewPackage = () => {
         is_online: values.is_online || false  // Ensure this is included
       };
 
-      // If not a package, remove package ID
-      if (!formattedValues.is_package) {
+      // If in package detail context, ensure is_package is true and package_id is set
+      if (isPackageDetailContext) {
+        formattedValues.is_package = true;
+        formattedValues.package_id = fixedPackageId;
+      } else if (!formattedValues.is_package) {
+        // If not a package, remove package ID
         formattedValues.package_id = null;
       }
 
@@ -468,7 +508,7 @@ const navigateToNewPackage = () => {
       return true;
     } catch (err) {
       console.error('Error saving lesson:', err);
-      setError('Error during save. Please check data and try again.');
+      setError('Errore durante il salvataggio. Controlla i dati e riprova.');
       return false;
     }
   };
@@ -508,11 +548,15 @@ const navigateToNewPackage = () => {
           isEditMode={isEditMode}
           isAdmin={isAdmin()}
           onSubmit={handleSubmit}
-          onCancel={() => navigate('/lessons')}
+          onCancel={() => isPackageDetailContext ? navigate(`/packages/${fixedPackageId}`) : navigate('/lessons')}
           onStudentChange={handleStudentChange}
           onPackageChange={handlePackageChange}
           calculatePackageHours={calculatePackageHours}
           originalLesson={originalLesson}
+          // Pass context props
+          context={isPackageDetailContext ? 'packageDetail' : 'default'}
+          fixedPackageId={fixedPackageId}
+          packageStudents={packageStudents}
         />
       </Paper>
 
