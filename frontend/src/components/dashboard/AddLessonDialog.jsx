@@ -169,8 +169,7 @@ function AddLessonDialog({
           ? formatDateForAPI(lessonForm.payment_date)
           : null,
         price: lessonForm.is_package ? 0 : (lessonForm.price || 20 * lessonForm.duration), // Set price to 0 for package lessons
-        is_online: false  // Add this line
-
+        is_online: lessonForm.is_online || false  // Use the actual value from the form
       };
 
       // Controllo sovrapposizioni usando la funzione utility
