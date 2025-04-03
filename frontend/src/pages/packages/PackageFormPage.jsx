@@ -28,7 +28,8 @@ import { useAuth } from '../../context/AuthContext';
 // Package validation schema
 const PackageSchema = Yup.object().shape({
   student_id_1: Yup.number()
-    .required('Il primo studente è obbligatorio')
+    .nullable()
+    .transform((value) => (isNaN(value) ? null : value))
     .positive('Seleziona uno studente valido'),
   student_id_2: Yup.number()
     .nullable()
@@ -182,9 +183,20 @@ function PackageFormPage() {
     fetchInitialData();
   }, [id, isEditMode, location.state]);
 
+  const atLeastOneStudentSelected = () => {
+    return values => {
+      const hasAnyStudent = values.student_id_1 || values.student_id_2 || values.student_id_3;
+      if (!hasAnyStudent) {
+        return { error: 'È necessario specificare almeno uno studente' };
+      }
+      return {};
+    };
+  };
+
   // Check if a student can be removed (has no lessons)
   const canRemoveStudent = (studentId) => {
     if (!isEditMode) return true; // Always allow in create mode
+    if (!studentId) return true; // Always allow removing empty student
 
     // Check if student has lessons
     return !hasLessonsPerStudent[studentId] || hasLessonsPerStudent[studentId].length === 0;
@@ -329,6 +341,7 @@ function PackageFormPage() {
           initialValues={initialValues}
           validationSchema={PackageSchema}
           onSubmit={handleSubmit}
+          validate={atLeastOneStudentSelected()}
           enableReinitialize
         >
           {({
@@ -350,10 +363,11 @@ function PackageFormPage() {
 
                 {/* Create two columns */}
                 <Grid container item xs={12} spacing={3}>
+
                   {/* Left column for students */}
                   <Grid item xs={12} md={6}>
                     <Grid container spacing={4}>
-                      {/* First Student - Always visible and required */}
+                      {/* First Student - Always visible */}
                       <Grid item xs={12}>
                         <StudentAutocomplete
                           value={values.student_id_1}
@@ -368,7 +382,7 @@ function PackageFormPage() {
                             (isEditMode && !canRemoveStudent(values.student_id_1) ?
                               "Questo studente ha lezioni associate" : "")}
                           disabled={isEditMode && !canRemoveStudent(values.student_id_1)}
-                          required={true}
+                          required={false} // Cambiato da true a false
                           students={students.filter(student =>
                             student.id !== values.student_id_2 &&
                             student.id !== values.student_id_3
@@ -376,57 +390,53 @@ function PackageFormPage() {
                         />
                       </Grid>
 
-                      {/* Second Student - Show only if first is selected */}
-                      {values.student_id_1 && (
-                        <Grid item xs={12} >
-                          <StudentAutocomplete
-                            value={values.student_id_2}
-                            onChange={(studentId) => handleStudentChange(
-                              'student_id_2',
-                              studentId,
-                              values.student_id_2,
-                              setFieldValue
-                            )}
-                            error={touched.student_id_2 && Boolean(errors.student_id_2)}
-                            helperText={(touched.student_id_2 && errors.student_id_2) ||
-                              "Secondo studente (pacchetto condiviso)" ||
-                              (isEditMode && values.student_id_2 && !canRemoveStudent(values.student_id_2) ?
-                                "Questo studente ha lezioni associate" : "")}
-                            disabled={isEditMode && values.student_id_2 && !canRemoveStudent(values.student_id_2)}
-                            required={false}
-                            students={students.filter(student =>
-                              student.id !== values.student_id_1 &&
-                              student.id !== values.student_id_3
-                            )}
-                          />
-                        </Grid>
-                      )}
+                      {/* Second Student - Always visible */}
+                      <Grid item xs={12}>
+                        <StudentAutocomplete
+                          value={values.student_id_2}
+                          onChange={(studentId) => handleStudentChange(
+                            'student_id_2',
+                            studentId,
+                            values.student_id_2,
+                            setFieldValue
+                          )}
+                          error={touched.student_id_2 && Boolean(errors.student_id_2)}
+                          helperText={(touched.student_id_2 && errors.student_id_2) ||
+                            "Secondo studente (pacchetto condiviso)" ||
+                            (isEditMode && values.student_id_2 && !canRemoveStudent(values.student_id_2) ?
+                              "Questo studente ha lezioni associate" : "")}
+                          disabled={isEditMode && values.student_id_2 && !canRemoveStudent(values.student_id_2)}
+                          required={false}
+                          students={students.filter(student =>
+                            student.id !== values.student_id_1 &&
+                            student.id !== values.student_id_3
+                          )}
+                        />
+                      </Grid>
 
-                      {/* Third Student - Show only if second is selected */}
-                      {values.student_id_1 && values.student_id_2 && (
-                        <Grid item xs={12}>
-                          <StudentAutocomplete
-                            value={values.student_id_3}
-                            onChange={(studentId) => handleStudentChange(
-                              'student_id_3',
-                              studentId,
-                              values.student_id_3,
-                              setFieldValue
-                            )}
-                            error={touched.student_id_3 && Boolean(errors.student_id_3)}
-                            helperText={(touched.student_id_3 && errors.student_id_3) ||
-                              "Terzo studente (pacchetto condiviso)" ||
-                              (isEditMode && values.student_id_3 && !canRemoveStudent(values.student_id_3) ?
-                                "Questo studente ha lezioni associate" : "")}
-                            disabled={isEditMode && values.student_id_3 && !canRemoveStudent(values.student_id_3)}
-                            required={false}
-                            students={students.filter(student =>
-                              student.id !== values.student_id_1 &&
-                              student.id !== values.student_id_2
-                            )}
-                          />
-                        </Grid>
-                      )}
+                      {/* Third Student - Always visible */}
+                      <Grid item xs={12}>
+                        <StudentAutocomplete
+                          value={values.student_id_3}
+                          onChange={(studentId) => handleStudentChange(
+                            'student_id_3',
+                            studentId,
+                            values.student_id_3,
+                            setFieldValue
+                          )}
+                          error={touched.student_id_3 && Boolean(errors.student_id_3)}
+                          helperText={(touched.student_id_3 && errors.student_id_3) ||
+                            "Terzo studente (pacchetto condiviso)" ||
+                            (isEditMode && values.student_id_3 && !canRemoveStudent(values.student_id_3) ?
+                              "Questo studente ha lezioni associate" : "")}
+                          disabled={isEditMode && values.student_id_3 && !canRemoveStudent(values.student_id_3)}
+                          required={false}
+                          students={students.filter(student =>
+                            student.id !== values.student_id_1 &&
+                            student.id !== values.student_id_2
+                          )}
+                        />
+                      </Grid>
                     </Grid>
                   </Grid>
 
