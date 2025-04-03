@@ -1,7 +1,6 @@
-// Modifica del componente StudentMultiAutocomplete.jsx
-
-import React, { useState, useEffect } from 'react';
-import { Autocomplete, TextField, CircularProgress, Chip } from '@mui/material';
+// src/components/common/StudentMultiAutocomplete.jsx
+import React, { useState, useEffect, useRef } from 'react';
+import { Autocomplete, TextField, CircularProgress, Chip, Box, Typography } from '@mui/material';
 import { studentService } from '../../services/api';
 
 function StudentMultiAutocomplete({
@@ -18,103 +17,148 @@ function StudentMultiAutocomplete({
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState([]);
-
-  // Carica gli studenti se non sono forniti
+  const [debug, setDebug] = useState({
+    receivedValues: JSON.stringify(values),
+    options: "Not loaded yet",
+    selectedStudents: "None"
+  });
+  
+  // For tracking render cycles
+  const renderCount = useRef(0);
+  renderCount.current += 1;
+  
+  // Load students if not provided
   useEffect(() => {
-    if (Array.isArray(students)) {
-      setOptions(students);
-      return;
-    }
+    console.log("StudentMultiAutocomplete: Loading options, current values:", values);
+    
+    const loadStudents = async () => {
+      if (Array.isArray(students)) {
+        console.log("StudentMultiAutocomplete: Using provided students:", students);
+        setOptions(students);
+        setDebug(prev => ({ ...prev, options: JSON.stringify(students.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` }))) }));
+        return;
+      }
 
-    const fetchStudents = async () => {
       try {
         setLoading(true);
+        console.log("StudentMultiAutocomplete: Fetching students from API");
         const response = await studentService.getAll();
-        setOptions(response.data || []);
+        const fetchedStudents = response.data || [];
+        console.log("StudentMultiAutocomplete: API returned students:", fetchedStudents);
+        setOptions(fetchedStudents);
+        setDebug(prev => ({ ...prev, options: JSON.stringify(fetchedStudents.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` }))) }));
       } catch (err) {
-        console.error('Error fetching students:', err);
+        console.error('StudentMultiAutocomplete: Error loading students:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStudents();
+    loadStudents();
   }, [students]);
 
-  // Aggiorna gli studenti selezionati quando cambiano i valori o le opzioni
+  // Convert IDs to student objects when values change
   useEffect(() => {
-    if (values && values.length && options.length) {
-      const selectedOptions = values.map(id => 
-        options.find(student => student.id === parseInt(id))
-      ).filter(Boolean);
+    console.log("StudentMultiAutocomplete: Values changed:", values);
+    setDebug(prev => ({ ...prev, receivedValues: JSON.stringify(values) }));
+    
+    if (!options.length) {
+      console.log("StudentMultiAutocomplete: Options not loaded yet, can't update selected students");
+      return;
+    }
+    
+    const valueArray = Array.isArray(values) ? values : [];
+    console.log("StudentMultiAutocomplete: Using value array:", valueArray);
+    
+    if (valueArray.length > 0) {
+      const found = valueArray.map(id => {
+        const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+        const student = options.find(s => s.id === numericId);
+        console.log(`StudentMultiAutocomplete: Looking for student with ID ${numericId}:`, student);
+        return student;
+      }).filter(Boolean);
       
-      setSelectedStudents(selectedOptions);
+      console.log("StudentMultiAutocomplete: Found students:", found);
+      setSelectedStudents(found);
+      setDebug(prev => ({ ...prev, selectedStudents: JSON.stringify(found.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` }))) }));
     } else {
+      console.log("StudentMultiAutocomplete: No values to convert, clearing selected students");
       setSelectedStudents([]);
+      setDebug(prev => ({ ...prev, selectedStudents: "None" }));
     }
   }, [values, options]);
 
-  const handleChange = (event, newValue) => {
-    if (newValue.length > maxStudents) {
-      return; // Non permettere più di maxStudents studenti
+  const handleChange = (event, newSelectedStudents) => {
+    console.log("StudentMultiAutocomplete: Selection changed to:", newSelectedStudents);
+    
+    if (newSelectedStudents.length > maxStudents) {
+      console.log(`StudentMultiAutocomplete: Ignoring selection, exceeds max of ${maxStudents}`);
+      return;
     }
     
-    setSelectedStudents(newValue);
+    setSelectedStudents(newSelectedStudents);
+    setDebug(prev => ({ ...prev, selectedStudents: JSON.stringify(newSelectedStudents.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` }))) }));
+    
+    // Extract IDs and call the onChange handler
+    const newStudentIds = newSelectedStudents.map(student => student.id);
+    console.log("StudentMultiAutocomplete: Calling onChange with IDs:", newStudentIds);
     
     if (typeof onChange === 'function') {
-      const studentIds = newValue.map(student => student.id);
-      console.log("StudentMultiAutocomplete sending studentIds:", studentIds);
-      onChange(studentIds);
+      onChange(newStudentIds);
+    } else {
+      console.error("StudentMultiAutocomplete: onChange is not a function!");
     }
   };
 
-  // Debug output
-  console.log("StudentMultiAutocomplete render with values:", values);
-  console.log("StudentMultiAutocomplete selected students:", selectedStudents);
+  console.log(`StudentMultiAutocomplete render #${renderCount.current}, selected:`, selectedStudents);
 
   return (
-    <Autocomplete
-      multiple
-      value={selectedStudents}
-      onChange={handleChange}
-      options={options}
-      getOptionLabel={(option) => `${option.first_name} ${option.last_name}`}
-      isOptionEqualToValue={(option, value) => {
-        // Assicurati che il confronto funzioni correttamente
-        if (!option || !value) return false;
-        return option.id === value.id;
-      }}
-      loading={loading}
-      disabled={disabled}
-      renderTags={(value, getTagProps) =>
-        value.map((option, index) => (
-          <Chip
-            key={option.id}
-            label={`${option.first_name} ${option.last_name}`}
-            {...getTagProps({ index })}
-            disabled={disabled}
+    <>
+      <Autocomplete
+        multiple
+        options={options}
+        value={selectedStudents}
+        onChange={handleChange}
+        getOptionLabel={(option) => `${option.first_name} ${option.last_name}`}
+        isOptionEqualToValue={(option, value) => option.id === value.id}
+        loading={loading}
+        disabled={disabled}
+        renderTags={(value, getTagProps) =>
+          value.map((option, index) => (
+            <Chip
+              key={option.id || index}
+              label={`${option.first_name} ${option.last_name}`}
+              {...getTagProps({ index })}
+            />
+          ))
+        }
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label={label}
+            required={required}
+            error={Boolean(error)}
+            helperText={helperText || `Selected: ${selectedStudents.length}`}
+            InputProps={{
+              ...params.InputProps,
+              endAdornment: (
+                <>
+                  {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                  {params.InputProps.endAdornment}
+                </>
+              ),
+            }}
           />
-        ))
-      }
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          label={label}
-          required={required}
-          error={Boolean(error)}
-          helperText={helperText}
-          InputProps={{
-            ...params.InputProps,
-            endAdornment: (
-              <>
-                {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                {params.InputProps.endAdornment}
-              </>
-            ),
-          }}
-        />
-      )}
-    />
+        )}
+      />
+      
+      {/* Debug info - uncomment to see in UI 
+      <Box sx={{ mt: 1, p: 1, border: '1px solid #eee', fontSize: '0.7rem', display: 'none' }}>
+        <Typography variant="caption">Debug Info:</Typography>
+        <pre>{JSON.stringify(debug, null, 2)}</pre>
+      </Box>
+      */}
+    </>
   );
 }
 
