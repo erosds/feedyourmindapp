@@ -64,6 +64,7 @@ class Lesson(Base):
     start_time = Column(Time, nullable=True)  # Nuovo campo
     payment_date = Column(Date, nullable=True)  # Nuovo campo
     price = Column(DECIMAL(10, 2), nullable=False, default=0)  # New field for student payment
+    is_online = Column(Boolean, default=False)  # Nuovo campo per lezioni online
 
     created_at = Column(TIMESTAMP, server_default=func.now())
     
@@ -327,6 +328,7 @@ class LessonBase(BaseModel):
     start_time: Optional[str] = None  # Usiamo str per l'input, ma convertiamo internamente
     payment_date: Optional[date] = None  # Nuovo campo
     price: Optional[Decimal] = Decimal('0')  # New field with default value 0
+    is_online: bool = False  # Nuovo campo con default False
 
     @field_validator('duration')
     @classmethod
@@ -373,6 +375,7 @@ class LessonCreate(BaseModel):
     is_paid: bool = True  # Campo aggiunto per il pagamento
     payment_date: Optional[date] = None  # Nuovo campo
     price: Optional[Decimal] = Decimal('0')  # New field with default value 0
+    is_online: bool = False  # Nuovo campo con default False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -389,6 +392,7 @@ class LessonUpdate(BaseModel):
     is_paid: Optional[bool] = None  # Campo aggiunto per il pagamento
     payment_date: Optional[date] = None  # Nuovo campo
     price: Optional[Decimal] = None  # New field, optional for updates
+    is_online: Optional[bool] = None  # Nuovo campo
 
     
     @field_validator('duration')
@@ -430,7 +434,7 @@ class LessonResponse(BaseModel):
     is_paid: bool
     payment_date: Optional[date] = None
     price: Decimal  # New field in response
-
+    is_online: bool = False  # Nuovo campo nella risposta
     
     model_config = ConfigDict(from_attributes=True)
     

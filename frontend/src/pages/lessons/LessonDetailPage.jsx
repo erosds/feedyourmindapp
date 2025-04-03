@@ -34,6 +34,10 @@ import { it } from 'date-fns/locale';
 import { lessonService, studentService, professorService, packageService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
+// Aggiungi all'import section:
+import WifiIcon from '@mui/icons-material/Wifi';
+import VideocamIcon from '@mui/icons-material/Videocam';
+
 function LessonDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -224,7 +228,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Data */}
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={2}>
               <Box display="flex" alignItems="center" mb={1}>
                 <CalendarIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -237,7 +241,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Orario */}
-            <Grid item xs={12} md={2}>
+            <Grid item xs={12} md={2.5}>
               <Box display="flex" alignItems="center" mb={1}>
                 <TimeIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -250,7 +254,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Durata */}
-            <Grid item xs={12} md={1}>
+            <Grid item xs={12} md={2.5}>
               <Box display="flex" alignItems="center" mb={1}>
                 <TimeIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -260,6 +264,22 @@ function LessonDetailPage() {
               <Typography variant="body1" fontWeight="medium">
                 {lesson.duration} ore
               </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={2}>
+              <Box display="flex" alignItems="center" mb={1}>
+                <VideocamIcon sx={{ mr: 1 }} color="primary" />
+                <Typography variant="body2" color="text.secondary">
+                  Modalità
+                </Typography>
+              </Box>
+              <Chip
+                icon={lesson.is_online ? <WifiIcon /> : null}
+                label={lesson.is_online ? "Online" : "In presenza"}
+                color={lesson.is_online ? "info" : "default"}
+                variant="outlined"
+                size="small"
+              />
             </Grid>
 
             {/* Divider */}
