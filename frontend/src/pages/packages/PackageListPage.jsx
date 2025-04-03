@@ -97,22 +97,28 @@ function PackageListPage() {
   const handleUpdatePaymentStatus = async (pkg, isPaid, paymentDate, updatedPrice) => {
     try {
       setUpdating(true);
-
-      // Prepara i dati da aggiornare
+  
+      // Prima, ottieni i dati completi del pacchetto
+      const packageResponse = await packageService.getById(pkg.id);
+      const currentPackageData = packageResponse.data;
+  
+      // Prepara i dati da aggiornare mantenendo gli student_ids esistenti
       const updateData = {
-        is_paid: isPaid,
+        ...currentPackageData,              // Include tutti i dati attuali
+        is_paid: isPaid,                    // Aggiorna solo i campi necessari
         payment_date: paymentDate ? format(paymentDate, 'yyyy-MM-dd') : null,
-        package_cost: updatedPrice // Aggiungi il prezzo aggiornato
+        package_cost: updatedPrice || currentPackageData.package_cost
       };
-
+  
       // Chiama il servizio per aggiornare il pacchetto
       await packageService.update(pkg.id, updateData);
-
+  
       // Ricarica i pacchetti
       const packagesResponse = await packageService.getAll();
       setPackages(packagesResponse.data);
     } catch (err) {
       console.error('Error updating payment status:', err);
+      console.error('Detailed error:', err.response?.data || err.message);
       alert('Errore durante l\'aggiornamento dello stato di pagamento. Riprova più tardi.');
     } finally {
       setUpdating(false);
