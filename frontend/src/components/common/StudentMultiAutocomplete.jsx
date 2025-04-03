@@ -1,4 +1,4 @@
-// Updated StudentMultiAutocomplete.jsx
+// Modifica del componente StudentMultiAutocomplete.jsx
 
 import React, { useState, useEffect } from 'react';
 import { Autocomplete, TextField, CircularProgress, Chip } from '@mui/material';
@@ -63,9 +63,14 @@ function StudentMultiAutocomplete({
     
     if (typeof onChange === 'function') {
       const studentIds = newValue.map(student => student.id);
+      console.log("StudentMultiAutocomplete sending studentIds:", studentIds);
       onChange(studentIds);
     }
   };
+
+  // Debug output
+  console.log("StudentMultiAutocomplete render with values:", values);
+  console.log("StudentMultiAutocomplete selected students:", selectedStudents);
 
   return (
     <Autocomplete
@@ -74,12 +79,17 @@ function StudentMultiAutocomplete({
       onChange={handleChange}
       options={options}
       getOptionLabel={(option) => `${option.first_name} ${option.last_name}`}
-      isOptionEqualToValue={(option, value) => option.id === value.id}
+      isOptionEqualToValue={(option, value) => {
+        // Assicurati che il confronto funzioni correttamente
+        if (!option || !value) return false;
+        return option.id === value.id;
+      }}
       loading={loading}
       disabled={disabled}
       renderTags={(value, getTagProps) =>
         value.map((option, index) => (
           <Chip
+            key={option.id}
             label={`${option.first_name} ${option.last_name}`}
             {...getTagProps({ index })}
             disabled={disabled}
@@ -92,7 +102,7 @@ function StudentMultiAutocomplete({
           label={label}
           required={required}
           error={Boolean(error)}
-          helperText={helperText || `Seleziona fino a ${maxStudents} studenti`}
+          helperText={helperText}
           InputProps={{
             ...params.InputProps,
             endAdornment: (

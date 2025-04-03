@@ -194,8 +194,18 @@ function PackageFormPage() {
   }, [location.state]);
 
   // Form submission handler
+  // Modifica della funzione handleSubmit in PackageFormPage.jsx
+
   const handleSubmit = (values, { setSubmitting, setFieldError }) => {
     setError(null);
+    console.log("Form values at submit:", values);
+
+    // Verifica che student_ids sia un array non vuoto
+    if (!values.student_ids || !Array.isArray(values.student_ids) || values.student_ids.length === 0) {
+      setFieldError('student_ids', 'Seleziona almeno uno studente');
+      setSubmitting(false);
+      return;
+    }
 
     // Check if total hours < used hours (for editing)
     if (isEditMode && parseFloat(values.total_hours) < hoursUsed) {
@@ -207,8 +217,8 @@ function PackageFormPage() {
     // Prepare data for API
     const packageData = {
       ...values,
-      // Ensure student_ids is properly passed (not student_id)
-      student_ids: values.student_ids,
+      // Ensure student_ids is properly passed as an array of numbers
+      student_ids: values.student_ids.map(id => typeof id === 'string' ? parseInt(id, 10) : id),
       // Format start date
       start_date: format(new Date(values.start_date), 'yyyy-MM-dd'),
       // Format payment date if present
@@ -223,6 +233,8 @@ function PackageFormPage() {
       delete packageData.student_id;
     }
 
+    console.log("Package data sending to API:", packageData);
+
     // API call
     let submitPromise;
     if (isEditMode) {
@@ -234,7 +246,10 @@ function PackageFormPage() {
     }
 
     submitPromise
-      .then(() => navigate('/packages'))
+      .then((response) => {
+        console.log("API Response:", response);
+        navigate('/packages');
+      })
       .catch(err => {
         console.error('Error saving package:', err);
         let errorMessage = 'Error during save. ';
@@ -317,10 +332,18 @@ function PackageFormPage() {
                     values={values.student_ids}
                     onChange={(selectedIds) => {
                       console.log("Selected student IDs:", selectedIds);
+                      // Aggiorna il valore del campo
                       setFieldValue("student_ids", selectedIds);
+
+                      // Semplice validazione manuale con timeout
+                      setTimeout(() => {
+                        // Trigger blur event sul campo per forzare la validazione di Formik
+                        const event = new Event('blur', { bubbles: true });
+                        document.activeElement.dispatchEvent(event);
+                      }, 100);
                     }}
                     error={touched.student_ids && Boolean(errors.student_ids)}
-                    helperText={touched.student_ids && errors.student_ids}
+                    helperText={(touched.student_ids && errors.student_ids) || "Seleziona da 1 a 3 studenti"}
                     disabled={isEditMode}
                     required
                     students={students}
