@@ -97,17 +97,17 @@ function PackageListPage() {
   const handleUpdatePaymentStatus = async (pkg, isPaid, paymentDate, updatedPrice) => {
     try {
       setUpdating(true);
-  
+
       // Prepara i dati da aggiornare
       const updateData = {
         is_paid: isPaid,
         payment_date: paymentDate ? format(paymentDate, 'yyyy-MM-dd') : null,
         package_cost: updatedPrice // Aggiungi il prezzo aggiornato
       };
-  
+
       // Chiama il servizio per aggiornare il pacchetto
       await packageService.update(pkg.id, updateData);
-  
+
       // Ricarica i pacchetti
       const packagesResponse = await packageService.getAll();
       setPackages(packagesResponse.data);
@@ -585,7 +585,7 @@ function PackageListPage() {
           <TableHead>
             <TableRow>
               <SortableTableCell id="id" label="ID" />
-              <SortableTableCell id="student_id" label="Studente" />
+              <SortableTableCell id="student_ids" label="Studente/i" />
               <SortableTableCell id="start_date" label="Data Inizio" />
               <SortableTableCell id="expiry_date" label="Data Scadenza" />
               <SortableTableCell id="total_hours" label="Totale Ore" />
@@ -621,7 +621,15 @@ function PackageListPage() {
                     }}
                   >
                     <TableCell>#{pkg.id}</TableCell>
-                    <TableCell>{students[pkg.student_id] || `Student #${pkg.student_id}`}</TableCell>
+                    <TableCell>
+                      <Box>
+                        {pkg.student_ids.map(studentId => (
+                          <Typography key={studentId} variant="body2" component="div">
+                            {students[studentId] || `Studente #${studentId}`}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </TableCell>
                     <TableCell>
                       {format(parseISO(pkg.start_date), 'dd/MM/yyyy', { locale: it })}
                     </TableCell>

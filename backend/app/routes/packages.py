@@ -77,70 +77,126 @@ def update_package_status(db: Session, package_id: int, commit: bool = True):
     
     return package
 
-@router.post("/", response_model=models.PackageResponse, status_code=http_status.HTTP_201_CREATED)
+# Aggiungi questa funzione helper
+def package_orm_to_response(package_orm):
+    """Converte un oggetto Package ORM in un oggetto PackageResponse"""
+    # Estrai gli ID degli studenti
+    student_ids = [student.id for student in package_orm.students]
+    
+    # Crea un dizionario con i dati
+    package_dict = {
+        "id": package_orm.id,
+        "student_ids": student_ids,
+        "start_date": package_orm.start_date,
+        "total_hours": package_orm.total_hours,
+        "package_cost": package_orm.package_cost,
+        "status": package_orm.status,
+        "is_paid": package_orm.is_paid,
+        "payment_date": package_orm.payment_date,
+        "remaining_hours": package_orm.remaining_hours,
+        "expiry_date": package_orm.expiry_date,
+        "extension_count": package_orm.extension_count,
+        "notes": package_orm.notes,
+        "created_at": package_orm.created_at
+    }
+    
+    return models.PackageResponse(**package_dict)
+
+@router.post("/", response_model=models.PackageResponse)
 def create_package(package: models.PackageCreate, allow_multiple: bool = False, db: Session = Depends(get_db)):
-    # Check if student exists
-    student = db.query(models.Student).filter(models.Student.id == package.student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+    # Verifica che tutti gli studenti esistano
+    for student_id in package.student_ids:
+        student = db.query(models.Student).filter(models.Student.id == student_id).first()
+        if not student:
+            raise HTTPException(status_code=404, detail=f"Student with ID {student_id} not found")
     
-    # Check for active packages (skip if allow_multiple is True)
+    # Controlla pacchetti attivi (salta se allow_multiple è True)
     if not allow_multiple:
-        active_package = db.query(models.Package).filter(
-            models.Package.student_id == package.student_id,
-            models.Package.status == "in_progress"
-        ).first()
-        
-        if active_package:
-            raise HTTPException(
-                status_code=http_status.HTTP_409_CONFLICT,
-                detail={
-                    "message": "Student already has an active package",
-                    "active_package_id": active_package.id,
-                    "active_package_remaining_hours": float(active_package.remaining_hours)
-                }
-            )
+        for student_id in package.student_ids:
+            active_package = db.query(models.Package).join(
+                models.PackageStudent
+            ).filter(
+                models.PackageStudent.student_id == student_id,
+                models.Package.status == "in_progress"
+            ).first()
+            
+            if active_package:
+                raise HTTPException(
+                    status_code=http_status.HTTP_409_CONFLICT,
+                    detail={
+                        "message": f"Student with ID {student_id} already has an active package",
+                        "active_package_id": active_package.id,
+                        "active_package_remaining_hours": float(active_package.remaining_hours)
+                    }
+                )
     
-    # Ensure total hours and cost are positive
+    # Assicurati che total_hours e cost siano positivi
     total_hours = max(Decimal('0.5'), package.total_hours)
     package_cost = max(Decimal('0'), package.package_cost)
     
-    # Calculate expiry date (30 days from start date)
+    # Calcola data di scadenza
     expiry_date = calculate_expiry_date(package.start_date)
     
-    # Determine payment date
+    # Determina la data di pagamento
     payment_date = package.payment_date if package.is_paid else None
 
-    # Determine status based on dates and payment
+    # Determina lo stato
     if package.is_paid:
         status = "in_progress" if date.today() < expiry_date else "completed"
     else:
         status = "in_progress" if date.today() < expiry_date else "expired"
     
-    # Create new package
+    # Crea nuovo pacchetto
     db_package = models.Package(
-        student_id=package.student_id,
+        # Rimuovi student_id
         start_date=package.start_date,
         total_hours=total_hours,
         package_cost=package_cost,
-        status=status,  # Use the computed status here
+        status=status,
         is_paid=package.is_paid,
         payment_date=payment_date,
-        remaining_hours=total_hours,  # Initially, remaining = total
-        expiry_date=expiry_date
+        remaining_hours=total_hours,
+        expiry_date=expiry_date,
+        notes=package.notes
     )
     
-    # Save to database
+    # Salva nel database
     db.add(db_package)
+    db.flush()  # Per ottenere l'ID
+    
+    # Aggiungi le relazioni con gli studenti
+    for student_id in package.student_ids:
+        db_package_student = models.PackageStudent(
+            package_id=db_package.id,
+            student_id=student_id
+        )
+        db.add(db_package_student)
+    
     db.commit()
     db.refresh(db_package)
     
     return db_package
 
+
 @router.get("/", response_model=List[models.PackageResponse])
 def read_packages(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):
+    # Fetch all packages
     packages = db.query(models.Package).offset(skip).limit(limit).all()
-    return packages
+    
+    # Update status for each package
+    for pkg in packages:
+        # Update package status
+        update_package_status(db, pkg.id, commit=False)
+    
+    db.commit()
+    
+    # Now re-fetch packages to ensure we have the latest data
+    packages = db.query(models.Package).offset(skip).limit(limit).all()
+    
+    # Convert packages to PackageResponse manually
+    package_responses = [package_orm_to_response(pkg) for pkg in packages]
+    
+    return package_responses
 
 @router.get("/{package_id}", response_model=models.PackageResponse)
 def read_package(package_id: int, db: Session = Depends(get_db)):
@@ -156,39 +212,56 @@ def read_package(package_id: int, db: Session = Depends(get_db)):
 
 @router.get("/student/{student_id}", response_model=List[models.PackageResponse])
 def read_student_packages(student_id: int, db: Session = Depends(get_db)):
-    # Check if student exists
+    # Verifica che lo studente esista
     student = db.query(models.Student).filter(models.Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
-    # Get all student packages
-    packages = db.query(models.Package).filter(models.Package.student_id == student_id).all()
+    # Ottieni tutti i pacchetti dello studente tramite la tabella di giunzione
+    packages = db.query(models.Package).join(
+        models.PackageStudent
+    ).filter(
+        models.PackageStudent.student_id == student_id
+    ).all()
     
-    # Update status for each package
+    # Aggiorna lo stato di ogni pacchetto
     for pkg in packages:
         update_package_status(db, pkg.id, commit=False)
     
     db.commit()
-    packages = db.query(models.Package).filter(models.Package.student_id == student_id).all()
+    
+    # Ricarica i pacchetti con lo stato aggiornato
+    packages = db.query(models.Package).join(
+        models.PackageStudent
+    ).filter(
+        models.PackageStudent.student_id == student_id
+    ).all()
     
     return packages
 
 @router.get("/student/{student_id}/active", response_model=models.PackageResponse)
 def read_student_active_package(student_id: int, db: Session = Depends(get_db)):
-    # Check if student exists
+    # Verifica che lo studente esista
     student = db.query(models.Student).filter(models.Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
-    # Update all packages for this student first
-    packages = db.query(models.Package).filter(models.Package.student_id == student_id).all()
+    # Aggiorna tutti i pacchetti per questo studente
+    packages = db.query(models.Package).join(
+        models.PackageStudent
+    ).filter(
+        models.PackageStudent.student_id == student_id
+    ).all()
+    
     for pkg in packages:
         update_package_status(db, pkg.id, commit=False)
     db.commit()
     
-    # Get active package
-    active_package = db.query(models.Package).filter(
-        models.Package.student_id == student_id,
+    # Ottieni il pacchetto attivo
+    active_package = db.query(models.Package).join(
+        models.PackageStudent
+    ).filter(
+        models.PackageStudent.student_id == student_id,
         models.Package.status == "in_progress"
     ).first()
     
@@ -196,9 +269,6 @@ def read_student_active_package(student_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No active package found for this student")
     
     return active_package
-
-# In backend/app/routes/packages.py
-# Find the update_package function and modify the part that handles start_date changes
 
 @router.put("/{package_id}", response_model=models.PackageResponse)
 def update_package(package_id: int, package: models.PackageUpdate, db: Session = Depends(get_db)):

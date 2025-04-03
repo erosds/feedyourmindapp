@@ -25,6 +25,8 @@ import { format, parseISO, addDays, startOfWeek } from 'date-fns';
 import { studentService, packageService, lessonService } from '../../services/api';
 import StudentAutocomplete from '../../components/common/StudentAutocomplete';
 import { useAuth } from '../../context/AuthContext';
+import StudentMultiAutocomplete from '../../components/common/StudentMultiAutocomplete';
+
 
 
 function PackageFormPage() {
@@ -41,6 +43,8 @@ function PackageFormPage() {
   const [students, setStudents] = useState([]);
   const [packageLessons, setPackageLessons] = useState([]);
   const [overflowDetails, setOverflowDetails] = useState(null);
+  const [selectedStudents, setSelectedStudents] = useState([]);
+
 
   // Calculate used hours
   const hoursUsed = useMemo(() =>
@@ -50,19 +54,21 @@ function PackageFormPage() {
 
   // Initial form state
   const [initialValues, setInitialValues] = useState({
-    student_id: '',
+    student_ids: [],
     start_date: new Date(),
     total_hours: '',
     package_cost: '',
     is_paid: false,
     payment_date: null,
-    package_cost: '0',
     notes: ''
   });
 
   // Package validation schema
   const PackageSchema = Yup.object().shape({
-    student_id: Yup.number().required('Student is required'),
+    student_ids: Yup.array()
+      .min(1, 'Almeno uno studente è richiesto')
+      .max(3, 'Massimo 3 studenti per pacchetto')
+      .required('Gli studenti sono richiesti'),
     start_date: Yup.date().required('Start date is required'),
     total_hours: Yup.number()
       .transform((value, originalValue) => originalValue === '' ? null : value)
@@ -115,8 +121,6 @@ function PackageFormPage() {
     return expiryDate;
   };
 
-
-
   // Load initial data
   useEffect(() => {
     const fetchInitialData = () => {
@@ -138,7 +142,7 @@ function PackageFormPage() {
                 );
                 setPackageLessons(filteredLessons);
                 setInitialValues({
-                  student_id: packageData.student_id,
+                  student_ids: [packageData.student_id],
                   start_date: parseISO(packageData.start_date),
                   total_hours: packageData.total_hours.toString(),
                   package_cost: packageData.package_cost.toString(),
@@ -313,17 +317,15 @@ function PackageFormPage() {
 
 
                 <Grid item xs={12} md={6}>
-                  <StudentAutocomplete
-                    value={values.student_id}
-                    onChange={(studentId) => {
-                      setFieldValue('student_id', studentId);
-                      checkActivePackage(studentId);
-                    }}
-                    error={touched.student_id && Boolean(errors.student_id)}
-                    helperText={touched.student_id && errors.student_id}
+                  <StudentMultiAutocomplete
+                    values={values.student_ids}
+                    onChange={(selectedStudents) => setFieldValue("student_ids", selectedStudents)}
+                    error={touched.student_ids && Boolean(errors.student_ids)}
+                    helperText={touched.student_ids && errors.student_ids}
                     disabled={isEditMode}
                     required
                     students={students}
+                    maxStudents={3}
                   />
                 </Grid>
 

@@ -44,8 +44,8 @@ class Student(Base):
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
-    
-    packages = relationship("Package", back_populates="student")
+    # Aggiornare la relazione:
+    packages = relationship("Package", secondary="package_students", back_populates="students")
     lessons = relationship("Lesson", back_populates="student")
 
 class Lesson(Base):
@@ -93,7 +93,6 @@ class ProfessorUpdate(BaseModel):
     is_admin: Optional[bool] = None
     password: Optional[str] = None
     
-
 class ProfessorResponse(ProfessorBase):
     id: int
     created_at: datetime
@@ -135,7 +134,6 @@ class Package(Base):
     __tablename__ = "packages"
     
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     start_date = Column(Date, nullable=False)
     total_hours = Column(DECIMAL(5, 2), nullable=False)
     package_cost = Column(DECIMAL(10, 2), nullable=False)
@@ -148,17 +146,26 @@ class Package(Base):
     notes = Column(String, nullable=True)  # Campo per annotazioni generali
     created_at = Column(TIMESTAMP, server_default=func.now())
 
+    students = relationship("Student", secondary="package_students", back_populates="packages")
+    lessons = relationship("Lesson", back_populates="package")
+
     __table_args__ = (
         CheckConstraint("total_hours > 0", name="positive_hours"),
         CheckConstraint("package_cost >= 0", name="positive_cost"),
     )
     
-    student = relationship("Student", back_populates="packages")
-    lessons = relationship("Lesson", back_populates="package")
+
+# Tabella di giunzione per la relazione many-to-many
+class PackageStudent(Base):
+    __tablename__ = "package_students"
+    
+    package_id = Column(Integer, ForeignKey("packages.id", ondelete="CASCADE"), primary_key=True)
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), primary_key=True)
+
 
 # Update Pydantic models for package
 class PackageBase(BaseModel):
-    student_id: int
+    student_ids: List[int]
     start_date: date
     total_hours: Decimal
     package_cost: Decimal
@@ -171,6 +178,15 @@ class PackageBase(BaseModel):
     def check_positive_hours(cls, v):
         if v <= 0:
             raise ValueError('total_hours must be positive')
+        return v
+    
+    @field_validator('student_ids')
+    @classmethod
+    def check_students_limit(cls, v):
+        if len(v) > 3:
+            raise ValueError('Maximum of 3 students allowed per package')
+        if len(v) == 0:
+            raise ValueError('At least one student must be assigned to the package')
         return v
     
     @field_validator('package_cost')
@@ -236,7 +252,7 @@ class PackageUpdate(BaseModel):
 
 class PackageResponse(BaseModel):
     id: int
-    student_id: int
+    student_ids: List[int]
     start_date: date
     total_hours: Decimal
     package_cost: Decimal
@@ -246,12 +262,38 @@ class PackageResponse(BaseModel):
     remaining_hours: Decimal
     expiry_date: date
     extension_count: int
-    notes: Optional[str]  # Aggiungere questa riga
-
+    notes: Optional[str]
 
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode='before')
+    def set_student_data(cls, values):
+        # If values is a SQLAlchemy model
+        try:
+            # Try to get student_id directly
+            student_id = values.get('student_id') or getattr(values, 'student_id', None)
+            
+            # If no student_id found, look for alternative ways
+            if student_id is None:
+                # Check if there's a relationship with student
+                student = getattr(values, 'student', None)
+                if student:
+                    student_id = student.id
+            
+            # Set student_ids if not already set
+            if not hasattr(values, 'student_ids'):
+                values.student_ids = [student_id] if student_id is not None else []
+            
+            # Ensure student_id is set
+            if student_id is not None:
+                values.student_id = student_id
+        except Exception as e:
+            # Log the error or handle it gracefully
+            print(f"Error processing student data: {e}")
+        
+        return values
 
 class LessonBase(BaseModel):
     professor_id: int

@@ -136,11 +136,18 @@ export const packageService = {
     return api.get(`/packages/student/${studentId}/active`);
   },
   
-  create: async (data) => {
-    return api.post('/packages/', data);
-  },
+  create: async (data, allowMultiple = false, studentIds = null) => {
+    // Ensure student_ids is used consistently
+    if (data.student_id && !data.student_ids) {
+      data.student_ids = [data.student_id];
+      delete data.student_id;
+    }
+    
+    // If additional student IDs are provided, use them
+    if (studentIds) {
+      data.student_ids = studentIds;
+    }
 
-  create: async (data, allowMultiple = false) => {
     return api.post(`/packages/?allow_multiple=${allowMultiple}`, data);
   },
   
@@ -149,6 +156,12 @@ export const packageService = {
   },
 
   update: async (id, data) => {
+    // Ensure student_ids is used consistently
+    if (data.student_id && !data.student_ids) {
+      data.student_ids = [data.student_id];
+      delete data.student_id;
+    }
+    
     return api.put(`/packages/${id}`, data);
   },
   

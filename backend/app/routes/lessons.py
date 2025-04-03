@@ -252,8 +252,10 @@ def create_lesson(
     if lesson.is_package:
         if not lesson.package_id:
             # Cerca il pacchetto attivo dello studente
-            active_package = db.query(models.Package).filter(
-                models.Package.student_id == lesson.student_id,
+            active_package = db.query(models.Package).join(
+                models.PackageStudent
+            ).filter(
+                models.PackageStudent.student_id == lesson.student_id,
                 models.Package.status == "in_progress"
             ).first()
             
@@ -271,8 +273,13 @@ def create_lesson(
             if not package:
                 raise HTTPException(status_code=404, detail="Package not found")
             
-            if package.student_id != lesson.student_id:
-                raise HTTPException(status_code=400, detail="Package does not belong to this student")
+            student_in_package = db.query(models.PackageStudent).filter(
+                models.PackageStudent.package_id == package.id,
+                models.PackageStudent.student_id == lesson.student_id
+            ).first()
+            
+            if not student_in_package:
+                raise HTTPException(status_code=400, detail="Lo studente non è associato a questo pacchetto")
             
             if package.status != "in_progress":
                 # Controlla se ci sono ore rimanenti

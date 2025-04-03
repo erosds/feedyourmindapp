@@ -84,43 +84,43 @@ function PackageDetailPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-
+  
         // Load package data
         const packageResponse = await packageService.getById(id);
         setPackageData(packageResponse.data);
-
-        // Load student data
-        const studentResponse = await studentService.getById(packageResponse.data.student_id);
-        setStudent(studentResponse.data);
-
-        // Imposta lo student_id nel form
+  
+        // Carica i dettagli di tutti gli studenti del pacchetto
+        const studentPromises = packageResponse.data.student_ids.map(studentId => 
+          studentService.getById(studentId)
+        );
+        const studentsData = await Promise.all(studentPromises);
+        const students = studentsData.map(response => response.data);
+        setStudents(students);
+  
+        // Imposta lo student_id nel form (usa il primo studente del pacchetto)
         setLessonForm(prev => ({
           ...prev,
-          student_id: packageResponse.data.student_id,
+          student_id: packageResponse.data.student_ids[0],
           package_id: parseInt(id),
           is_package: true
         }));
-
-        // Carica tutti gli studenti per il componente StudentAutocomplete
-        const studentsResponse = await studentService.getAll();
-        setStudents(studentsResponse.data);
-
+  
         // Load lessons related to the package
         const lessonsResponse = await lessonService.getAll();
         const packageLessons = lessonsResponse.data.filter(
           lesson => lesson.package_id === parseInt(id) && lesson.is_package
         );
         setLessons(packageLessons);
-
-        // Load student lessons for overlap checks
-        const studentLessonsResponse = await lessonService.getByStudent(packageResponse.data.student_id);
+  
+        // Load student lessons for overlap checks (usa il primo studente)
+        const studentLessonsResponse = await lessonService.getByStudent(packageResponse.data.student_ids[0]);
         setStudentLessons(studentLessonsResponse.data);
-
+  
         // Set current month to the month of the first lesson or today if no lessons
         if (packageLessons.length > 0) {
           setCurrentMonth(parseISO(packageLessons[0].lesson_date));
         }
-
+  
       } catch (err) {
         console.error('Error fetching package data:', err);
         setError('Unable to load package data. Please try refreshing the page.');
@@ -128,7 +128,7 @@ function PackageDetailPage() {
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, [id]);
 
@@ -425,13 +425,28 @@ function PackageDetailPage() {
                 {/* Left Column */}
                 <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
-                    Studente
+                    Studente/i
                   </Typography>
-                  <Typography variant="body1" fontWeight="medium" gutterBottom>
-                    <Link to={`/students/${student.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      {student.first_name} {student.last_name}
-                    </Link>
-                  </Typography>
+                  <Box>
+                    {packageData.student_ids.map(studentId => {
+                      const studentData = students.find(s => s.id === studentId);
+                      return (
+                        <Typography
+                          key={studentId}
+                          variant="body1"
+                          fontWeight="medium"
+                          gutterBottom
+                        >
+                          <Link
+                            to={`/students/${studentId}`}
+                            style={{ textDecoration: 'none', color: 'inherit' }}
+                          >
+                            {studentData ? `${studentData.first_name} ${studentData.last_name}` : `Studente #${studentId}`}
+                          </Link>
+                        </Typography>
+                      );
+                    })}
+                  </Box>
                 </Grid>
 
                 <Grid item xs={12} md={4}>
@@ -606,7 +621,7 @@ function PackageDetailPage() {
                 </Grid>
 
                 <Grid item xs={12}>
-                <Divider /> {/* Divisore aggiunto */}
+                  <Divider /> {/* Divisore aggiunto */}
                   <Box display="flex" flexDirection="column" >
                     <Box display="flex" justifyContent="space-between" sx={{ mt: 13.5 }}>
                       <Typography variant="h6">Completamento:</Typography>
