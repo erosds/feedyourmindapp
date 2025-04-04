@@ -201,7 +201,7 @@ function LessonFormPage() {
       hourly_rate: lesson.hourly_rate,
       is_paid: lesson.is_paid !== undefined ? lesson.is_paid : true,
       payment_date: paymentDate,
-      price: lesson.price || 0, // Use existing price or default to 0
+      price: !lesson.is_package ? (lesson.price || lesson.duration * 20) : 0,
       is_online: lesson.is_online !== undefined ? lesson.is_online : false
     });
   };
@@ -248,6 +248,9 @@ function LessonFormPage() {
       startTimeDate.setHours(9, 0, 0, 0);
     }
 
+    // Calcola il prezzo predefinito in base alle ore eccedenti
+    const defaultPrice = 20 * overflow_hours;
+
     // Pre-fill the form
     setInitialValues({
       ...initialValues,
@@ -261,6 +264,7 @@ function LessonFormPage() {
       hourly_rate: original_hourly_rate || '12.5',
       is_paid: false,
       payment_date: null,
+      price: defaultPrice,
     });
 
     setInfoMessage(`Stai creando una lezione singola per ${overflow_hours} ore in eccesso da un'altra lezione. Puoi modificare la tariffa oraria o altri dettagli se necessario.`);

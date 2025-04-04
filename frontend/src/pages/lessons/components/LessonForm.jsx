@@ -203,7 +203,15 @@ function LessonForm({
                   label="Durata (ore)"
                   type="number"
                   value={values.duration}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const newDuration = parseFloat(e.target.value) || 0;
+                    handleChange(e);
+
+                    // Se non è una lezione da pacchetto, aggiorna automaticamente il prezzo
+                    if (!values.is_package) {
+                      setFieldValue('price', newDuration * 20);
+                    }
+                  }}
                   onBlur={handleBlur}
                   error={touched.duration && Boolean(errors.duration)}
                   helperText={touched.duration && errors.duration}
