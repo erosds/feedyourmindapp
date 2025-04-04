@@ -108,6 +108,8 @@ def _handle_use_package_option(db, values, lesson_data, package_id, lesson_hours
         "package_status": package.status
     }
 
+# Modifica in backend/app/routes/lessons.py
+
 def _handle_create_new_package_option(db, values, lesson_data, package_id, lesson_hours_in_package, overflow_hours):
     """Gestisce l'opzione di creare un nuovo pacchetto per le ore in eccesso."""
     from .. import models
@@ -118,21 +120,33 @@ def _handle_create_new_package_option(db, values, lesson_data, package_id, lesso
     # Recupera il pacchetto originale
     package = db.query(models.Package).filter(models.Package.id == package_id).first()
     
+    # Ottieni lo student_id dalla lezione originale
+    student_id = lesson_data["student_id"]
+    
     # Calcola il costo proporzionale per il nuovo pacchetto
     original_hourly_cost = package.package_cost / package.total_hours
     new_package_cost = original_hourly_cost * overflow_hours
     
     # Crea nuovo pacchetto per le ore rimanenti
     new_package = models.Package(
-        student_id=package.student_id,
+        # Non più student_id ma usiamo il modello relazionale
         start_date=lesson_data["lesson_date"],
         total_hours=overflow_hours,
         package_cost=new_package_cost,
         status="in_progress",
         is_paid=False,
-        remaining_hours=overflow_hours
+        remaining_hours=overflow_hours,
+        expiry_date=package.expiry_date  # Usa la stessa data di scadenza del pacchetto originale
     )
     db.add(new_package)
+    db.flush()  # Otteniamo l'ID del nuovo pacchetto
+    
+    # Aggiungi relazione con lo studente
+    db_package_student = models.PackageStudent(
+        package_id=new_package.id,
+        student_id=student_id
+    )
+    db.add(db_package_student)
     db.flush()
     
     # Parse delle informazioni di tempo
@@ -147,7 +161,7 @@ def _handle_create_new_package_option(db, values, lesson_data, package_id, lesso
     )
     
     payment_date_new = determine_payment_date(
-        is_paid=True,
+        is_paid=False,  # Il nuovo pacchetto non è pagato
         reference_date=new_package.start_date
     )
     
@@ -176,7 +190,7 @@ def _handle_create_new_package_option(db, values, lesson_data, package_id, lesso
         package_id=new_package.id,
         hourly_rate=lesson_data["hourly_rate"],
         total_payment=overflow_hours * Decimal(str(lesson_data["hourly_rate"])),
-        is_paid=True,
+        is_paid=False,  # Il nuovo pacchetto non è pagato
         start_time=start_time_obj,
         payment_date=payment_date_new
     )

@@ -227,6 +227,7 @@ function PackageFormPage() {
 
   // Modified handleSubmit function with improved error handling
   // Modifica la funzione handleSubmit in PackageFormPage.jsx
+  // In frontend/src/pages/packages/PackageFormPage.jsx, modifica la funzione handleSubmit:
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
@@ -265,6 +266,8 @@ function PackageFormPage() {
 
       console.log("Dati pacchetto da inviare all'API:", packageData);
 
+      let newPackageId;
+
       // Chiamata API con gestione migliorata degli errori
       if (isEditMode) {
         try {
@@ -276,7 +279,33 @@ function PackageFormPage() {
         }
       } else {
         const allowMultiple = location.state?.allow_multiple || false;
-        await packageService.create(packageData, allowMultiple);
+        const response = await packageService.create(packageData, allowMultiple);
+        newPackageId = response.data.id;
+      }
+
+      // Verifica se dobbiamo creare automaticamente una lezione sul nuovo pacchetto
+      if (!isEditMode && location.state?.create_lesson_after && newPackageId && location.state?.lesson_data) {
+        // Prepara i dati della lezione
+        const lessonData = {
+          professor_id: location.state.lesson_data.professor_id,
+          student_id: student_ids[0], // Usiamo il primo studente associato al pacchetto
+          lesson_date: location.state.lesson_data.lesson_date,
+          start_time: location.state.lesson_data.start_time,
+          duration: location.state.overflow_hours,
+          is_package: true,
+          package_id: newPackageId,
+          hourly_rate: location.state.lesson_data.hourly_rate,
+          is_paid: false, // Lezione non pagata perché il pacchetto non è pagato
+        };
+
+        try {
+          console.log("Creazione automatica lezione sul nuovo pacchetto:", lessonData);
+          await lessonService.create(lessonData);
+          // Nessuna necessità di attendere la risposta o di fare altre operazioni
+        } catch (err) {
+          console.error("Errore nella creazione automatica della lezione:", err);
+          // Non blocchiamo l'esecuzione se la creazione della lezione fallisce
+        }
       }
 
       navigate('/packages');
