@@ -30,7 +30,6 @@ import {
   ArrowBack as ArrowBackIcon,
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
-  AddTask as AddLessonIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { format, parseISO, isAfter, differenceInDays } from 'date-fns';
@@ -49,7 +48,6 @@ function PackageDetailPage() {
 
   const navigate = useNavigate();
   const [packageData, setPackageData] = useState(null);
-  const [student, setStudent] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [professors, setProfessors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -62,7 +60,6 @@ function PackageDetailPage() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [students, setStudents] = useState([]);
   const [studentLessons, setStudentLessons] = useState([]);
-  const [selectedLesson, setSelectedLesson] = useState(null);
   // Modifiche al prezzo
   const [isEditingPrice, setIsEditingPrice] = useState(false);
   const [priceValue, setPriceValue] = useState(0);
@@ -284,21 +281,6 @@ function PackageDetailPage() {
     navigate('/packages');
   };
 
-  const handleAddLesson = () => {
-    // Imposta la data corrente
-    setSelectedDay(new Date());
-    // Imposta il form con i valori predefiniti, usando la data corrente
-    setLessonForm(prev => ({
-      ...prev,
-      lesson_date: new Date(),
-      professor_id: currentUser?.id || '',
-      student_id: packageData.student_ids[0] || '',
-      package_id: parseInt(id),
-      is_package: true
-    }));
-    // Apri il dialogo
-    setAddLessonDialogOpen(true);
-  };
 
   // Aggiungi questa funzione handleExtendPackage
   const handleExtendPackage = async () => {
@@ -751,18 +733,6 @@ function PackageDetailPage() {
               <Typography variant="h6">
                 Lezioni del pacchetto
               </Typography>
-              {parseFloat(packageData.remaining_hours) > 0 && (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<AddLessonIcon />}
-                  onClick={handleAddLesson}
-                  sx={{ mr: 1 }}
-                  size='small'
-                >
-                  Aggiungi Lezioni al Pacchetto
-                </Button>
-              )}
             </Box>
 
             {lessons.length === 0 ? (

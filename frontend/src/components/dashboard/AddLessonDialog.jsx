@@ -391,7 +391,7 @@ useEffect(() => {
                 />
               )}
             </Grid>
-            {/* Data lezione */}
+
             {/* Data lezione */}
             <Grid item xs={12} md={6}>
               <DatePicker
