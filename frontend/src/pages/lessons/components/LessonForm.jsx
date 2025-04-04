@@ -166,12 +166,16 @@ function LessonForm({
                       setFieldValue('payment_date', date);
                     }
                   }}
+                  // Disable the date picker when coming from the calendar in package detail
+                  readOnly={context === 'packageDetail' && fixedPackageId}
                   slotProps={{
                     textField: {
                       fullWidth: true,
                       required: true,
                       error: touched.lesson_date && Boolean(errors.lesson_date),
-                      helperText: touched.lesson_date && errors.lesson_date,
+                      helperText: touched.lesson_date && errors.lesson_date ||
+                        (context === 'packageDetail' && fixedPackageId ?
+                          "Data fissata dal calendario" : ""),
                     },
                   }}
                 />

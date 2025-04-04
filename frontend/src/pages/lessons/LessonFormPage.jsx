@@ -273,19 +273,24 @@ function LessonFormPage() {
   // Handle student change
   const handleStudentChange = async (studentId, setFieldValue) => {
     if (!studentId) return;
-
+  
     try {
       setFieldValue('student_id', studentId);
       
-      // If we're in package detail context, don't reset package_id
-      if (!isPackageDetailContext) {
+      // Important: Preserve is_package and package_id in package detail context
+      if (isPackageDetailContext) {
+        // Ensure we keep is_package as true and package_id set properly
+        setFieldValue('is_package', true);
+        setFieldValue('package_id', fixedPackageId);
+      } else {
+        // Original behavior for non-package-detail context
         setFieldValue('package_id', null);
         setLessonsInPackage([]);
-
+  
         // Load student packages
         await loadStudentPackages(studentId);
       }
-
+  
       // Load student lessons to check for overlaps
       await loadStudentLessons(studentId);
     } catch (err) {

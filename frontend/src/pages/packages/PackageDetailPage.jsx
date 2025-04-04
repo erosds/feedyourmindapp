@@ -179,12 +179,36 @@ function PackageDetailPage() {
         notes: updatedNotes,
         student_ids: prevData.student_ids
       };
-      
+
       // Optional: Log to help debug
       console.log('Package data updated with new notes:', newData);
-      
+
       return newData;
     });
+  };
+
+  const handleDeleteLesson = async (lessonId, event) => {
+    event.stopPropagation(); // Prevent navigation to lesson details
+
+    if (window.confirm('Sei sicuro di voler eliminare questa lezione? Questa azione non può essere annullata.')) {
+      try {
+        await lessonService.delete(lessonId);
+
+        // Reload lessons data
+        const lessonsResponse = await lessonService.getAll();
+        const packageLessons = lessonsResponse.data.filter(
+          lesson => lesson.package_id === parseInt(id) && lesson.is_package
+        );
+        setLessons(packageLessons);
+
+        // Also refresh package data to update remaining hours
+        const packageResponse = await packageService.getById(id);
+        setPackageData(packageResponse.data);
+      } catch (err) {
+        console.error('Error deleting lesson:', err);
+        alert('Errore durante l\'eliminazione della lezione. Riprova più tardi.');
+      }
+    }
   };
 
   // Funzione per calcolare le ore disponibili nel pacchetto
@@ -727,7 +751,7 @@ function PackageDetailPage() {
                 <Button
                   variant="contained"
                   color="primary"
-                  startIcon={<AddLessonIcon/>}
+                  startIcon={<AddLessonIcon />}
                   onClick={handleAddLesson}
                   sx={{ mr: 1 }}
                   size='small'
@@ -755,7 +779,9 @@ function PackageDetailPage() {
                         <TableCell>Professore</TableCell>
                         <TableCell>Durata (ore)</TableCell>
                         <TableCell>Tariffa Oraria</TableCell>
-                        <TableCell align="right">Totale</TableCell>
+                        <TableCell>Totale</TableCell>
+                        <TableCell align="right">Azioni</TableCell>
+
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -786,10 +812,21 @@ function PackageDetailPage() {
                             <TableCell>
                               {getProfessorNameById(lesson.professor_id)}
                             </TableCell>
-                            
+
                             <TableCell>{lesson.duration}</TableCell>
                             <TableCell>€{parseFloat(lesson.hourly_rate).toFixed(2)}</TableCell>
                             <TableCell align="right">€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>
+                            <TableCell align="right">
+                              <Tooltip title="Elimina">
+                                <IconButton
+                                  color="error"
+                                  onClick={(e) => handleDeleteLesson(lesson.id, e)}
+                                  size="small"
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
                           </TableRow>
                         ))}
                     </TableBody>
