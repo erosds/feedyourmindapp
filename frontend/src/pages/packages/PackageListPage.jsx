@@ -611,7 +611,7 @@ function PackageListPage() {
           <TableHead>
             <TableRow>
               <SortableTableCell id="id" label="ID" />
-              <SortableTableCell id="student_ids" label="Studente/i" width={150} />
+              <SortableTableCell id="student_ids" label="Studente/i" width={250} />
               <SortableTableCell id="start_date" label="Data Inizio" />
               <SortableTableCell id="expiry_date" label="Data Scadenza" />
               <SortableTableCell id="total_hours" label="Totale Ore" />
