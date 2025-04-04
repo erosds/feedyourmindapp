@@ -455,7 +455,7 @@ function PackageListPage() {
   };
 
   // SortableTableCell component for column headers
-  const SortableTableCell = ({ id, label, numeric }) => {
+  const SortableTableCell = ({ id, label, numeric, width }) => {
     const isActive = orderBy === id;
 
     return (
@@ -469,6 +469,7 @@ function PackageListPage() {
             backgroundColor: 'rgba(0, 0, 0, 0.04)',
           },
           fontWeight: isActive ? 'bold' : 'normal',
+          width: width || 'auto', // Usa la larghezza specificata o auto
           '& .sort-icon': {
             opacity: isActive ? 1 : 0.35,
             marginLeft: '4px',
@@ -610,7 +611,7 @@ function PackageListPage() {
           <TableHead>
             <TableRow>
               <SortableTableCell id="id" label="ID" />
-              <SortableTableCell id="student_ids" label="Studente/i" />
+              <SortableTableCell id="student_ids" label="Studente/i" width={150} />
               <SortableTableCell id="start_date" label="Data Inizio" />
               <SortableTableCell id="expiry_date" label="Data Scadenza" />
               <SortableTableCell id="total_hours" label="Totale Ore" />
@@ -675,7 +676,7 @@ function PackageListPage() {
                       </Box>
                     </TableCell>
 
-                    <TableCell>{pkg.total_hours}</TableCell>
+                    <TableCell>{parseFloat(pkg.total_hours).toFixed(1)}</TableCell>
                     <TableCell sx={{
                       fontWeight: parseFloat(pkg.remaining_hours) > 0
                         ? (pkg.status !== 'in_progress' ? 'bold' : '')

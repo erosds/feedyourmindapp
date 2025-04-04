@@ -465,7 +465,7 @@ function PackageDetailPage() {
       {/* Main data */}
       <Grid container spacing={1}>
         {/* Header with basic package information */}
-        <Grid item xs={12} md={8} >
+        <Grid item xs={12} md={7} >
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" >
@@ -703,17 +703,21 @@ function PackageDetailPage() {
         </Grid>
 
         {/* Calendario lezioni */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={5}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom mb={3.3} >
+              <Typography variant="h6">
                 Calendario Lezioni
+              </Typography>
+              <Typography variant="body2" color="text.secondary" mb={5} fontStyle={'italic'}>
+                Clicca su un giorno per aggiungere una lezione
               </Typography>
               <PackageCalendar
                 lessons={lessons}
                 professors={professors}
                 onDayClick={handleDayClick}
                 expiryDate={packageData.expiry_date}
+                startDate={packageData.start_date}
               />
 
             </CardContent>

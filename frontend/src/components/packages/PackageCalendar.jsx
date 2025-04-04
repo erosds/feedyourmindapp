@@ -1,4 +1,3 @@
-// src/pages/lessons/utils/PackageCalendar.jsx
 import React, { useState } from 'react';
 import { Box, Grid, IconButton, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -7,7 +6,7 @@ import { format, getYear, getMonth, getDaysInMonth, getDay, startOfMonth, parseI
 import { it } from 'date-fns/locale';
 import getProfessorNameById from '../../utils/professorMapping';
 
-const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate }) => {
+const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate, startDate }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const changeMonth = (offset) => {
@@ -68,6 +67,9 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate }) => {
     });
   }
 
+  // Parse the start date if provided
+  const packageStartDate = startDate ? parseISO(startDate) : null;
+
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
@@ -120,6 +122,8 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate }) => {
           const isToday = isSameDay(dateObj, new Date());
           const isPastExpiryDate = expiryDate && dateObj > new Date(expiryDate);
           
+          // Check if this is the package start date
+          const isPackageStartDate = packageStartDate && isSameDay(dateObj, packageStartDate);
 
           return (
             <Grid item xs={12 / 7} key={`day-${index}`}>
@@ -142,7 +146,7 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate }) => {
                     justifyContent: 'center',
                     border: isToday ? 1 : 0,
                     borderColor: 'primary.main',
-                    bgcolor: hasLesson ? 'primary.main' : (isToday ? 'transparent' : 'transparent'),
+                    bgcolor: hasLesson ? 'primary.main' : 'transparent',
                     color: hasLesson ? 'primary.contrastText' : (isPastExpiryDate ? 'text.disabled' : 'text.primary'),
                     opacity: isPastExpiryDate ? 0.5 : 1,
                     // Modificato il cursore per indicare che è cliccabile se esiste onDayClick
@@ -170,6 +174,20 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate }) => {
                   }}
                 >
                   {day}
+                  {/* Add a small circle indicator for package start date */}
+                  {isPackageStartDate && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        bottom: 10,
+                        left: '0%',
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        bgcolor: 'secondary.main'
+                      }}
+                    />
+                  )}
                   {hasLesson && (
                     <Box
                       className="lessons-tooltip"
