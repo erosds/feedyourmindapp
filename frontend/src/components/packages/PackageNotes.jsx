@@ -1,4 +1,3 @@
-// src/components/packages/PackageNotes.jsx
 import React, { useState } from 'react';
 import {
   Box,
@@ -78,9 +77,9 @@ const PackageNotes = ({ packageId, initialNotes, onNotesUpdate }) => {
   };
 
   return (
-    <Card sx={{ mt: 1 }}>
+    <Card>
       <CardHeader 
-        title={<Typography variant="h6">Annotazioni Pacchetto</Typography>}
+        title={<Typography variant="h6">Annotazioni pacchetto</Typography>}
         action={
           !isEditing ? (
             <IconButton color="primary" onClick={handleToggleEdit}>
@@ -101,16 +100,18 @@ const PackageNotes = ({ packageId, initialNotes, onNotesUpdate }) => {
             </Box>
           )
         }
+        // Reduce bottom padding of the header
+        sx={{ pb: 0 }}
       />
-      <CardContent>
+      <CardContent sx={{ pt: 1 }}>  {/* Reduce top padding of content */}
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 1 }}>  {/* Reduced margin bottom */}
             {error}
           </Alert>
         )}
         
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert severity="success" sx={{ mb: 1 }}>  {/* Reduced margin bottom */}
             {success}
           </Alert>
         )}

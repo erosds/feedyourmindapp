@@ -469,7 +469,7 @@ function PackageDetailPage() {
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" >
-                Informazioni Pacchetto
+                Informazioni pacchetto
               </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 {/* Left Column */}
@@ -535,7 +535,7 @@ function PackageDetailPage() {
 
                 {/* Dates and times */}
                 <Grid item xs={12}>
-                  <Divider sx={{ my: 1 }} />
+                  <Divider />
                 </Grid>
 
                 <Grid item xs={12} md={4}>
@@ -673,8 +673,8 @@ function PackageDetailPage() {
                 <Grid item xs={12}>
                   <Divider /> {/* Divisore aggiunto */}
                   <Box display="flex" flexDirection="column" >
-                    <Box display="flex" justifyContent="space-between" sx={{ mt: 13.5 }}>
-                      <Typography variant="h6">Completamento:</Typography>
+                    <Box display="flex" justifyContent="space-between" sx={{ mt: 2}}>
+                      <Typography variant="body2" color="text.secondary">Completamento</Typography>
                       <Typography variant="h5" fontWeight="medium">
                         {completionPercentage.toFixed(0)}%
                       </Typography>
@@ -687,6 +687,7 @@ function PackageDetailPage() {
                     value={completionPercentage}
                     color={packageData.status === 'completed' ? 'success' : 'primary'}
                     sx={{
+                      mt: 1,
                       height: 10,
                       borderRadius: 1,
                       backgroundImage: `repeating-linear-gradient(to right, transparent, transparent 24.5%, 
@@ -704,12 +705,12 @@ function PackageDetailPage() {
 
         {/* Calendario lezioni */}
         <Grid item xs={12} md={5}>
-          <Card>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6">
-                Calendario Lezioni
+                Calendario lezioni
               </Typography>
-              <Typography variant="body2" color="text.secondary" mb={5} fontStyle={'italic'}>
+              <Typography variant="body2" color="text.secondary" mb={4} fontStyle={'italic'}>
                 Clicca su un giorno per aggiungere una lezione
               </Typography>
               <PackageCalendar
@@ -722,17 +723,18 @@ function PackageDetailPage() {
 
             </CardContent>
           </Card>
-          <PackageNotes
-            packageId={packageData.id}
-            initialNotes={packageData.notes}
-            onNotesUpdate={handleNotesUpdate}
-          />
+          
         </Grid>
 
 
         {/* Lesson Table */}
         <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
+        <PackageNotes
+            packageId={packageData.id}
+            initialNotes={packageData.notes}
+            onNotesUpdate={handleNotesUpdate}
+          />
+          <Paper sx={{ p: 2 , mt: 1}}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="h6">
                 Lezioni del pacchetto

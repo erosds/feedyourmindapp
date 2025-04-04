@@ -179,7 +179,7 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate, startDat
                     <Box
                       sx={{
                         position: 'absolute',
-                        bottom: 10,
+                        bottom: 11,
                         left: '0%',
                         width: 8,
                         height: 8,
