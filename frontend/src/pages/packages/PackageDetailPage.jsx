@@ -62,6 +62,7 @@ function PackageDetailPage() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [students, setStudents] = useState([]);
   const [studentLessons, setStudentLessons] = useState([]);
+  const [selectedLesson, setSelectedLesson] = useState(null);
   // Modifiche al prezzo
   const [isEditingPrice, setIsEditingPrice] = useState(false);
   const [priceValue, setPriceValue] = useState(0);
@@ -187,23 +188,26 @@ function PackageDetailPage() {
     });
   };
 
-  const handleDeleteLesson = async (lessonId, event) => {
-    event.stopPropagation(); // Prevent navigation to lesson details
+  const handleDeleteLesson = async (lesson, event) => {
+    // Previeni la navigazione quando si clicca sul pulsante di eliminazione
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
 
-    if (window.confirm('Sei sicuro di voler eliminare questa lezione? Questa azione non può essere annullata.')) {
+    if (window.confirm(`Sei sicuro di voler eliminare la lezione #${lesson.id}? Questa azione non può essere annullata.`)) {
       try {
-        await lessonService.delete(lessonId);
+        // Chiama l'API per eliminare la lezione
+        await lessonService.delete(lesson.id);
 
-        // Reload lessons data
-        const lessonsResponse = await lessonService.getAll();
-        const packageLessons = lessonsResponse.data.filter(
-          lesson => lesson.package_id === parseInt(id) && lesson.is_package
-        );
-        setLessons(packageLessons);
+        // Aggiorna lo stato delle lezioni rimuovendo la lezione eliminata
+        setLessons(prevLessons => prevLessons.filter(l => l.id !== lesson.id));
 
-        // Also refresh package data to update remaining hours
+        // Ricarica i dati del pacchetto per aggiornare le ore rimanenti
         const packageResponse = await packageService.getById(id);
         setPackageData(packageResponse.data);
+
+        alert('La lezione è stata eliminata con successo.');
       } catch (err) {
         console.error('Error deleting lesson:', err);
         alert('Errore durante l\'eliminazione della lezione. Riprova più tardi.');
@@ -820,7 +824,7 @@ function PackageDetailPage() {
                               <Tooltip title="Elimina">
                                 <IconButton
                                   color="error"
-                                  onClick={(e) => handleDeleteLesson(lesson.id, e)}
+                                  onClick={(e) => handleDeleteLesson(lesson, e)}
                                   size="small"
                                 >
                                   <DeleteIcon />

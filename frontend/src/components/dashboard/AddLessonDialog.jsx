@@ -392,12 +392,22 @@ useEffect(() => {
               )}
             </Grid>
             {/* Data lezione */}
+            {/* Data lezione */}
             <Grid item xs={12} md={6}>
               <DatePicker
                 label="Data lezione"
                 value={lessonForm.lesson_date}
                 onChange={(date) => setLessonForm(prev => ({ ...prev, lesson_date: date }))}
-                slotProps={{ textField: { fullWidth: true, required: true, disabled: submitting } }}
+                disabled={context === 'packageDetail'}
+                readOnly={context === 'packageDetail'}
+                slotProps={{ 
+                  textField: { 
+                    fullWidth: true, 
+                    required: true, 
+                    disabled: submitting || context === 'packageDetail',
+                    helperText: context === 'packageDetail' ? "Data fissata dal calendario" : ""
+                  } 
+                }}
               />
             </Grid>
             {/* Orario inizio */}
