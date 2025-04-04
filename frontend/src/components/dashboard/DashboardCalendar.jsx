@@ -190,7 +190,6 @@ function DashboardCalendar({
                               width: 'auto',
                               height: 16,
                               fontSize: '0.650rem',
-                              opacity: 0.8
                             }}
                           />
                         )}
@@ -207,7 +206,6 @@ function DashboardCalendar({
                               width: 'auto',
                               height: 16,
                               fontSize: '0.650rem',
-                              opacity: 0.8,
                               '& .MuiChip-icon': {
                                 marginLeft: '5px',
                                 marginRight: '-10px'
