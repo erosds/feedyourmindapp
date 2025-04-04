@@ -18,7 +18,7 @@ router = APIRouter(
 def calculate_expiry_date(start_date: date) -> date:
     """
     Calcola la data di scadenza per un pacchetto a durata fissa (4 settimane).
-    La scadenza cade il lunedì della quarta settimana dopo la data di inizio.
+    La scadenza cade la domenica della quarta settimana dopo la data di inizio.
     
     Args:
         start_date: Data di inizio del pacchetto
@@ -33,7 +33,7 @@ def calculate_expiry_date(start_date: date) -> date:
     monday = start_date - timedelta(days=weekday)
     
     # Aggiungi 4 settimane (28 giorni)
-    expiry_date = monday + timedelta(days=28)
+    expiry_date = monday + timedelta(days=27)
     
     return expiry_date
 
@@ -405,14 +405,14 @@ def update_package(package_id: int, package: models.PackageUpdate, allow_multipl
 
 @router.put("/{package_id}/extend", response_model=models.PackageResponse)
 def extend_package_expiry(package_id: int, db: Session = Depends(get_db)):
-    """Estende la scadenza del pacchetto al lunedì successivo"""
+    """Estende la scadenza del pacchetto alla domenica successiva"""
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
         
-    # Calcola il lunedì successivo
+    # Calcola la domenica successiva
     current_expiry = db_package.expiry_date
-    days_until_next_monday = 7  # Se siamo lunedì, andiamo al lunedì successivo
+    days_until_next_monday = 7  # Se siamo a domenica, andiamo alla domenica successiva
     
     # Calcola la nuova data di scadenza
     new_expiry = current_expiry + timedelta(days=days_until_next_monday)

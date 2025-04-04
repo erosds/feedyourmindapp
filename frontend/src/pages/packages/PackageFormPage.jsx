@@ -103,7 +103,7 @@ function PackageFormPage() {
   const calculateExpiryDate = (startDate) => {
     if (!startDate) return null;
     const currentWeekMonday = startOfWeek(startDate, { weekStartsOn: 1 });
-    return addDays(currentWeekMonday, 28);
+    return addDays(currentWeekMonday, 27);
   };
 
   // Load initial data
@@ -533,7 +533,7 @@ function PackageFormPage() {
                 {/* Notes Field */}
                 <Grid item xs={12}>
                   <Divider sx={{ my: 2 }} />
-                  <Typography variant="subtitle1" gutterBottom>
+                  <Typography variant="h6" gutterBottom>
                     Annotazioni
                   </Typography>
                   <TextField
@@ -553,7 +553,7 @@ function PackageFormPage() {
                 {/* Payment section */}
                 <Grid item xs={12}>
                   <Divider sx={{ my: 2 }} />
-                  <Typography variant="subtitle1" gutterBottom>
+                  <Typography variant="h6" gutterBottom>
                     Pagamento
                   </Typography>
                 </Grid>
