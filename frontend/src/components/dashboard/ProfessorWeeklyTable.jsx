@@ -50,7 +50,7 @@ function ProfessorWeeklyTable({
             <TableHead>
               <TableRow>
                 <TableCell>Professore</TableCell>
-                <TableCell align="center">Lezioni in questa settimana</TableCell>
+                <TableCell align="center">Lezioni</TableCell>
                 <TableCell align="right">Ultimo giorno</TableCell>
                 <TableCell align="right">Pagamento</TableCell>
               </TableRow>
@@ -67,18 +67,24 @@ function ProfessorWeeklyTable({
                     <Box display="flex" alignItems="center">
                       <Avatar
                         sx={{
-                          width: 24,
-                          height: 24,
+                          width: 16,
+                          height: 16,
                           mr: 1,
+                          ml: -1,
                           bgcolor: 'primary.main',
-                          fontSize: '0.875rem'
+                          fontSize: '0.6rem'
                         }}
                       >
                         {prof.first_name.charAt(0)}
                       </Avatar>
-                      <Typography variant="body1">
-                        {prof.first_name} {prof.last_name}
-                      </Typography>
+                      <Box>
+                        <Typography variant="body1" sx={{ lineHeight: 1.2 }}>
+                          {prof.first_name}
+                        </Typography>
+                        <Typography variant="body1" sx={{ lineHeight: 1.2 }}>
+                          {prof.last_name}
+                        </Typography>
+                      </Box>
                     </Box>
                   </TableCell>
                   <TableCell align="center">

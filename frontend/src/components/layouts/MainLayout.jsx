@@ -35,7 +35,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import logo from '../assets/logo.jpg';
 
-const drawerWidth = 250;
+const drawerWidth = 240;
 
 function MainLayout() {
   const { currentUser, logout, isAdmin } = useAuth();

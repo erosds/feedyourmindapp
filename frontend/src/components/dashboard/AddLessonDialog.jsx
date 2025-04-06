@@ -1,6 +1,7 @@
 // src/components/dashboard/AddLessonDialog.jsx
 import React, { useState, useEffect } from 'react';
 import {
+  Alert,
   Button,
   Box,
   CircularProgress,
@@ -123,7 +124,7 @@ function AddLessonDialog({
       }
       return 0;
     }
-    
+
     // Comportamento normale
     if (!localSelectedPackage) return 0;
     const { availableHours } = calculatePackageHours(
@@ -339,60 +340,60 @@ function AddLessonDialog({
   // Calcoli derivati
   const availableHours = getAvailableHours();
   const isPackageToggleDisabled = submitting || !lessonForm.student_id || localPackages.length === 0;
-  const isDurationExceedingAvailable = lessonForm.is_package && lessonForm.package_id && 
-  parseFloat(lessonForm.duration) > availableHours;
+  const isDurationExceedingAvailable = lessonForm.is_package && lessonForm.package_id &&
+    parseFloat(lessonForm.duration) > availableHours;
   const totalAmount = ((parseFloat(lessonForm.duration) || 0) * (parseFloat(lessonForm.hourly_rate) || 0)).toFixed(2);
 
 
-  
-  // Modifica questo useEffect in AddLessonDialog.jsx
-useEffect(() => {
-  if (open) {
-    setError('');
-    
-    // Se stiamo usando il dialogo dal dettaglio pacchetto, imposta alcuni valori di default
-    if (context === 'packageDetail' && fixedPackageId) {
-      // Forza sempre l'utilizzo del pacchetto corrente
-      setLessonForm(prev => ({
-        ...prev,
-        is_package: true,
-        package_id: fixedPackageId
-      }));
 
-      // Trova il pacchetto corrente nella lista
-      const currentPackage = studentPackages.find(pkg => pkg.id === fixedPackageId);
-      if (currentPackage) {
-        setLocalSelectedPackage(currentPackage);
-        
-        // Estrai gli studenti dal pacchetto corrente - esegui solo una volta
-        if (packageStudents.length === 0 && students && Array.isArray(students)) {
-          // Filtriamo gli studenti che sono associati a questo pacchetto
-          const pkgStudents = students.filter(student => 
-            currentPackage.student_ids && 
-            currentPackage.student_ids.includes(student.id)
-          );
-          setPackageStudents(pkgStudents);
+  // Modifica questo useEffect in AddLessonDialog.jsx
+  useEffect(() => {
+    if (open) {
+      setError('');
+
+      // Se stiamo usando il dialogo dal dettaglio pacchetto, imposta alcuni valori di default
+      if (context === 'packageDetail' && fixedPackageId) {
+        // Forza sempre l'utilizzo del pacchetto corrente
+        setLessonForm(prev => ({
+          ...prev,
+          is_package: true,
+          package_id: fixedPackageId
+        }));
+
+        // Trova il pacchetto corrente nella lista
+        const currentPackage = studentPackages.find(pkg => pkg.id === fixedPackageId);
+        if (currentPackage) {
+          setLocalSelectedPackage(currentPackage);
+
+          // Estrai gli studenti dal pacchetto corrente - esegui solo una volta
+          if (packageStudents.length === 0 && students && Array.isArray(students)) {
+            // Filtriamo gli studenti che sono associati a questo pacchetto
+            const pkgStudents = students.filter(student =>
+              currentPackage.student_ids &&
+              currentPackage.student_ids.includes(student.id)
+            );
+            setPackageStudents(pkgStudents);
+          }
+        }
+      } else {
+        const activePackages = Array.isArray(studentPackages)
+          ? studentPackages.filter(pkg => pkg && pkg.status === 'in_progress')
+          : [];
+        setLocalPackages(activePackages);
+        if (selectedPackage) {
+          setLocalSelectedPackage(selectedPackage);
+        } else {
+          setLocalSelectedPackage(null);
         }
       }
-    } else {
-      const activePackages = Array.isArray(studentPackages)
-        ? studentPackages.filter(pkg => pkg && pkg.status === 'in_progress')
-        : [];
-      setLocalPackages(activePackages);
-      if (selectedPackage) {
-        setLocalSelectedPackage(selectedPackage);
-      } else {
-        setLocalSelectedPackage(null);
+
+      // Carica le lezioni dello studente solo se non è già stato fatto
+      if (lessonForm.student_id && studentLessons.length === 0) {
+        loadStudentLessons(lessonForm.student_id);
       }
     }
-    
-    // Carica le lezioni dello studente solo se non è già stato fatto
-    if (lessonForm.student_id && studentLessons.length === 0) {
-      loadStudentLessons(lessonForm.student_id);
-    }
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [open, context, fixedPackageId, selectedPackage, lessonForm.student_id, context, fixedPackageId, students]); // Rimuovi le dipendenze che causano re-render continui
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, context, fixedPackageId, selectedPackage, lessonForm.student_id, context, fixedPackageId, students]); // Rimuovi le dipendenze che causano re-render continui
 
   return (
     <>
@@ -401,6 +402,11 @@ useEffect(() => {
           Aggiungi Lezione per {selectedDay ? format(selectedDay, "EEEE d MMMM yyyy", { locale: it }) : ""}
         </DialogTitle>
         <DialogContent>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {/* Selezione studente - Condizionale in base al contesto */}
             <Grid item xs={12} md={6}>
@@ -433,13 +439,13 @@ useEffect(() => {
                 onChange={(date) => setLessonForm(prev => ({ ...prev, lesson_date: date }))}
                 disabled={context === 'packageDetail'}
                 readOnly={context === 'packageDetail'}
-                slotProps={{ 
-                  textField: { 
-                    fullWidth: true, 
-                    required: true, 
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    required: true,
                     disabled: submitting || context === 'packageDetail',
                     helperText: context === 'packageDetail' ? "Data fissata dal calendario" : ""
-                  } 
+                  }
                 }}
               />
             </Grid>

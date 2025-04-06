@@ -375,7 +375,7 @@ function AdminDashboardPage() {
         </Grid>
         
         {/* Professors Weekly Table */}
-        <Grid item xs={12} md={7}>
+        <Grid item xs={12} md={6}>
           <ProfessorWeeklyTable
             currentWeekStart={currentWeekStart}
             endOfWeek={endOfWeek}
@@ -387,7 +387,7 @@ function AdminDashboardPage() {
         </Grid>
         
         {/* Admin Dashboard Summary */}
-        <Grid item xs={12} md={5}>
+        <Grid item xs={12} md={6}>
           <AdminDashboardSummary
             currentWeekStart={currentWeekStart}
             professorWeeklyData={professorWeeklyData}
