@@ -14,8 +14,8 @@ import {
   useTheme
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { 
-  Search as SearchIcon 
+import {
+  Search as SearchIcon
 } from '@mui/icons-material';
 import {
   format,
@@ -39,7 +39,7 @@ function DashboardCalendar({
   handleAddLessonClick
 }) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Genera i giorni della settimana a partire dal lunedì
   const daysOfWeek = eachDayOfInterval({
@@ -77,11 +77,19 @@ function DashboardCalendar({
 
   return (
     <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-        <Typography variant="h6">
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' }, // Colonna su mobile, riga su tablet/desktop
+          alignItems: { xs: 'stretch', sm: 'center' }, // Stretch su mobile per larghezza piena
+          justifyContent: 'space-between',
+          mb: 2
+        }}
+      >
+        <Typography variant="h6" sx={{ mb: { xs: 1, sm: 0 } }}>
           Calendario Settimanale
         </Typography>
-        <ButtonGroup size="small">
+        <ButtonGroup size="small" sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}>
           <Button onClick={() => handleWeekChange('prev')}>Precedente</Button>
           <Button onClick={() => handleWeekChange('reset')}>
             Corrente
@@ -102,26 +110,21 @@ function DashboardCalendar({
       </Typography>
 
       {/* Contenitore con overflow per lo scroll orizzontale su mobile */}
-      <Box 
-        sx={{ 
-          overflowX: isMobile ? 'auto' : 'hidden',
+      <Box
+        sx={{
+          overflowX: 'visible',  // Cambia da 'auto' a 'visible'
           flexGrow: 1,
-          // Nasconde la scrollbar per un'interfaccia più pulita
-          '&::-webkit-scrollbar': { display: 'none' },
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
+          // Rimuovi gli stili che nascondono la scrollbar
         }}
       >
-        <Grid 
-          container 
-          spacing={1} 
-          sx={{ 
-            flexGrow: 1, 
+        <Grid
+          container
+          spacing={1}
+          sx={{
+            flexGrow: 1,
             mt: 0,
-            // Su mobile, imposta una larghezza minima per ogni giorno
-            width: isMobile ? 'auto' : '100%',
-            // Solo su mobile: non-wrap per forzare la disposizione orizzontale
-            flexWrap: isMobile ? 'nowrap' : 'wrap'
+            width: '100%',  // Sempre 100% della larghezza disponibile
+            flexWrap: 'wrap'  // Sempre wrap per adattarsi alla larghezza dello schermo
           }}
         >
           {daysOfWeek.map(day => {
@@ -130,14 +133,13 @@ function DashboardCalendar({
             const sortedLessons = sortLessonsByTime(dayLessons);
             const isCurrentDay = isToday(day);
             return (
-              <Grid 
-                item 
-                // Su mobile usando una larghezza fissa anziché dinamica
-                xs={isMobile ? 'auto' : true}
-                sx={{ 
-                  width: isMobile ? '130px' : 'calc(100% / 7)',
-                  minWidth: isMobile ? '130px' : 'auto',
-                }} 
+              <Grid
+                item
+                xs={12} sm={12 / 7}  // 100% width on xs, 1/7 on larger screens
+                sx={{
+                  width: '100%',  // Rimuovi width fissa
+                  minWidth: 'auto'  // Rimuovi minWidth
+                }}
                 key={day.toString()}
               >
                 <Paper

@@ -19,7 +19,8 @@ import {
   MenuItem,
   Paper,
   useTheme,
-  alpha
+  alpha,
+  AppBar
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -209,6 +210,32 @@ function MainLayout() {
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
 
+      {/* AppBar per dispositivi mobili */}
+      <AppBar
+        position="fixed"
+        sx={{
+          display: { xs: 'block', sm: 'none' },
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          ml: { sm: `${drawerWidth}px` },
+          borderRadius: 0
+        }}
+      >
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            edge="start"
+            onClick={handleDrawerToggle}
+            sx={{ mr: 2 }}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Typography variant="h6" noWrap component="div">
+            FeedYourMind App
+          </Typography>
+        </Toolbar>
+      </AppBar>
+
       {/* Drawer per navigazione */}
       <Box
         component="nav"
@@ -259,10 +286,12 @@ function MainLayout() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          p: { xs: 1, sm: 2, md: 3 }, // Modifica qui: riduci il padding su schermi piccoli
+          width: { xs: '100%', sm: `calc(100% - ${drawerWidth}px)` }, // Assicura larghezza 100% su mobile
           minHeight: '100vh',
-          backgroundColor: alpha(theme.palette.background.default, 0.5)
+          backgroundColor: alpha(theme.palette.background.default, 0.5),
+          mt: { xs: '56px', sm: 0 }, // Spazio in alto per l'AppBar
+          overflow: 'hidden' // Impedisci overflow orizzontale
         }}
       >
         <Outlet />
