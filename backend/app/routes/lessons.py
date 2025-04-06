@@ -108,17 +108,25 @@ def _handle_use_package_option(db, values, lesson_data, package_id, lesson_hours
         "package_status": package.status
     }
 
-# Modifica in backend/app/routes/lessons.py
+# In backend/app/routes/lessons.py
+# Update the _handle_create_new_package_option function
 
 def _handle_create_new_package_option(db, values, lesson_data, package_id, lesson_hours_in_package, overflow_hours):
     """Gestisce l'opzione di creare un nuovo pacchetto per le ore in eccesso."""
     from .. import models
-    from app.routes.packages import update_package_status
+    from app.routes.packages import update_package_status, calculate_expiry_date
     from ..utils import parse_time_string, determine_payment_date
     from decimal import Decimal
+    from datetime import timedelta
     
     # Recupera il pacchetto originale
     package = db.query(models.Package).filter(models.Package.id == package_id).first()
+    
+    # Calcola la data di inizio per il nuovo pacchetto (lunedì dopo la scadenza del pacchetto corrente)
+    new_start_date = package.expiry_date + timedelta(days=1)  # Inizia dal giorno dopo la scadenza
+    days_until_monday = (7 - new_start_date.weekday()) % 7  # Giorni fino al prossimo lunedì (0 se già lunedì)
+    if days_until_monday > 0:
+        new_start_date = new_start_date + timedelta(days=days_until_monday)
     
     # Ottieni lo student_id dalla lezione originale
     student_id = lesson_data["student_id"]
@@ -130,13 +138,13 @@ def _handle_create_new_package_option(db, values, lesson_data, package_id, lesso
     # Crea nuovo pacchetto per le ore rimanenti
     new_package = models.Package(
         # Non più student_id ma usiamo il modello relazionale
-        start_date=lesson_data["lesson_date"],
+        start_date=new_start_date,  # Usa la data calcolata invece di lesson_data["lesson_date"]
         total_hours=overflow_hours,
         package_cost=new_package_cost,
         status="in_progress",
         is_paid=False,
         remaining_hours=overflow_hours,
-        expiry_date=package.expiry_date  # Usa la stessa data di scadenza del pacchetto originale
+        expiry_date=calculate_expiry_date(new_start_date)  # Calcola la scadenza basata sulla nuova data di inizio
     )
     db.add(new_package)
     db.flush()  # Otteniamo l'ID del nuovo pacchetto

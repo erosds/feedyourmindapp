@@ -225,9 +225,10 @@ function PackageFormPage() {
     setFieldValue(fieldName, value);
   };
 
-  // Modified handleSubmit function with improved error handling
-  // Modifica la funzione handleSubmit in PackageFormPage.jsx
-  // In frontend/src/pages/packages/PackageFormPage.jsx, modifica la funzione handleSubmit:
+
+
+  // In frontend/src/pages/packages/PackageFormPage.jsx
+  // Update the handleSubmit function to handle the error about multiple future packages
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
@@ -320,7 +321,13 @@ function PackageFormPage() {
           const responseData = err.response.data;
 
           if (typeof responseData.detail === 'object') {
-            errorMessage += responseData.detail.message || JSON.stringify(responseData.detail);
+            // Handle the specific case of multiple future packages
+            if (responseData.detail.message && responseData.detail.message.includes('ha già un pacchetto attivo e un pacchetto futuro')) {
+              errorMessage = responseData.detail.message ||
+                'Lo studente ha già un pacchetto attivo e un pacchetto futuro. Non è possibile creare un ulteriore pacchetto.';
+            } else {
+              errorMessage += responseData.detail.message || JSON.stringify(responseData.detail);
+            }
           } else if (responseData.detail) {
             errorMessage += responseData.detail;
           } else {

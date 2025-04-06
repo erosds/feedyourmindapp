@@ -60,14 +60,14 @@ def update_package_status(db: Session, package_id: int, commit: bool = True):
     today = date.today()
     
     if package.is_paid:
-        if today < package.expiry_date:
+        if today <= package.expiry_date:
             package.status = "in_progress"
-        elif today >= package.expiry_date:
+        else:
             package.status = "completed"
     else:
-        if today < package.expiry_date:
+        if today <= package.expiry_date:
             package.status = "in_progress"
-        elif today >= package.expiry_date:
+        else:
             package.status = "expired"
     
     # Commit if requested
@@ -104,6 +104,9 @@ def package_orm_to_response(package_orm):
     
     return models.PackageResponse(**package_dict)
 
+# In backend/app/routes/packages.py
+# Update the create_package function to check for existing future packages
+
 @router.post("/", response_model=models.PackageResponse)
 def create_package(package: models.PackageCreate, allow_multiple: bool = False, db: Session = Depends(get_db)):
     # Verifica che tutti gli studenti esistano
@@ -112,9 +115,10 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
         if not student:
             raise HTTPException(status_code=404, detail=f"Student with ID {student_id} not found")
     
-    # Controlla pacchetti attivi (salta se allow_multiple è True)
+    # Controlla pacchetti attivi e futuri (salta se allow_multiple è True)
     if not allow_multiple:
         for student_id in package.student_ids:
+            # Controlla prima i pacchetti attivi
             active_package = db.query(models.Package).join(
                 models.PackageStudent
             ).filter(
@@ -123,6 +127,31 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
             ).first()
             
             if active_package:
+                # Se il nuovo pacchetto inizia dopo la scadenza del pacchetto attuale
+                if package.start_date > active_package.expiry_date:
+                    # Controlla se esiste già un pacchetto futuro per questo studente
+                    future_package = db.query(models.Package).join(
+                        models.PackageStudent
+                    ).filter(
+                        models.PackageStudent.student_id == student_id,
+                        models.Package.start_date > active_package.expiry_date
+                    ).first()
+                    
+                    if future_package:
+                        # Se esiste già un pacchetto futuro, blocca la creazione
+                        raise HTTPException(
+                            status_code=http_status.HTTP_409_CONFLICT,
+                            detail={
+                                "message": f"Lo studente con ID {student_id} ha già un pacchetto attivo e un pacchetto futuro. Non è possibile creare un ulteriore pacchetto.",
+                                "active_package_id": active_package.id,
+                                "future_package_id": future_package.id,
+                                "active_package_expiry": active_package.expiry_date.isoformat()
+                            }
+                        )
+                    # Se non c'è un pacchetto futuro, permetti la creazione
+                    continue
+                
+                # Se il pacchetto inizia prima della scadenza, non permettere la creazione
                 raise HTTPException(
                     status_code=http_status.HTTP_409_CONFLICT,
                     detail={
@@ -144,9 +173,9 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
 
     # Determina lo stato
     if package.is_paid:
-        status = "in_progress" if date.today() < expiry_date else "completed"
+        status = "in_progress" if date.today() <= expiry_date else "completed"
     else:
-        status = "in_progress" if date.today() < expiry_date else "expired"
+        status = "in_progress" if date.today() <= expiry_date else "expired"
     
     # Crea nuovo pacchetto
     db_package = models.Package(
@@ -403,13 +432,34 @@ def update_package(package_id: int, package: models.PackageUpdate, allow_multipl
     db.refresh(db_package)
     return package_orm_to_response(db_package)  # Use the helper function for consistent response format
 
+# In backend/app/routes/packages.py
+# Update the extend_package_expiry function
+
 @router.put("/{package_id}/extend", response_model=models.PackageResponse)
 def extend_package_expiry(package_id: int, db: Session = Depends(get_db)):
     """Estende la scadenza del pacchetto alla domenica successiva"""
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
+    
+    # Controlla se qualche studente in questo pacchetto ha un pacchetto futuro
+    for student in db_package.students:
+        student_id = student.id
+        # Cerca pacchetti futuri per questo studente (che iniziano dopo la scadenza del pacchetto corrente)
+        future_package = db.query(models.Package).join(
+            models.PackageStudent
+        ).filter(
+            models.PackageStudent.student_id == student_id,
+            models.Package.start_date > db_package.expiry_date,
+            models.Package.id != package_id
+        ).first()
         
+        if future_package:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Non è possibile estendere il pacchetto perché lo studente {student.first_name} {student.last_name} ha già un pacchetto futuro programmato"
+            )
+    
     # Calcola la domenica successiva
     current_expiry = db_package.expiry_date
     days_until_next_monday = 7  # Se siamo a domenica, andiamo alla domenica successiva

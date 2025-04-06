@@ -282,7 +282,6 @@ function PackageDetailPage() {
   };
 
 
-  // Aggiungi questa funzione handleExtendPackage
   const handleExtendPackage = async () => {
     try {
       await packageService.extendPackage(id);
@@ -291,7 +290,13 @@ function PackageDetailPage() {
       setPackageData(packageResponse.data);
     } catch (err) {
       console.error('Error extending package:', err);
-      alert('Errore durante l\'estensione della scadenza del pacchetto. Riprova più tardi.');
+      
+      // Handle specific error about future packages
+      if (err.response?.status === 400 && err.response?.data?.detail) {
+        alert(err.response.data.detail);
+      } else {
+        alert('Errore durante l\'estensione della scadenza del pacchetto. Riprova più tardi.');
+      }
     }
   };
 
