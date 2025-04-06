@@ -11,7 +11,9 @@ import {
   DialogTitle,
   Typography,
   Tooltip,
-  Divider
+  Divider,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -19,6 +21,8 @@ import AddIcon from '@mui/icons-material/Add';
 
 function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons, studentsMap }) {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   if (!selectedDay) return null;
   
@@ -30,9 +34,19 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
   });
 
   // Define working day hours (8:00 - 22:00)
+  // On mobile, reduce the displayed hours to prevent overlapping
   const dayStartHour = 8;
   const dayEndHour = 22;
   const totalHours = dayEndHour - dayStartHour;
+  
+  // For mobile, display fewer hour labels to prevent overlapping
+  const hourStep = isMobile ? 2 : 1; // Show every 2 hours on mobile
+  
+  // Generate hour labels for timeline - on mobile, only show every 2 hours
+  const hourLabels = Array.from(
+    { length: Math.ceil((totalHours + 1) / hourStep) }, 
+    (_, i) => dayStartHour + (i * hourStep)
+  );
   
   // Function to convert time "10:30" to minutes since midnight (630)
   const timeToMinutes = (timeStr) => {
@@ -59,9 +73,6 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
     
     return { startPosition, width };
   };
-  
-  // Generate hour labels for timeline
-  const hourLabels = Array.from({ length: totalHours + 1 }, (_, i) => dayStartHour + i);
   
   // Function to calculate exact position of hours (percentage)
   const calculateHourPosition = (hour) => {
@@ -108,9 +119,10 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
                       top: 0,
                       left: `${calculateHourPosition(hour)}%`,
                       transform: 'translateX(-50%)', // Center label on line
-                      width: 'auto',
+                      width: isMobile ? '24px' : 'auto', // Fixed width on mobile
                       textAlign: 'center',
-                      color: 'text.secondary'
+                      color: 'text.secondary',
+                      fontSize: isMobile ? '0.6rem' : '0.75rem' // Smaller font on mobile
                     }}
                   >
                     {hour}:00
@@ -139,7 +151,7 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
             </Box>
 
             {/* Timeline of lessons - fixed height, with optimized layout */}
-            <Box sx={{ position: 'relative', height: '120px', mb: 1, mt:-2 }}>
+            <Box sx={{ position: 'relative', height: '120px', mb: 1, mt: -2 }}>
               {/* Vertical dividing lines for hours - in main body */}
               {hourLabels.map((hour, index) => {
                 // First line (left) has different style
@@ -254,6 +266,9 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
                       // Get student name
                       const studentName = studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`;
                       
+                      // Don't show text in very narrow bars on mobile
+                      const showText = !isMobile || width > 10;
+                      
                       return (
                         <Tooltip 
                           key={`lesson-${lesson.id}-${rowIndex}`}
@@ -301,7 +316,7 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
                               color: 'white'
                             }}
                           >
-                            {width > 2 && (
+                            {showText && (
                               <Typography 
                                 variant="caption" 
                                 sx={{ 
@@ -309,7 +324,7 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
                                   textOverflow: 'ellipsis',
                                   overflow: 'hidden',
                                   maxWidth: '100%',
-                                  fontSize: '0.7rem',
+                                  fontSize: isMobile ? '0.6rem' : '0.7rem',
                                   textShadow: '0px 0px 2px rgba(0,0,0,0.7)',
                                   px: 0.5
                                 }}
@@ -353,42 +368,89 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
                 }}
                 onClick={() => handleLessonClick(lesson.id)}
               >
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Box display="flex" alignItems="center">
-                    <Typography variant="body1" fontWeight="medium" sx={{ mr: 1 }}>
-                      {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
-                    </Typography>
-                    <Typography variant="body1" noWrap sx={{ maxWidth: { xs: '130px', sm: '200px', md: '300px' } }}>
-                      {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
-                    </Typography>
-                    {lesson.is_package && (
-                      <Chip
-                        label="P"
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                        sx={{ ml: 1, height: 18, '& .MuiChip-label': { px: 0.5, fontSize: '0.625rem' } }}
-                      />
-                    )}
-                    {lesson.is_online && (
-                      <Chip
-                        label="on-line"
-                        size="small"
-                        color="secondary"
-                        variant="outlined"
-                        sx={{ ml: 1, height: 18, '& .MuiChip-label': { px: 0.5, fontSize: '0.625rem' } }}
-                      />
-                    )}
+                {/* Modified layout to prevent text overlapping on mobile */}
+                {isMobile ? (
+                  // Mobile layout - split into two rows
+                  <Box>
+                    {/* First row with time and student name */}
+                    <Box display="flex" alignItems="center" mb={0.5}>
+                      <Typography variant="body1" fontWeight="medium" sx={{ mr: 1, minWidth: '40px' }}>
+                        {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
+                      </Typography>
+                      <Typography variant="body1" noWrap sx={{ flex: 1 }}>
+                        {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
+                      </Typography>
+                    </Box>
+                    
+                    {/* Second row with duration, badges and payment */}
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Box display="flex" alignItems="center">
+                        <Typography variant="body2" sx={{ mr: 1, minWidth: '40px' }}>
+                          {lesson.duration} ore
+                        </Typography>
+                        {lesson.is_package && (
+                          <Chip
+                            label="P"
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            sx={{ mr: 0.5, height: 18, '& .MuiChip-label': { px: 0.5, fontSize: '0.625rem' } }}
+                          />
+                        )}
+                        {lesson.is_online && (
+                          <Chip
+                            label="online"
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
+                            sx={{ height: 18, '& .MuiChip-label': { px: 0.5, fontSize: '0.625rem' } }}
+                          />
+                        )}
+                      </Box>
+                      <Typography variant="body2" fontWeight="medium" sx={{ minWidth: '70px', textAlign: 'right' }}>
+                        €{parseFloat(lesson.total_payment).toFixed(2)}
+                      </Typography>
+                    </Box>
                   </Box>
-                  <Box display="flex" alignItems="center">
-                    <Typography variant="body2" sx={{ mr: 2 }}>
-                      {lesson.duration} ore
-                    </Typography>
-                    <Typography variant="body2" fontWeight="medium" sx={{ minWidth: '70px', textAlign: 'right' }}>
-                      €{parseFloat(lesson.total_payment).toFixed(2)}
-                    </Typography>
+                ) : (
+                  // Desktop layout - single row with all elements
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Box display="flex" alignItems="center">
+                      <Typography variant="body1" fontWeight="medium" sx={{ mr: 1 }}>
+                        {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
+                      </Typography>
+                      <Typography variant="body1" noWrap sx={{ maxWidth: { xs: '130px', sm: '200px', md: '300px' } }}>
+                        {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
+                      </Typography>
+                      {lesson.is_package && (
+                        <Chip
+                          label="P"
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          sx={{ ml: 1, height: 18, '& .MuiChip-label': { px: 0.5, fontSize: '0.625rem' } }}
+                        />
+                      )}
+                      {lesson.is_online && (
+                        <Chip
+                          label="online"
+                          size="small"
+                          color="secondary"
+                          variant="outlined"
+                          sx={{ ml: 1, height: 18, '& .MuiChip-label': { px: 0.5, fontSize: '0.625rem' } }}
+                        />
+                      )}
+                    </Box>
+                    <Box display="flex" alignItems="center">
+                      <Typography variant="body2" sx={{ mr: 2 }}>
+                        {lesson.duration} ore
+                      </Typography>
+                      <Typography variant="body2" fontWeight="medium" sx={{ minWidth: '70px', textAlign: 'right' }}>
+                        €{parseFloat(lesson.total_payment).toFixed(2)}
+                      </Typography>
+                    </Box>
                   </Box>
-                </Box>
+                )}
               </Box>
             ))}
           </Box>
