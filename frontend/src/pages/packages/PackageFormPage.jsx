@@ -159,17 +159,47 @@ function PackageFormPage() {
           });
         }
 
-        // Set info message if we're coming from an overflow action
+        // Inside the useEffect in PackageFormPage.jsx, add this code where it handles overflow_from_lesson
         if (location.state?.overflow_from_lesson) {
           setInfoMessage(`Stai creando un nuovo pacchetto per ${location.state.overflow_hours} ore in eccesso. Sono suggerite ${location.state.suggested_hours} ore totali, ma puoi modificare il valore.`);
 
-          // If a student ID is provided, set it
+          // If a student ID is provided, set it and find the latest package
           if (location.state.student_id) {
+            const studentId = location.state.student_id;
+
+            // First, set the student ID and suggested hours
             setInitialValues(prev => ({
               ...prev,
-              student_id_1: location.state.student_id,
+              student_id_1: studentId,
               total_hours: location.state.suggested_hours.toString()
             }));
+
+            // Then, fetch all packages for this student to find the active one
+            try {
+              const packagesResponse = await packageService.getByStudent(studentId);
+              const studentPackages = packagesResponse.data || [];
+
+              // Find the latest 'in_progress' package
+              const activePackage = studentPackages.find(pkg => pkg.status === 'in_progress');
+
+              if (activePackage) {
+                // Calculate Monday after expiry date
+                const expiryDate = parseISO(activePackage.expiry_date);
+                let newStartDate = addDays(expiryDate, 1); // Start from day after expiry
+                const dayOfWeek = newStartDate.getDay(); // 0 is Sunday, 1 is Monday
+                const daysUntilMonday = dayOfWeek === 1 ? 0 : (8 - dayOfWeek) % 7; // 0 if already Monday
+                newStartDate = addDays(newStartDate, daysUntilMonday);
+
+                // Update initialValues with the calculated start date
+                setInitialValues(prev => ({
+                  ...prev,
+                  start_date: newStartDate
+                }));
+              }
+            } catch (err) {
+              console.error('Error fetching student packages:', err);
+              // Don't throw an error, just use default start date
+            }
           }
         }
       } catch (err) {

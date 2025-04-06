@@ -155,7 +155,7 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
                 raise HTTPException(
                     status_code=http_status.HTTP_409_CONFLICT,
                     detail={
-                        "message": f"Student with ID {student_id} already has an active package",
+                        "message": f"Student with ID {student_id} already has an active package during that time.",
                         "active_package_id": active_package.id,
                         "active_package_remaining_hours": float(active_package.remaining_hours)
                     }

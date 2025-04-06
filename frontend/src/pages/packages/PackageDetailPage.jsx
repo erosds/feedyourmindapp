@@ -53,7 +53,7 @@ function PackageDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   // Aggiungi questi stati
   const [addLessonDialogOpen, setAddLessonDialogOpen] = useState(false);
@@ -800,7 +800,7 @@ function PackageDetailPage() {
 
                             <TableCell>{lesson.duration}</TableCell>
                             <TableCell>€{parseFloat(lesson.hourly_rate).toFixed(2)}</TableCell>
-                            <TableCell align="right">€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>
+                            <TableCell>€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>
                             <TableCell align="right">
                               <Tooltip title="Elimina">
                                 <IconButton
@@ -825,7 +825,7 @@ function PackageDetailPage() {
                   page={page}
                   onPageChange={handleChangePage}
                   onRowsPerPageChange={handleChangeRowsPerPage}
-                  labelRowsPerPage="Rows per page:"
+                  labelRowsPerPage="Righe per pagina:"
                   labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
                 />
               </>
