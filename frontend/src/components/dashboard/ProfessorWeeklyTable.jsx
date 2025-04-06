@@ -29,16 +29,11 @@ function ProfessorWeeklyTable({
     <Paper sx={{ p: 2, height: '100%', mb: 2 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6">
-          Riepilogo Settimana Corrente
+          Riepilogo Settimana Selezionata
         </Typography>
         <Box display="flex" alignItems="center">
         </Box>
       </Box>
-
-      <Typography variant="subtitle1" align="center" gutterBottom
-        sx={{ fontWeight: 'bold', fontSize: '1rem', my: 2 }}>
-        {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
-      </Typography>
 
       {professorWeeklyData.length === 0 ? (
         <Typography align="center" color="text.secondary" sx={{ py: 3 }}>

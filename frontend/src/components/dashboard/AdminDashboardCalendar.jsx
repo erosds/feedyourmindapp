@@ -23,28 +23,15 @@ import { it } from 'date-fns/locale';
 
 function AdminDashboardCalendar({
   currentWeekStart,
-  handleChangeWeek,
   getProfessorsForDay,
   handleProfessorClick,
   handleDayClick,
 
 }) {
-  const [weekStart, setWeekStart] = useState(currentWeekStart);
-
-  const handleWeekChange = (action) => {
-    if (action === 'prev') {
-      setWeekStart(prev => startOfWeek(new Date(prev.setDate(prev.getDate() - 7)), { weekStartsOn: 1 }));
-    } else if (action === 'next') {
-      setWeekStart(prev => startOfWeek(new Date(prev.setDate(prev.getDate() + 7)), { weekStartsOn: 1 }));
-    } else if (action === 'reset') {
-      setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
-    }
-  };
-
   // Genera i giorni della settimana a partire dal lunedì
   const daysOfWeek = eachDayOfInterval({
-    start: weekStart,
-    end: endOfWeek(weekStart, { weekStartsOn: 1 }),
+    start: currentWeekStart,
+    end: endOfWeek(currentWeekStart, { weekStartsOn: 1 }),
   });
 
   return (
@@ -61,30 +48,7 @@ function AdminDashboardCalendar({
         <Typography variant="h6" sx={{ mb: { xs: 1, sm: 0 } }}>
           Calendario Professori in Sede
         </Typography>
-        <ButtonGroup size="small" sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}>
-          <Button onClick={() => handleWeekChange('prev')}>Precedente</Button>
-          <Button onClick={() => handleWeekChange('reset')}>
-            Corrente
-          </Button>
-          <Button onClick={() => handleWeekChange('next')}>Successiva</Button>
-        </ButtonGroup>
       </Box>
-
-      <Typography
-        variant="subtitle1"
-        align="center"
-        sx={{
-          fontWeight: 'bold',
-          fontSize: '1.2rem',
-          mb: 2,
-          backgroundColor: 'primary.light',
-          color: 'primary.contrastText',
-          py: 1,
-          borderRadius: 1
-        }}
-      >
-        {format(weekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(weekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
-      </Typography>
 
       <Grid
         container

@@ -136,19 +136,19 @@ function AdminDashboardSummary({
     const mondayThisWeek = new Date(today);
     mondayThisWeek.setDate(today.getDate() - dayOfWeek + 1); // Lunedì della settimana corrente
     mondayThisWeek.setHours(0, 0, 0, 0); // Inizio della giornata
-    
+
     // Ottieni il lunedì della settimana prossima (7 giorni dopo)
     const mondayNextWeek = new Date(mondayThisWeek);
     mondayNextWeek.setDate(mondayThisWeek.getDate() + 7);
-    
+
     // Filtra i pacchetti in scadenza
     return allPackages.filter(pkg => {
       const expiryDate = parseISO(pkg.expiry_date);
-      
+
       // Pacchetti la cui scadenza è compresa tra il lunedì di questa settimana e il lunedì della prossima (inclusi)
       return (
         pkg.status === 'in_progress' && // Solo pacchetti in corso
-        expiryDate >= mondayThisWeek && 
+        expiryDate >= mondayThisWeek &&
         expiryDate <= mondayNextWeek
       );
     });
@@ -264,9 +264,10 @@ function AdminDashboardSummary({
                 label="Periodo"
                 onChange={handlePeriodChange}
               >
-                <MenuItem value="week">Questa Settimana</MenuItem>
-                <MenuItem value="month">Questo Mese</MenuItem>
-                <MenuItem value="year">Questo Anno</MenuItem>
+                <MenuItem value="week">Settimana Selezionata</MenuItem>
+                <MenuItem value="month">Mese Corrente</MenuItem>
+                <MenuItem value="lastMonth">Mese Scorso</MenuItem>
+                <MenuItem value="year">Anno Corrente</MenuItem>
               </Select>
             </FormControl>
 
@@ -294,7 +295,13 @@ function AdminDashboardSummary({
                 color={netProfit >= 0 ? 'success.main' : 'error.main'}
               />
               <Grid item xs={12}>
-                <Divider/>
+                <Divider />
+              </Grid>
+
+              <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>
+                Informazioni Aggiuntive 
+              </Typography>
               </Grid>
 
               {/* Next row - clickable blocks */}
@@ -322,9 +329,6 @@ function AdminDashboardSummary({
                 color="error.main"
               />
 
-              <Grid item xs={12}>
-                <Divider/>
-              </Grid>
 
               {/* Active professors */}
               <ClickableStatBlock

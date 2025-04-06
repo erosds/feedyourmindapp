@@ -4,6 +4,9 @@ import {
   Box,
   CircularProgress,
   Grid,
+  Button,
+  ButtonGroup,
+  Paper,
   Typography,
 } from '@mui/material';
 import {
@@ -22,6 +25,8 @@ import {
   endOfYear,
   format
 } from 'date-fns';
+import { it } from 'date-fns/locale';
+
 import { useNavigate } from 'react-router-dom';
 import { lessonService, professorService, packageService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -29,9 +34,9 @@ import { useAuth } from '../../context/AuthContext';
 // Import the modular components
 import ProfessorWeeklyTable from '../../components/dashboard/ProfessorWeeklyTable';
 import AdminDashboardCalendar from '../../components/dashboard/AdminDashboardCalendar';
-import AdminProfessorSummary from '../../components/dashboard/AdminProfessorSummary';
 import AdminDashboardSummary from '../../components/dashboard/AdminDashboardSummary';
 import DayProfessorsDialog from '../../components/dashboard/DayProfessorsDialog';
+
 
 function AdminDashboardPage() {
   const { isAdmin } = useAuth();
@@ -203,6 +208,7 @@ function AdminDashboardPage() {
   };
 
   // Function to get lessons for the period
+  // Function to get lessons for the period
   const getLessonsForPeriod = () => {
     if (!Array.isArray(lessons)) return [];
 
@@ -210,12 +216,18 @@ function AdminDashboardPage() {
 
     switch (periodFilter) {
       case 'week':
-        startDate = currentWeekStart;
+        startDate = currentWeekStart; // Usa la settimana selezionata
         endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
         break;
       case 'month':
         startDate = startOfMonth(new Date());
         endDate = endOfMonth(new Date());
+        break;
+      case 'lastMonth': // Aggiungi questa opzione
+        const today = new Date();
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1);
+        startDate = startOfMonth(lastMonth);
+        endDate = endOfMonth(lastMonth);
         break;
       case 'year':
         startDate = startOfYear(new Date());
@@ -323,7 +335,7 @@ function AdminDashboardPage() {
 
   // Filtered lessons for the selected period
   const periodLessons = getLessonsForPeriod();
-  
+
   // Filtered packages for the selected period
   const periodPackages = getPackagesForPeriod();
 
@@ -362,18 +374,47 @@ function AdminDashboardPage() {
         Dashboard Amministrazione
       </Typography>
 
+      {/* Nuovo componente per la selezione della settimana */}
+      <Paper sx={{ p: 2, mb: 3 , bgcolor: 'primary.light'}}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'center', sm: 'center' },
+            justifyContent: 'space-between'
+          }}
+        >
+          <Typography
+            variant="subtitle1"
+            align="center"
+            sx={{
+              fontWeight: 'bold',
+              color: 'primary.contrastText',
+              fontSize: '1.2rem',
+              mb: { xs: 2, sm: 0 }
+            }}
+          >
+            {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
+          </Typography>
+          <ButtonGroup size="small">
+            <Button onClick={() => handleChangeWeek('prev')} sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}>Precedente</Button>
+            <Button onClick={() => resetToCurrentWeek()} sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}>Corrente</Button>
+            <Button onClick={() => handleChangeWeek('next')} sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}>Successiva</Button>
+          </ButtonGroup>
+        </Box>
+      </Paper>
+
       <Grid container spacing={3}>
         {/* Calendar */}
         <Grid item xs={12}>
           <AdminDashboardCalendar
             currentWeekStart={currentWeekStart}
-            handleChangeWeek={handleChangeWeek}
             getProfessorsForDay={getProfessorsForDay}
             handleProfessorClick={handleProfessorClick}
             handleDayClick={handleDayClick}
           />
         </Grid>
-        
+
         {/* Professors Weekly Table */}
         <Grid item xs={12} md={6}>
           <ProfessorWeeklyTable
@@ -385,7 +426,7 @@ function AdminDashboardPage() {
             handleProfessorClick={handleProfessorClick}
           />
         </Grid>
-        
+
         {/* Admin Dashboard Summary */}
         <Grid item xs={12} md={6}>
           <AdminDashboardSummary
