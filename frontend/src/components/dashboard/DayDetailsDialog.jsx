@@ -267,7 +267,7 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
                       const studentName = studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`;
                       
                       // Don't show text in very narrow bars on mobile
-                      const showText = !isMobile || width > 10;
+                      const showText = !isMobile || width > 5;
                       
                       return (
                         <Tooltip 
