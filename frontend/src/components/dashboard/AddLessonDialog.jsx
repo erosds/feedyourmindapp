@@ -99,8 +99,32 @@ function AddLessonDialog({
     }
   };
 
+  useEffect(() => {
+    if (lessonForm.package_id && studentPackages && studentPackages.length > 0) {
+      const pkg = studentPackages.find(p => p.id === parseInt(lessonForm.package_id));
+      if (pkg) {
+        setLocalSelectedPackage(pkg);
+      }
+    }
+  }, [lessonForm.package_id, studentPackages]);
+
   // Calcola le ore disponibili per il pacchetto selezionato
   const getAvailableHours = () => {
+    // Se abbiamo un pacchetto nel form ma non abbiamo localSelectedPackage,
+    // cerca il pacchetto negli studentPackages
+    if (lessonForm.is_package && lessonForm.package_id && (!localSelectedPackage || localSelectedPackage.id !== lessonForm.package_id)) {
+      const pkg = studentPackages.find(p => p.id === parseInt(lessonForm.package_id));
+      if (pkg) {
+        const { availableHours } = calculatePackageHours(
+          pkg.id,
+          pkg.total_hours
+        );
+        return availableHours;
+      }
+      return 0;
+    }
+    
+    // Comportamento normale
     if (!localSelectedPackage) return 0;
     const { availableHours } = calculatePackageHours(
       localSelectedPackage.id,
@@ -123,11 +147,18 @@ function AddLessonDialog({
       setError('Seleziona un pacchetto');
       return false;
     }
-    if (lessonForm.is_package && localSelectedPackage) {
-      const duration = parseFloat(lessonForm.duration);
-      const availableHours = getAvailableHours();
-      if (duration > availableHours) {
-        setError(`Ore eccedenti: il pacchetto ha solo ${availableHours.toFixed(1)} ore rimanenti mentre stai cercando di utilizzarne ${duration}. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.`);
+    if (lessonForm.is_package) {
+      // Se c'è un package_id nel form, verificare esplicitamente
+      if (lessonForm.package_id) {
+        const duration = parseFloat(lessonForm.duration);
+        // Calcola direttamente le ore disponibili senza dipendere da localSelectedPackage
+        const availableHours = getAvailableHours();
+        if (duration > availableHours) {
+          setError(`Ore eccedenti: il pacchetto ha solo ${availableHours.toFixed(1)} ore rimanenti mentre stai cercando di utilizzarne ${duration}. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.`);
+          return false;
+        }
+      } else {
+        setError('Seleziona un pacchetto');
         return false;
       }
     }
@@ -308,10 +339,12 @@ function AddLessonDialog({
   // Calcoli derivati
   const availableHours = getAvailableHours();
   const isPackageToggleDisabled = submitting || !lessonForm.student_id || localPackages.length === 0;
-  const isDurationExceedingAvailable = lessonForm.is_package && localSelectedPackage &&
-    parseFloat(lessonForm.duration) > availableHours;
+  const isDurationExceedingAvailable = lessonForm.is_package && lessonForm.package_id && 
+  parseFloat(lessonForm.duration) > availableHours;
   const totalAmount = ((parseFloat(lessonForm.duration) || 0) * (parseFloat(lessonForm.hourly_rate) || 0)).toFixed(2);
 
+
+  
   // Modifica questo useEffect in AddLessonDialog.jsx
 useEffect(() => {
   if (open) {
