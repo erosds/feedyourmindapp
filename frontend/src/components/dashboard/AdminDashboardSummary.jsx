@@ -320,31 +320,177 @@ function AdminDashboardSummary({
             </Box>
           ) : (
             <Box>
-              <Typography variant="subtitle1" gutterBottom>
-                Dettagli per tipologia
-              </Typography>
+              <Grid container spacing={2}>
+                {/* Colonna lezioni singole */}
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="primary" gutterBottom>
+                    Lezioni Singole
+                  </Typography>
+                  <List dense>
+                    <ListItem>
+                      {(() => {
+                        const singleLessons = periodLessons.filter(lesson => !lesson.is_package);
+                        const paidLessons = singleLessons.filter(lesson => lesson.is_paid).length;
+                        const totalLessons = singleLessons.length;
+                        
+                        return (
+                          <ListItemText
+                            primary="Numero lezioni"
+                            secondary={
+                              <Typography variant="body2">
+                                {totalLessons} <Typography component="span" variant="caption" color="text.secondary">(di cui pagate: {paidLessons})</Typography>
+                              </Typography>
+                            }
+                          />
+                        );
+                      })()}
+                    </ListItem>
+                    <ListItem>
+                      {(() => {
+                        const singleLessons = periodLessons.filter(lesson => !lesson.is_package);
+                        const paidLessonsHours = singleLessons
+                          .filter(lesson => lesson.is_paid)
+                          .reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
+                        const totalHours = singleLessons
+                          .reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
+                          
+                        return (
+                          <ListItemText
+                            primary="Ore di lezione"
+                            secondary={
+                              <Typography variant="body2">
+                                {totalHours.toFixed(1)} <Typography component="span" variant="caption" color="text.secondary">(di cui pagate: {paidLessonsHours.toFixed(1)})</Typography>
+                              </Typography>
+                            }
+                          />
+                        );
+                      })()}
+                    </ListItem>
+                    <ListItem>
+                      {(() => {
+                        // Ottieni tutte le lezioni singole nel periodo
+                        const singleLessons = periodLessons.filter(lesson => !lesson.is_package);
+                        
+                        // Entrate effettive (solo lezioni pagate con prezzo > 0)
+                        const actualIncome = lessonsPriceIncome;
+                        
+                        // Entrate teoriche (somma di tutti i prezzi delle lezioni, anche se non pagate)
+                        const theoreticalIncome = singleLessons.reduce((total, lesson) => 
+                          total + parseFloat(lesson.price || 0), 0);
+                        
+                        // Verifica se ci sono lezioni con prezzo a zero
+                        const zeroPrice = singleLessons.some(lesson => 
+                          (!lesson.price || parseFloat(lesson.price) === 0) && lesson.is_paid);
+                        
+                        return (
+                          <ListItemText
+                            primary="Entrate lezioni"
+                            secondary={
+                              <Box>
+                                <Typography variant="body2" component="span">
+                                  €{actualIncome.toFixed(2)}/{theoreticalIncome.toFixed(2)}
+                                </Typography>
+                                {zeroPrice && (
+                                  <Typography 
+                                    variant="caption" 
+                                    component="div" 
+                                    color="error.main" 
+                                    sx={{ mt: 0.5 }}
+                                  >
+                                    * Esistono lezioni pagate senza prezzo impostato
+                                  </Typography>
+                                )}
+                              </Box>
+                            }
+                          />
+                        );
+                      })()}
+                    </ListItem>
+                  </List>
+                </Grid>
+                
+                {/* Colonna lezioni da pacchetti */}
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="primary" gutterBottom>
+                    Lezioni da Pacchetti
+                  </Typography>
+                  <List dense>
+                    <ListItem>
+                      {(() => {
+                        const packageLessons = periodLessons.filter(lesson => lesson.is_package);
+                        const paidPackageIds = new Set(
+                          periodPackages
+                            .filter(pkg => pkg.is_paid)
+                            .map(pkg => pkg.id)
+                        );
+                        const paidLessons = packageLessons.filter(lesson => 
+                          paidPackageIds.has(lesson.package_id)
+                        ).length;
+                        const totalLessons = packageLessons.length;
+                        
+                        return (
+                          <ListItemText
+                            primary="Numero lezioni"
+                            secondary={
+                              <Typography variant="body2">
+                                {totalLessons} 
+                              </Typography>
+                            }
+                          />
+                        );
+                      })()}
+                    </ListItem>
+                    <ListItem>
+                      {(() => {
+                        const packageLessons = periodLessons.filter(lesson => lesson.is_package);
+                        const paidPackageIds = new Set(
+                          periodPackages
+                            .filter(pkg => pkg.is_paid)
+                            .map(pkg => pkg.id)
+                        );
+                        const paidLessonsHours = packageLessons
+                          .filter(lesson => paidPackageIds.has(lesson.package_id))
+                          .reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
+                        const totalHours = packageLessons
+                          .reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
 
-              <List dense>
-                <ListItem>
-                  <ListItemText
-                    primary="Entrate da pacchetti"
-                    secondary={`€${packagesPriceIncome.toFixed(2)}`}
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemText
-                    primary="Entrate da lezioni singole"
-                    secondary={`€${lessonsPriceIncome.toFixed(2)}`}
-                  />
-                </ListItem>
-
-                <ListItem>
-                  <ListItemText
-                    primary="Pagamenti ai professori"
-                    secondary={`€${professorsPayments.toFixed(2)}`}
-                  />
-                </ListItem>
-              </List>
+                        return (
+                          <ListItemText
+                            primary="Ore di lezione"
+                            secondary={
+                              <Typography variant="body2">
+                                {totalHours.toFixed(1)}
+                              </Typography>
+                            }
+                          />
+                        );
+                      })()}
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText
+                        primary="Entrate pacchetti"
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" component="span">
+                              €{packagesPriceIncome.toFixed(2)}
+                            </Typography>
+                            {periodPackages.some(pkg => (!pkg.package_cost || parseFloat(pkg.package_cost) === 0) && pkg.is_paid) && (
+                              <Typography 
+                                variant="caption" 
+                                component="div" 
+                                color="error.main" 
+                                sx={{ mt: 0.5 }}
+                              >
+                                * Esistono pacchetti pagati con prezzo a zero
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  </List>
+                </Grid>
+              </Grid>
             </Box>
           )}
         </CardContent>

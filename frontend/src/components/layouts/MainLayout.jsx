@@ -102,7 +102,7 @@ function MainLayout() {
         bgcolor: 'transparent'
       }}
     >
-      <Toolbar>
+      <Toolbar sx={{my:1.5}}>
         <img src={logo} alt="Logo" style={{ height: 46, marginRight: 12, borderRadius: 8 }} />
         <Typography variant="h6" noWrap component="div" fontWeight="bold">
           FeedYourMind
