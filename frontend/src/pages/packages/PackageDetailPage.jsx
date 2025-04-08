@@ -264,6 +264,25 @@ function PackageDetailPage() {
     }
   };
 
+  const isPackageExpiring = (pkg) => {
+    const expiryDate = parseISO(pkg.expiry_date);
+
+    // Ottieni il lunedì della settimana corrente
+    const today = new Date();
+    const dayOfWeek = today.getDay() || 7; // 0 per domenica, trasformato in 7
+    const mondayThisWeek = new Date(today);
+    mondayThisWeek.setDate(today.getDate() - dayOfWeek + 1); // Lunedì della settimana corrente
+    mondayThisWeek.setHours(0, 0, 0, 0); // Inizio della giornata
+
+    // Ottieni il lunedì della settimana prossima (7 giorni dopo)
+    const mondayNextWeek = new Date(mondayThisWeek);
+    mondayNextWeek.setDate(mondayThisWeek.getDate() + 7);
+
+    // Controlla se scade tra lunedì di questa settimana e lunedì della prossima
+    return expiryDate > mondayThisWeek && expiryDate <= mondayNextWeek;
+  };
+
+
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -290,7 +309,7 @@ function PackageDetailPage() {
       setPackageData(packageResponse.data);
     } catch (err) {
       console.error('Error extending package:', err);
-      
+
       // Handle specific error about future packages
       if (err.response?.status === 400 && err.response?.data?.detail) {
         alert(err.response.data.detail);
@@ -516,9 +535,13 @@ function PackageDetailPage() {
                             'In corso'
                     }
                     color={
-                      packageData.status === 'in_progress' ? 'primary' :
-                        packageData.status === 'expired' ? 'error' :
-                          'success'
+                      packageData.status === 'in_progress'
+                        ? (isPackageExpiring(packageData) ? 'warning' : 'primary')
+                        : packageData.status === 'expired'
+                          ? 'error'
+                          : packageData.status === 'completed'
+                            ? 'success'
+                            : 'default'
                     }
                     size="small"
                   />
@@ -678,7 +701,7 @@ function PackageDetailPage() {
                 <Grid item xs={12}>
                   <Divider /> {/* Divisore aggiunto */}
                   <Box display="flex" flexDirection="column" >
-                    <Box display="flex" justifyContent="space-between" sx={{ mt: 2}}>
+                    <Box display="flex" justifyContent="space-between" sx={{ mt: 2 }}>
                       <Typography variant="body2" color="text.secondary">Completamento</Typography>
                       <Typography variant="h5" fontWeight="medium">
                         {completionPercentage.toFixed(0)}%
@@ -728,18 +751,18 @@ function PackageDetailPage() {
 
             </CardContent>
           </Card>
-          
+
         </Grid>
 
 
         {/* Lesson Table */}
         <Grid item xs={12}>
-        <PackageNotes
+          <PackageNotes
             packageId={packageData.id}
             initialNotes={packageData.notes}
             onNotesUpdate={handleNotesUpdate}
           />
-          <Paper sx={{ p: 2 , mt: 1}}>
+          <Paper sx={{ p: 2, mt: 1 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="h6">
                 Lezioni del pacchetto

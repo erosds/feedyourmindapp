@@ -38,7 +38,10 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { lessonService, studentService, professorService } from '../../services/api';
-import { format, parseISO, isToday, isThisWeek, isThisMonth } from 'date-fns';
+import {
+  format, parseISO, isToday, isThisWeek, isThisMonth, isAfter, isBefore,
+  startOfWeek, endOfWeek, addWeeks, subWeeks
+} from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuth } from '../../context/AuthContext';
 import Dialog from '@mui/material/Dialog';
@@ -60,7 +63,7 @@ function LessonListPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredLessons, setFilteredLessons] = useState([]);
-  const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, month
+  const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, lastWeek, nextWeek, month
   const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid, package
   const [showOnlyMine, setShowOnlyMine] = useState(!isAdmin()); // Default: professori normali vedono solo le proprie lezioni
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -234,11 +237,22 @@ function LessonListPage() {
     if (timeFilter !== 'all') {
       filtered = filtered.filter(lesson => {
         const lessonDate = parseISO(lesson.lesson_date);
+
         switch (timeFilter) {
           case 'today':
             return isToday(lessonDate);
           case 'week':
-            return isThisWeek(lessonDate);
+            return isThisWeek(lessonDate, { weekStartsOn: 1 });
+          case 'lastWeek': {
+            const lastWeekStart = subWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1);
+            const lastWeekEnd = endOfWeek(lastWeekStart, { weekStartsOn: 1 });
+            return isAfter(lessonDate, lastWeekStart) && isBefore(lessonDate, lastWeekEnd);
+          }
+          case 'nextWeek': {
+            const nextWeekStart = addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1);
+            const nextWeekEnd = endOfWeek(nextWeekStart, { weekStartsOn: 1 });
+            return isAfter(lessonDate, nextWeekStart) && isBefore(lessonDate, nextWeekEnd);
+          }
           case 'month':
             return isThisMonth(lessonDate);
           default:
@@ -335,11 +349,16 @@ function LessonListPage() {
 
   const handleConfirmPayment = () => {
     if (selectedLesson) {
+      // Solo gli admin possono modificare il prezzo
+      const priceToUse = isAdmin()
+        ? (selectedLesson.price || 20 * selectedLesson.duration)
+        : 20 * selectedLesson.duration;
+
       handleUpdatePaymentStatus(
         selectedLesson,
         true,
         paymentDate,
-        selectedLesson.price || 0
+        priceToUse
       );
     }
     setPaymentDialogOpen(false);
@@ -477,7 +496,9 @@ function LessonListPage() {
               >
                 <MenuItem value="all">Tutte le date</MenuItem>
                 <MenuItem value="today">Oggi</MenuItem>
+                <MenuItem value="lastWeek">Settimana scorsa</MenuItem>
                 <MenuItem value="week">Questa settimana</MenuItem>
+                <MenuItem value="nextWeek">Settimana prossima</MenuItem>
                 <MenuItem value="month">Questo mese</MenuItem>
               </Select>
             </FormControl>
@@ -678,22 +699,24 @@ function LessonListPage() {
         <DialogTitle>Conferma Pagamento</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              fullWidth
-              label="Prezzo Lezione"
-              type="number"
-              value={selectedLesson?.price || 0}
-              onChange={(e) => {
-                const updatedLesson = {
-                  ...selectedLesson,
-                  price: parseFloat(e.target.value) || 0
-                };
-                setSelectedLesson(updatedLesson);
-              }}
-              InputProps={{
-                startAdornment: <InputAdornment position="start">€</InputAdornment>,
-              }}
-            />
+            {isAdmin() && (
+              <TextField
+                fullWidth
+                label="Prezzo Lezione"
+                type="number"
+                value={selectedLesson?.price || 0}
+                onChange={(e) => {
+                  const updatedLesson = {
+                    ...selectedLesson,
+                    price: parseFloat(e.target.value) || 0
+                  };
+                  setSelectedLesson(updatedLesson);
+                }}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                }}
+              />
+            )}
             <DatePicker
               label="Data pagamento"
               value={paymentDate}

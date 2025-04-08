@@ -97,11 +97,11 @@ function PackageListPage() {
   const handleUpdatePaymentStatus = async (pkg, isPaid, paymentDate, updatedPrice) => {
     try {
       setUpdating(true);
-  
+
       // Prima, ottieni i dati completi del pacchetto
       const packageResponse = await packageService.getById(pkg.id);
       const currentPackageData = packageResponse.data;
-  
+
       // Prepara i dati da aggiornare mantenendo gli student_ids esistenti
       const updateData = {
         ...currentPackageData,              // Include tutti i dati attuali
@@ -109,10 +109,10 @@ function PackageListPage() {
         payment_date: paymentDate ? format(paymentDate, 'yyyy-MM-dd') : null,
         package_cost: updatedPrice || currentPackageData.package_cost
       };
-  
+
       // Chiama il servizio per aggiornare il pacchetto
       await packageService.update(pkg.id, updateData);
-  
+
       // Ricarica i pacchetti
       const packagesResponse = await packageService.getAll();
       setPackages(packagesResponse.data);
@@ -127,7 +127,17 @@ function PackageListPage() {
 
   const handleConfirmPayment = () => {
     if (selectedPackage) {
-      handleUpdatePaymentStatus(selectedPackage, true, paymentDate, selectedPackage.package_cost);
+      // Solo gli admin possono modificare il prezzo
+      const costToUse = isAdmin()
+        ? selectedPackage.package_cost
+        : 0; // Default zero per utenti non admin
+
+      handleUpdatePaymentStatus(
+        selectedPackage,
+        true,
+        paymentDate,
+        costToUse
+      );
     }
     setPaymentDialogOpen(false);
   };
@@ -281,7 +291,7 @@ function PackageListPage() {
 
   useEffect(() => {
     let filtered = [...packages];
-  
+
     // Filtra per termine di ricerca (nome studente)
     if (searchTerm.trim() !== '') {
       const lowercaseSearch = searchTerm.toLowerCase();
@@ -351,26 +361,26 @@ function PackageListPage() {
     }
 
     // Make sure sorting works with multi-student packages
-  if (orderBy === 'student_id' || orderBy === 'student_ids') {
-    filtered.sort((a, b) => {
-      // Get the first student name for each package (or empty string if none)
-      const studentNameA = a.student_ids.length > 0 ? (students[a.student_ids[0]] || '') : '';
-      const studentNameB = b.student_ids.length > 0 ? (students[b.student_ids[0]] || '') : '';
-      
-      // Compare based on the direction
-      return order === 'asc' 
-        ? studentNameA.localeCompare(studentNameB)
-        : studentNameB.localeCompare(studentNameA);
-    });
-  } else {
-    // Apply normal sorting for other fields
-    const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
-    filtered = sortedFiltered;
-  }
-  
-  setFilteredPackages(filtered);
-  setPage(0); // Reset to first page after filtering
-}, [searchTerm, packages, students, timeFilter, statusFilter, paymentFilter, order, orderBy]);
+    if (orderBy === 'student_id' || orderBy === 'student_ids') {
+      filtered.sort((a, b) => {
+        // Get the first student name for each package (or empty string if none)
+        const studentNameA = a.student_ids.length > 0 ? (students[a.student_ids[0]] || '') : '';
+        const studentNameB = b.student_ids.length > 0 ? (students[b.student_ids[0]] || '') : '';
+
+        // Compare based on the direction
+        return order === 'asc'
+          ? studentNameA.localeCompare(studentNameB)
+          : studentNameB.localeCompare(studentNameA);
+      });
+    } else {
+      // Apply normal sorting for other fields
+      const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
+      filtered = sortedFiltered;
+    }
+
+    setFilteredPackages(filtered);
+    setPage(0); // Reset to first page after filtering
+  }, [searchTerm, packages, students, timeFilter, statusFilter, paymentFilter, order, orderBy]);
 
   const handleStatusFilterChange = (event) => {
     setStatusFilter(event.target.value);
@@ -781,23 +791,24 @@ function PackageListPage() {
         <DialogTitle>Conferma Pagamento</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              fullWidth
-              label="Prezzo Pacchetto"
-              type="number"
-              value={selectedPackage?.package_cost || 0}
-              onChange={(e) => {
-                // Se vuoi permettere la modifica del prezzo
-                const updatedPackage = {
-                  ...selectedPackage,
-                  package_cost: parseFloat(e.target.value) || 0
-                };
-                setSelectedPackage(updatedPackage);
-              }}
-              InputProps={{
-                startAdornment: <InputAdornment position="start">€</InputAdornment>,
-              }}
-            />
+            {isAdmin() && (
+              <TextField
+                fullWidth
+                label="Prezzo Pacchetto"
+                type="number"
+                value={selectedPackage?.package_cost || 0}
+                onChange={(e) => {
+                  const updatedPackage = {
+                    ...selectedPackage,
+                    package_cost: parseFloat(e.target.value) || 0
+                  };
+                  setSelectedPackage(updatedPackage);
+                }}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                }}
+              />
+            )}
             <DatePicker
               label="Data pagamento"
               value={paymentDate}

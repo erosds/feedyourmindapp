@@ -236,208 +236,158 @@ function AdminDashboardSummary({
   );
 
   return (
-    <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Statistiche
-        </Typography>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Prima Card: Statistiche basate sul periodo selezionato */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Statistiche per Periodo
+          </Typography>
 
-        <Tabs
-          value={currentTab}
-          onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
-          sx={{ mb: 2 }}
-        >
-          <Tab label="Riepilogo" />
-          <Tab label="Dettaglio" />
-        </Tabs>
+          <Tabs
+            value={currentTab}
+            onChange={handleTabChange}
+            indicatorColor="primary"
+            textColor="primary"
+            variant="fullWidth"
+            sx={{ mb: 2 }}
+          >
+            <Tab label="Riepilogo" />
+            <Tab label="Dettaglio" />
+          </Tabs>
 
-        {currentTab === 0 ? (
-          <Box>
-            <FormControl fullWidth sx={{ mt: 1 }}>
-              <InputLabel id="period-filter-label">Periodo</InputLabel>
-              <Select
-                labelId="period-filter-label"
-                value={periodFilter}
-                label="Periodo"
-                onChange={handlePeriodChange}
-              >
-                <MenuItem value="week">Settimana Selezionata</MenuItem>
-                <MenuItem value="month">Mese Corrente</MenuItem>
-                <MenuItem value="lastMonth">Mese Scorso</MenuItem>
-                <MenuItem value="year">Anno Corrente</MenuItem>
-              </Select>
-            </FormControl>
-
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-
-              {/* Financial details */}
-              <ClickableStatBlock
-                icon={<MoneyIcon />}
-                label="Entrate"
-                value={`€${totalIncome.toFixed(2)}`}
-                color="primary.main"
-              />
-
-              <ClickableStatBlock
-                icon={<PaymentIcon />}
-                label="Pagamenti"
-                value={`€${totalExpenses.toFixed(2)}`}
-                color="secondary.main"
-              />
-
-              <ClickableStatBlock
-                icon={<TrendingUpIcon />}
-                label="Ricavi"
-                value={`€${netProfit.toFixed(2)}`}
-                color={netProfit >= 0 ? 'success.main' : 'error.main'}
-              />
-              <Grid item xs={12}>
-                <Divider />
-              </Grid>
-
-              <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
-                Informazioni Aggiuntive 
-              </Typography>
-              </Grid>
-
-              {/* Next row - clickable blocks */}
-              <ClickableStatBlock
-                icon={<TimerIcon />}
-                label="Pacchetti in scadenza"
-                value={expiringPackages.length}
-                onClick={() => navigateToPackages('expiring')}
-                color="warning.main"
-              />
-
-              <ClickableStatBlock
-                icon={<CancelIcon />}
-                label="Pacchetti da saldare"
-                value={expiredPackages.length}
-                onClick={() => navigateToPackages('unpaid')}
-                color="error.main"
-              />
-
-              <ClickableStatBlock
-                icon={<MoneyIcon />}
-                label="Lezioni da saldare"
-                value={unpaidLessons.length}
-                onClick={() => navigateToLessons('unpaid')}
-                color="error.main"
-              />
-
-
-              {/* Active professors */}
-              <ClickableStatBlock
-                icon={<PersonIcon />}
-                label="Professori attivi"
-                value={activeProfessorsCount}
-              />
-
-              {/* Lessons in period */}
-              <ClickableStatBlock
-                icon={<LessonIcon />}
-                label="Lezioni nel periodo"
-                value={totalLessonsCount}
-              />
-
-              {/* Total lesson hours */}
-              <ClickableStatBlock
-                icon={<LessonIcon />}
-                label="Ore di lezione totali"
-                value={totalLessonHours.toFixed(1)}
-              />
-
-            </Grid>
-          </Box>
-        ) : (
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>
-              Dettagli per tipologia
-            </Typography>
-
-            <List dense>
-              <ListItem>
-                <ListItemText
-                  primary="Entrate da pacchetti"
-                  secondary={`€${packagesPriceIncome.toFixed(2)}`}
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText
-                  primary="Entrate da lezioni singole"
-                  secondary={`€${lessonsPriceIncome.toFixed(2)}`}
-                />
-              </ListItem>
-
-              <ListItem>
-                <ListItemText
-                  primary="Pagamenti ai professori"
-                  secondary={`€${professorsPayments.toFixed(2)}`}
-                />
-              </ListItem>
-
-              {/* Additional details */}
-              <ListItem>
-                <ListItemText
-                  primary="Pacchetti in scadenza"
-                  secondary={`${expiringPackages.length} pacchetti`}
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText
-                  primary="Pacchetti non saldati"
-                  secondary={`${expiredPackages.length} pacchetti`}
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText
-                  primary="Lezioni non pagate"
-                  secondary={`${unpaidLessons.length} lezioni`}
-                />
-              </ListItem>
-            </List>
-
-            <Box mt={2} display="flex" flexDirection="column" gap={1}>
-              <Box display="flex" justifyContent="space-between">
-                <Button
-                  variant="outlined"
-                  color="warning"
-                  onClick={() => navigateToPackages('expiring')}
-                  fullWidth
-                  sx={{ mr: 1 }}
-                  startIcon={<TimerIcon />}
+          {currentTab === 0 ? (
+            <Box>
+              <FormControl fullWidth sx={{ mt: 1 }}>
+                <InputLabel id="period-filter-label">Periodo</InputLabel>
+                <Select
+                  labelId="period-filter-label"
+                  value={periodFilter}
+                  label="Periodo"
+                  onChange={handlePeriodChange}
                 >
-                  Pacchetti in scadenza
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={() => navigateToPackages('unpaid')}
-                  fullWidth
-                  sx={{ ml: 1 }}
-                  startIcon={<CancelIcon />}
-                >
-                  Pacchetti da saldare
-                </Button>
-              </Box>
-              <Button
-                variant="outlined"
-                color="secondary"
-                onClick={() => navigateToLessons('unpaid')}
-                fullWidth
-                startIcon={<MoneyIcon />}
-              >
-                Lezioni da saldare
-              </Button>
+                  <MenuItem value="week">Settimana Selezionata</MenuItem>
+                  <MenuItem value="month">Mese Corrente</MenuItem>
+                  <MenuItem value="lastMonth">Mese Scorso</MenuItem>
+                  <MenuItem value="year">Anno Corrente</MenuItem>
+                </Select>
+              </FormControl>
+
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                {/* Financial details */}
+                <ClickableStatBlock
+                  icon={<MoneyIcon />}
+                  label="Entrate"
+                  value={`€${totalIncome.toFixed(2)}`}
+                  color="primary.main"
+                />
+
+                <ClickableStatBlock
+                  icon={<PaymentIcon />}
+                  label="Pagamenti"
+                  value={`€${totalExpenses.toFixed(2)}`}
+                  color="secondary.main"
+                />
+
+                <ClickableStatBlock
+                  icon={<TrendingUpIcon />}
+                  label="Ricavi"
+                  value={`€${netProfit.toFixed(2)}`}
+                  color={netProfit >= 0 ? 'success.main' : 'error.main'}
+                />
+
+                {/* Active professors */}
+                <ClickableStatBlock
+                  icon={<PersonIcon />}
+                  label="Professori attivi"
+                  value={activeProfessorsCount}
+                />
+
+                {/* Lessons in period */}
+                <ClickableStatBlock
+                  icon={<LessonIcon />}
+                  label="Lezioni nel periodo"
+                  value={totalLessonsCount}
+                />
+
+                {/* Total lesson hours */}
+                <ClickableStatBlock
+                  icon={<LessonIcon />}
+                  label="Ore di lezione"
+                  value={totalLessonHours.toFixed(1)}
+                />
+              </Grid>
             </Box>
-          </Box>
-        )}
-      </CardContent>
-    </Card>
+          ) : (
+            <Box>
+              <Typography variant="subtitle1" gutterBottom>
+                Dettagli per tipologia
+              </Typography>
+
+              <List dense>
+                <ListItem>
+                  <ListItemText
+                    primary="Entrate da pacchetti"
+                    secondary={`€${packagesPriceIncome.toFixed(2)}`}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemText
+                    primary="Entrate da lezioni singole"
+                    secondary={`€${lessonsPriceIncome.toFixed(2)}`}
+                  />
+                </ListItem>
+
+                <ListItem>
+                  <ListItemText
+                    primary="Pagamenti ai professori"
+                    secondary={`€${professorsPayments.toFixed(2)}`}
+                  />
+                </ListItem>
+              </List>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Seconda Card: Informazioni Aggiuntive (fisse, calcolate al giorno attuale) */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Informazioni Aggiuntive
+          </Typography>
+          
+          <Grid container spacing={2}>
+            {/* Next row - clickable blocks */}
+            <ClickableStatBlock
+              icon={<TimerIcon />}
+              label="Pacchetti in scadenza"
+              value={expiringPackages.length}
+              onClick={() => navigateToPackages('expiring')}
+              color="warning.main"
+            />
+
+            <ClickableStatBlock
+              icon={<CancelIcon />}
+              label="Pacchetti da saldare"
+              value={expiredPackages.length}
+              onClick={() => navigateToPackages('unpaid')}
+              color="error.main"
+            />
+
+            <ClickableStatBlock
+              icon={<MoneyIcon />}
+              label="Lezioni singole da saldare"
+              value={unpaidLessons.length}
+              onClick={() => navigateToLessons('unpaid')}
+              color="error.main"
+            />
+          </Grid>
+
+          
+        </CardContent>
+      </Card>
+    </Box>
   );
 }
 

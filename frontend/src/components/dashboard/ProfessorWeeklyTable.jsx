@@ -25,6 +25,17 @@ function ProfessorWeeklyTable({
   totalProfessorPayments,
   handleProfessorClick
 }) {
+  // Ordina i professori alfabeticamente per nome e poi per cognome
+  const sortedProfessors = [...professorWeeklyData].sort((a, b) => {
+    // Prima confronta per nome
+    const firstNameComparison = a.first_name.localeCompare(b.first_name);
+    // Se i nomi sono uguali, confronta per cognome
+    return firstNameComparison !== 0 ? firstNameComparison : a.last_name.localeCompare(b.last_name);
+  });
+
+  // Calcola il totale delle lezioni
+  const totalLessons = professorWeeklyData.reduce((total, prof) => total + prof.weeklyLessons, 0);
+
   return (
     <Paper sx={{ p: 2, height: '100%', mb: 2 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
@@ -35,7 +46,7 @@ function ProfessorWeeklyTable({
         </Box>
       </Box>
 
-      {professorWeeklyData.length === 0 ? (
+      {sortedProfessors.length === 0 ? (
         <Typography align="center" color="text.secondary" sx={{ py: 3 }}>
           Nessun professore attivo questa settimana
         </Typography>
@@ -51,7 +62,7 @@ function ProfessorWeeklyTable({
               </TableRow>
             </TableHead>
             <TableBody>
-              {professorWeeklyData.map((prof) => (
+              {sortedProfessors.map((prof) => (
                 <TableRow
                   key={prof.id}
                   hover
@@ -100,8 +111,13 @@ function ProfessorWeeklyTable({
                 </TableRow>
               ))}
               <TableRow>
-                <TableCell colSpan={2} sx={{ fontWeight: 'bold' }}>
-                  <Typography variant="subtitle1" fontWeight="medium">Totale Pagamenti</Typography>
+                <TableCell colSpan={1} sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle1" fontWeight="medium">Totale</Typography>
+                </TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle1" fontWeight="medium">
+                    {totalLessons}
+                  </Typography>
                 </TableCell>
                 <TableCell align="right"></TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>

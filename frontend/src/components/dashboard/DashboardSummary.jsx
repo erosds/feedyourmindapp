@@ -18,6 +18,7 @@ import {
   Tabs,
   Typography
 } from '@mui/material';
+import { parseISO } from 'date-fns';
 
 function DashboardSummary({
   currentWeekLessons = [],
@@ -78,9 +79,40 @@ function DashboardSummary({
   const packageHours = calculateTypeHours('package');
   const singleHours = calculateTypeHours('single');
 
+  // Conteggio numero di lezioni per tipo
+  const packageLessonsCount = periodLessons.filter(lesson => lesson.is_package).length;
+  const singleLessonsCount = periodLessons.filter(lesson => !lesson.is_package).length;
+
   // Calcolo guadagni per tipo
   const packageEarnings = calculateTypeEarnings('package');
   const singleEarnings = calculateTypeEarnings('single');
+
+  // Calcola il numero di lezioni singole pagate
+  const paidSingleLessons = periodLessons.filter(lesson => 
+    !lesson.is_package && lesson.is_paid
+  ).length;
+
+  // Funzione per verificare se una lezione appartiene a un pacchetto in scadenza
+  const isLessonFromExpiringPackage = (lesson) => {
+    if (!lesson.is_package || !lesson.package_id) return false;
+    
+    // Per determinare se un pacchetto è in scadenza, dovremmo avere la data di scadenza del pacchetto
+    // Poiché non abbiamo direttamente quella informazione nella lezione, 
+    // possiamo considerare che le lezioni recenti (ultimi 7 giorni) siano potenzialmente da pacchetti in scadenza
+    // Nota: questa è una semplificazione; in un'implementazione reale dovresti verificare la data di scadenza del pacchetto
+    
+    const lessonDate = parseISO(lesson.lesson_date);
+    const today = new Date();
+    const oneWeekAgo = new Date(today);
+    oneWeekAgo.setDate(today.getDate() - 7);
+    
+    return lessonDate >= oneWeekAgo && lessonDate <= today;
+  };
+
+  // Calcola lezioni da pacchetti in scadenza (questo è un'approssimazione)
+  const lessonsFromExpiringPackages = periodLessons.filter(lesson => 
+    lesson.is_package && isLessonFromExpiringPackage(lesson)
+  ).length;
 
   // Handler per cambiare il periodo
   const handlePeriodChange = (event) => {
@@ -150,7 +182,16 @@ function DashboardSummary({
               <ListItem>
                 <ListItemText
                   primary="Lezioni singole"
-                  secondary={`${singleHours.toFixed(1)} ore`}
+                  secondary={
+                    <Box>
+                      <Typography variant="body2">
+                        {singleLessonsCount} lezioni
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        di cui pagate: {paidSingleLessons}
+                      </Typography>
+                    </Box>
+                  }
                 />
                 <Typography>
                   €{singleEarnings.toFixed(2)}
@@ -159,7 +200,16 @@ function DashboardSummary({
               <ListItem>
                 <ListItemText
                   primary="Lezioni da pacchetti"
-                  secondary={`${packageHours.toFixed(1)} ore`}
+                  secondary={
+                    <Box>
+                      <Typography variant="body2">
+                        {packageLessonsCount} lezioni
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        di cui in scadenza: {lessonsFromExpiringPackages}
+                      </Typography>
+                    </Box>
+                  }
                 />
                 <Typography>
                   €{packageEarnings.toFixed(2)}
