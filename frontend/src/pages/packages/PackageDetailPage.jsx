@@ -794,6 +794,7 @@ function PackageDetailPage() {
                     </TableHead>
                     <TableBody>
                       {lessons
+                        .sort((a, b) => new Date(b.lesson_date) - new Date(a.lesson_date)) // Ordina dalla più recente alla meno recente
                         .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                         .map((lesson) => (
                           <TableRow
