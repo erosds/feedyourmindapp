@@ -246,246 +246,250 @@ function DayProfessorsDialog({ open, onClose, selectedDay, professorSchedules, h
               }}
             >
               {/* Professor rows with their lessons */}
-              {schedules.map((prof) => (
-                <Box
-                  key={prof.id}
-                  sx={{
-                    display: 'flex',
-                    mb: 2,
-                    pb: 2,
-                    borderBottom: '1px solid rgba(224, 224, 224, 0.5)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                      cursor: 'pointer'
-                    }
-                  }}
-                  onClick={() => handleProfessorClick(prof.id)}
-                >
-                  {/* Professor information */}
+              {schedules.map((prof) => {
+                // Determine maximum number of overlaps for this professor
+                const timeSlots = {};
+                
+                // For each lesson, add +1 to all time slots it covers
+                prof.lessons.forEach(lesson => {
+                  const { startPosition, width } = calculateLessonBar(
+                    lesson.start_time ? lesson.start_time.substring(0, 5) : null,
+                    parseFloat(lesson.duration)
+                  );
+                  
+                  // Round to have discrete slots (5% increments)
+                  const startSlot = Math.floor(startPosition / 5) * 5;
+                  const endSlot = Math.ceil((startPosition + width) / 5) * 5;
+                  
+                  // For each time slot covered by the lesson
+                  for (let slot = startSlot; slot < endSlot; slot += 5) {
+                    if (!timeSlots[slot]) timeSlots[slot] = 0;
+                    timeSlots[slot]++;
+                  }
+                });
+                
+                // Find maximum number of overlaps
+                const maxOverlap = Math.max(1, ...Object.values(timeSlots));
+                
+                // Calculate minimum row height based on the number of overlapping lessons
+                // Each lesson needs at least 15px + 2px spacing between rows
+                const minHeight = maxOverlap * 17;  // 15px per row + 2px spacing
+                const rowHeight = Math.max(60, minHeight);
+                
+                return (
                   <Box
+                    key={prof.id}
                     sx={{
-                      width: '200px',
-                      flexShrink: 0,
-                      pr: 2,
                       display: 'flex',
-                      alignItems: 'center'
+                      mb: 2,
+                      pb: 2,
+                      borderBottom: '1px solid rgba(224, 224, 224, 0.5)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                        cursor: 'pointer'
+                      }
                     }}
+                    onClick={() => handleProfessorClick(prof.id)}
                   >
-                    <Avatar
+                    {/* Professor information */}
+                    <Box
                       sx={{
-                        width: 36,
-                        height: 36,
-                        bgcolor: 'primary.main',
-                        mr: 1
+                        width: '200px',
+                        flexShrink: 0,
+                        pr: 2,
+                        display: 'flex',
+                        alignItems: 'center'
                       }}
                     >
-                      {prof.first_name.charAt(0)}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="body1" noWrap>
-                        {prof.first_name} {prof.last_name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {prof.lessons.length} lezioni • {prof.totalHours.toFixed(1)} ore
-                      </Typography>
+                      <Avatar
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          bgcolor: 'primary.main',
+                          mr: 1
+                        }}
+                      >
+                        {prof.first_name.charAt(0)}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="body1" noWrap>
+                          {prof.first_name} {prof.last_name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {prof.lessons.length} lezioni • {prof.totalHours.toFixed(1)} ore
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {/* Lesson timeline with dynamic height */}
+                    <Box sx={{ flex: 1, position: 'relative', height: `${rowHeight}px` }}>
+                      {/* Vertical dividing lines for hours - in main body */}
+                      {hourLabels.map((hour, index) => {
+                        // First line (left) has different style
+                        const isFirst = index === 0;
+
+                        return (
+                          <Box
+                            key={`divider-${hour}`}
+                            sx={{
+                              position: 'absolute',
+                              left: `${calculateHourPosition(hour)}%`,
+                              top: 0,
+                              bottom: 0,
+                              width: '1px',
+                              backgroundColor: isFirst ? 'transparent' : 'rgba(224, 224, 224, 0.5)'
+                            }}
+                          />
+                        );
+                      })}
+                      {(() => {
+                        // Calculate distribution of lessons in dynamic height
+
+                        // Get the container height determined earlier
+                        const TIMELINE_HEIGHT = rowHeight;
+
+                        // Sort lessons by start time
+                        const sortedLessons = [...prof.lessons].sort((a, b) => {
+                          const timeA = a.start_time ? a.start_time : "00:00";
+                          const timeB = b.start_time ? b.start_time : "00:00";
+                          return timeA.localeCompare(timeB);
+                        });
+
+                        // Calculate height of each bar (with some space between bars)
+                        const barHeight = Math.max(12, Math.floor((TIMELINE_HEIGHT - (maxOverlap - 1) * 2) / maxOverlap));
+
+                        // Assign lessons to time bands
+                        const rows = Array(maxOverlap).fill().map(() => []);
+
+                        // Function to check for overlaps
+                        const isOverlapping = (lesson, rowLessons) => {
+                          const { startPosition: lessonStart, width: lessonWidth } = calculateLessonBar(
+                            lesson.start_time ? lesson.start_time.substring(0, 5) : null,
+                            parseFloat(lesson.duration)
+                          );
+                          const lessonEnd = lessonStart + lessonWidth;
+
+                          for (const existingLesson of rowLessons) {
+                            const { startPosition: existingStart, width: existingWidth } = calculateLessonBar(
+                              existingLesson.start_time ? existingLesson.start_time.substring(0, 5) : null,
+                              parseFloat(existingLesson.duration)
+                            );
+                            const existingEnd = existingStart + existingWidth;
+
+                            // If there's overlap
+                            if (lessonStart < existingEnd && lessonEnd > existingStart) {
+                              return true;
+                            }
+                          }
+                          return false;
+                        };
+
+                        // Assign each lesson to first available row
+                        sortedLessons.forEach(lesson => {
+                          let rowIndex = 0;
+                          // Find first row without overlaps
+                          while (rowIndex < maxOverlap && isOverlapping(lesson, rows[rowIndex])) {
+                            rowIndex++;
+                          }
+
+                          // If we've exceeded maximum number of rows, put in last row
+                          if (rowIndex >= maxOverlap) rowIndex = maxOverlap - 1;
+
+                          // Add lesson to row
+                          rows[rowIndex].push(lesson);
+                        });
+
+                        // Now display lessons by rows
+                        return rows.map((rowLessons, rowIndex) => (
+                          <React.Fragment key={`row-${rowIndex}`}>
+                            {rowLessons.map((lesson, index) => {
+                              const { startPosition, width } = calculateLessonBar(
+                                lesson.start_time ? lesson.start_time.substring(0, 5) : null,
+                                parseFloat(lesson.duration)
+                              );
+
+                              // Calculate vertical position of bar
+                              const topPosition = 2 + rowIndex * (barHeight + 2);
+
+                              // Get student name (now available thanks to API call)
+                              const studentName = lesson.student_name;
+
+                              return (
+                                <Tooltip
+                                  key={`${prof.id}-lesson-${rowIndex}-${index}`}
+                                  title={
+                                    <React.Fragment>
+                                      <Typography variant="body2" fontWeight="bold">
+                                        {studentName}
+                                      </Typography>
+                                      <Typography variant="caption">
+                                        {lesson.start_time ? lesson.start_time.substring(0, 5) : '—'} • {parseFloat(lesson.duration)} ore
+                                      </Typography>
+                                      <Typography variant="caption" display="block">
+                                        Clicca per vedere i dettagli
+                                      </Typography>
+                                    </React.Fragment>
+                                  }
+                                >
+                                  <Box
+                                    onClick={(e) => handleLessonClick(lesson.id, e)}
+                                    sx={{
+                                      position: 'absolute',
+                                      left: `${startPosition}%`,
+                                      width: `${width}%`,
+                                      height: `${barHeight}px`,
+                                      top: `${topPosition}px`,
+                                      backgroundColor: lesson.is_online ? 'secondary.main' : 'primary.main',
+                                      borderRadius: '3px',
+                                      opacity: 0.8,
+                                      '&:hover': {
+                                        opacity: 1,
+                                        transform: 'translateY(-1px)',
+                                        boxShadow: 1,
+                                        zIndex: 10,
+                                        cursor: 'pointer'
+                                      },
+                                      transition: 'all 0.2s ease',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      overflow: 'hidden',
+                                      whiteSpace: 'nowrap',
+                                      color: 'white',
+                                      fontSize: '0.65rem',
+                                      fontWeight: 'bold',
+                                      textShadow: '0px 0px 2px rgba(0,0,0,0.5)'
+                                    }}
+                                  >
+                                    {/* Show student if bar is wide enough */}
+                                    {width > 2 && barHeight > 1 && (
+                                      <Typography
+                                        variant="caption"
+                                        sx={{
+                                          color: 'white',
+                                          padding: '0 4px',
+                                          textOverflow: 'ellipsis',
+                                          overflow: 'hidden',
+                                          maxWidth: '100%',
+                                          fontSize: '0.6rem',
+                                          lineHeight: 1
+                                        }}
+                                        noWrap
+                                      >
+                                        {studentName}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                </Tooltip>
+                              );
+                            })}
+                          </React.Fragment>
+                        ));
+                      })()}
                     </Box>
                   </Box>
-
-                  {/* Lesson timeline with fixed height */}
-                  <Box sx={{ flex: 1, position: 'relative', height: '60px' }}>
-                    {/* Vertical dividing lines for hours - in main body */}
-                    {hourLabels.map((hour, index) => {
-                      // First line (left) has different style
-                      const isFirst = index === 0;
-
-                      return (
-                        <Box
-                          key={`divider-${hour}`}
-                          sx={{
-                            position: 'absolute',
-                            left: `${calculateHourPosition(hour)}%`,
-                            top: 0,
-                            bottom: 0,
-                            width: '1px',
-                            backgroundColor: isFirst ? 'transparent' : 'rgba(224, 224, 224, 0.5)'
-                          }}
-                        />
-                      );
-                    })}
-                    {(() => {
-                      // Calculate distribution of lessons in fixed height
-
-                      // Constant for total container height
-                      const TIMELINE_HEIGHT = 60;
-
-                      // Sort lessons by start time
-                      const sortedLessons = [...prof.lessons].sort((a, b) => {
-                        const timeA = a.start_time ? a.start_time : "00:00";
-                        const timeB = b.start_time ? b.start_time : "00:00";
-                        return timeA.localeCompare(timeB);
-                      });
-
-                      // Determine how many "tracks" we need for each time slot
-                      // This allows us to calculate the height of each bar
-
-                      // For each time position, keep track of how many overlaps there are
-                      const timeSlots = {};
-
-                      // For each lesson, add +1 to all time slots it covers
-                      sortedLessons.forEach(lesson => {
-                        const { startPosition, width } = calculateLessonBar(
-                          lesson.start_time ? lesson.start_time.substring(0, 5) : null,
-                          parseFloat(lesson.duration)
-                        );
-
-                        // Round to have discrete slots (5% increments)
-                        const startSlot = Math.floor(startPosition / 5) * 5;
-                        const endSlot = Math.ceil((startPosition + width) / 5) * 5;
-
-                        // For each time slot covered by the lesson
-                        for (let slot = startSlot; slot < endSlot; slot += 5) {
-                          if (!timeSlots[slot]) timeSlots[slot] = 0;
-                          timeSlots[slot]++;
-                        }
-                      });
-
-                      // Find maximum number of overlaps
-                      const maxOverlap = Math.max(1, ...Object.values(timeSlots));
-
-                      // Calculate height of each bar (with some space between bars)
-                      const barHeight = Math.max(12, Math.floor((TIMELINE_HEIGHT) / maxOverlap));
-
-                      // Assign lessons to time bands
-                      const rows = Array(maxOverlap).fill().map(() => []);
-
-                      // Function to check for overlaps
-                      const isOverlapping = (lesson, rowLessons) => {
-                        const { startPosition: lessonStart, width: lessonWidth } = calculateLessonBar(
-                          lesson.start_time ? lesson.start_time.substring(0, 5) : null,
-                          parseFloat(lesson.duration)
-                        );
-                        const lessonEnd = lessonStart + lessonWidth;
-
-                        for (const existingLesson of rowLessons) {
-                          const { startPosition: existingStart, width: existingWidth } = calculateLessonBar(
-                            existingLesson.start_time ? existingLesson.start_time.substring(0, 5) : null,
-                            parseFloat(existingLesson.duration)
-                          );
-                          const existingEnd = existingStart + existingWidth;
-
-                          // If there's overlap
-                          if (lessonStart < existingEnd && lessonEnd > existingStart) {
-                            return true;
-                          }
-                        }
-                        return false;
-                      };
-
-                      // Assign each lesson to first available row
-                      sortedLessons.forEach(lesson => {
-                        let rowIndex = 0;
-                        // Find first row without overlaps
-                        while (rowIndex < maxOverlap && isOverlapping(lesson, rows[rowIndex])) {
-                          rowIndex++;
-                        }
-
-                        // If we've exceeded maximum number of rows, put in last row
-                        if (rowIndex >= maxOverlap) rowIndex = maxOverlap - 1;
-
-                        // Add lesson to row
-                        rows[rowIndex].push(lesson);
-                      });
-
-                      // Now display lessons by rows
-                      return rows.map((rowLessons, rowIndex) => (
-                        <React.Fragment key={`row-${rowIndex}`}>
-                          {rowLessons.map((lesson, index) => {
-                            const { startPosition, width } = calculateLessonBar(
-                              lesson.start_time ? lesson.start_time.substring(0, 5) : null,
-                              parseFloat(lesson.duration)
-                            );
-
-                            // Calculate vertical position of bar
-                            const topPosition = 2 + rowIndex * (barHeight + 2);
-
-                            // Get student name (now available thanks to API call)
-                            const studentName = lesson.student_name;
-
-                            return (
-                              <Tooltip
-                                key={`${prof.id}-lesson-${rowIndex}-${index}`}
-                                title={
-                                  <React.Fragment>
-                                    <Typography variant="body2" fontWeight="bold">
-                                      {studentName}
-                                    </Typography>
-                                    <Typography variant="caption">
-                                      {lesson.start_time ? lesson.start_time.substring(0, 5) : '—'} • {parseFloat(lesson.duration)} ore
-                                    </Typography>
-                                    <Typography variant="caption" display="block">
-                                      Clicca per vedere i dettagli
-                                    </Typography>
-                                  </React.Fragment>
-                                }
-                              >
-                                <Box
-                                  onClick={(e) => handleLessonClick(lesson.id, e)}
-                                  sx={{
-                                    position: 'absolute',
-                                    left: `${startPosition}%`,
-                                    width: `${width}%`,
-                                    height: `${barHeight}px`,
-                                    top: `${topPosition}px`,
-                                    backgroundColor: lesson.is_online ? 'secondary.main' : 'primary.main',
-                                    borderRadius: '3px',
-                                    opacity: 0.8,
-                                    '&:hover': {
-                                      opacity: 1,
-                                      transform: 'translateY(-1px)',
-                                      boxShadow: 1,
-                                      zIndex: 10,
-                                      cursor: 'pointer'
-                                    },
-                                    transition: 'all 0.2s ease',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    overflow: 'hidden',
-                                    whiteSpace: 'nowrap',
-                                    color: 'white',
-                                    fontSize: '0.65rem',
-                                    fontWeight: 'bold',
-                                    textShadow: '0px 0px 2px rgba(0,0,0,0.5)'
-                                  }}
-                                >
-                                  {/* Show student if bar is wide enough */}
-                                  {width > 2 && barHeight > 1 && (
-                                    <Typography
-                                      variant="caption"
-                                      sx={{
-                                        color: 'white',
-                                        padding: '0 4px',
-                                        textOverflow: 'ellipsis',
-                                        overflow: 'hidden',
-                                        maxWidth: '100%',
-                                        fontSize: '0.6rem',
-                                        lineHeight: 1
-                                      }}
-                                      noWrap
-                                    >
-                                      {studentName}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              </Tooltip>
-                            );
-                          })}
-                        </React.Fragment>
-                      ));
-                    })()}
-                  </Box>
-                </Box>
-              ))}
+                );
+              })}
             </Box>
           </Box>
         )}

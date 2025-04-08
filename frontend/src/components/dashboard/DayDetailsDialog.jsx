@@ -84,6 +84,40 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
     navigate(`/lessons/${lessonId}`);
   };
 
+  // Calculate the maximum number of overlaps for the timeline height
+  const calculateMaxOverlaps = (lessons) => {
+    const timeSlots = {};
+    
+    // For each lesson, add +1 to all time slots it covers
+    lessons.forEach(lesson => {
+      const { startPosition, width } = calculateLessonBar(
+        lesson.start_time ? lesson.start_time.substring(0, 5) : null, 
+        parseFloat(lesson.duration)
+      );
+      
+      // Round to have discrete slots (5% increments)
+      const startSlot = Math.floor(startPosition / 5) * 5;
+      const endSlot = Math.ceil((startPosition + width) / 5) * 5;
+      
+      // For each time slot covered by the lesson
+      for (let slot = startSlot; slot < endSlot; slot += 5) {
+        if (!timeSlots[slot]) timeSlots[slot] = 0;
+        timeSlots[slot]++;
+      }
+    });
+    
+    // Find maximum number of overlaps (minimum 1)
+    return Math.max(1, ...Object.values(timeSlots));
+  };
+
+  // Calculate the maximum number of overlaps
+  const maxOverlaps = calculateMaxOverlaps(sortedLessons);
+  
+  // Calculate the timeline height based on number of overlaps
+  // Each row needs at least 15px height + 2px spacing
+  const minHeight = maxOverlaps * 17; // 15px per row + 2px spacing
+  const timelineHeight = Math.max(120, minHeight);
+
   return (
     <Dialog
       open={open}
@@ -150,8 +184,8 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
               </Box>
             </Box>
 
-            {/* Timeline of lessons - fixed height, with optimized layout */}
-            <Box sx={{ position: 'relative', height: '120px', mb: 1, mt: -2 }}>
+            {/* Timeline of lessons - dynamic height based on overlaps */}
+            <Box sx={{ position: 'relative', height: `${timelineHeight}px`, mb: 1, mt: -2 }}>
               {/* Vertical dividing lines for hours - in main body */}
               {hourLabels.map((hour, index) => {
                 // First line (left) has different style
@@ -174,7 +208,6 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
 
               {(() => {
                 // Calculate layout with rows to fully use available height
-                const TIMELINE_HEIGHT = 120;
                 
                 // Sort lessons by start time
                 const sortedTimelineLessons = [...sortedLessons].sort((a, b) => {
@@ -183,35 +216,11 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
                   return timeA.localeCompare(timeB);
                 });
                 
-                // Determine time slots and overlaps
-                const timeSlots = {};
-                
-                // For each lesson, add +1 to all time slots it covers
-                sortedTimelineLessons.forEach(lesson => {
-                  const { startPosition, width } = calculateLessonBar(
-                    lesson.start_time ? lesson.start_time.substring(0, 5) : null, 
-                    parseFloat(lesson.duration)
-                  );
-                  
-                  // Round to have discrete slots (5% increments)
-                  const startSlot = Math.floor(startPosition / 5) * 5;
-                  const endSlot = Math.ceil((startPosition + width) / 5) * 5;
-                  
-                  // For each time slot covered by the lesson
-                  for (let slot = startSlot; slot < endSlot; slot += 5) {
-                    if (!timeSlots[slot]) timeSlots[slot] = 0;
-                    timeSlots[slot]++;
-                  }
-                });
-                
-                // Find maximum number of overlaps
-                const maxOverlap = Math.max(1, ...Object.values(timeSlots));
-                
-                // Calculate height of each bar (with some space between bars)
-                const barHeight = Math.floor((TIMELINE_HEIGHT)/ maxOverlap);
+                // Calculate height of each bar (with space between bars)
+                const barHeight = Math.floor((timelineHeight - (maxOverlaps - 1) * 2) / maxOverlaps);
                 
                 // Assign lessons to time bands
-                const rows = Array(maxOverlap).fill().map(() => []);
+                const rows = Array(maxOverlaps).fill().map(() => []);
                 
                 // Function to check for overlaps
                 const isOverlapping = (lesson, rowLessons) => {
@@ -240,12 +249,12 @@ function DayDetailsDialog({ open, onClose, onAddLesson, selectedDay, dayLessons,
                 sortedTimelineLessons.forEach(lesson => {
                   let rowIndex = 0;
                   // Find first row without overlaps
-                  while (rowIndex < maxOverlap && isOverlapping(lesson, rows[rowIndex])) {
+                  while (rowIndex < maxOverlaps && isOverlapping(lesson, rows[rowIndex])) {
                     rowIndex++;
                   }
                   
                   // If we've exceeded maximum number of rows, put in last row
-                  if (rowIndex >= maxOverlap) rowIndex = maxOverlap - 1;
+                  if (rowIndex >= maxOverlaps) rowIndex = maxOverlaps - 1;
                   
                   // Add lesson to row
                   rows[rowIndex].push(lesson);
