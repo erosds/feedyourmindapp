@@ -74,10 +74,7 @@ function FAQSection1({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Utilizza il tuo nomecognome come username. La password di default è 1234, cambiala appena puoi.
-          </Typography>
-          <Typography>
-            Per accedere, vai alla <Link component={RouterLink} to="/login">pagina di login</Link>.
+            Probabilmente se sei qui lo sai già, ma comunque: utilizza il tuo nomecognome come username. La password di default è 1234, cambiala appena puoi.
           </Typography>
         </>
       )

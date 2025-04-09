@@ -98,6 +98,11 @@ function MainLayout() {
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
       { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
+      {
+        text: 'FAQ',
+        icon: <HelpOutlineIcon />,
+        path: '/faq'
+      },
     ];
   }
 
