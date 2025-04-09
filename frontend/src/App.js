@@ -51,8 +51,12 @@ import PrivateRoute from './components/auth/PrivateRoute';
 import AdminRoute from './components/auth/AdminRoute';
 import RootRedirect from './components/auth/RootRedirect';
 
+import FAQPage from './pages/faq/FAQPage';
+
 // Scegli tema
 import {theme} from './services/theme'
+
+
 
 
 function App() {
@@ -115,6 +119,8 @@ function App() {
                 <Route path="/lessons/:id" element={<LessonDetailPage />} />
                 <Route path="/lessons/new" element={<LessonFormPage />} />
                 <Route path="/lessons/edit/:id" element={<LessonFormPage />} />
+
+                <Route path="/faq" element={<FAQPage />} />
               </Route>
 
               {/* 404 Not Found */}
