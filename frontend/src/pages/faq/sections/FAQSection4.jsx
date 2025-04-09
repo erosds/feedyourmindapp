@@ -38,12 +38,12 @@ function FAQSection4({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Quando crei una nuova lezione, seleziona lo studente e poi attiva l'opzione "Lezione da 
-            pacchetto". Seleziona quindi il pacchetto desiderato dal menu a tendina che apparirà. Il sistema 
+            Quando crei una nuova lezione, seleziona lo studente e poi attiva l'opzione "Lezione da
+            pacchetto". Seleziona quindi il pacchetto desiderato dal menu a tendina che apparirà. Il sistema
             mostrerà automaticamente le ore disponibili nel pacchetto.
           </Typography>
           <Typography paragraph>
-            Se non vedi pacchetti disponibili, chiedi se hanno un pacchetto, e nel caso, crealo facendoti dare 
+            Se non vedi pacchetti disponibili, chiedi se hanno un pacchetto, e nel caso, crealo facendoti dare
             le informazioni da inserire (data di partenza e numero di ore).
           </Typography>
           <Typography>
@@ -59,7 +59,7 @@ function FAQSection4({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Se stai creando una lezione e lo studente dovrebbe avere un pacchetto ma questo 
+            Se stai creando una lezione e lo studente dovrebbe avere un pacchetto ma questo
             non appare tra le opzioni disponibili, significa che il pacchetto non è ancora stato
             registrato nel sistema. Segui questi passaggi:
           </Typography>
@@ -87,12 +87,12 @@ function FAQSection4({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Se la durata della lezione supera le ore disponibili nel pacchetto, il sistema mostrerà una finestra 
+            Se stai aggiungendo una lezione dalla sezione Lezioni, e la durata della lezione supera le ore disponibili nel pacchetto, il sistema mostrerà una finestra
             di dialogo con due opzioni:
           </Typography>
           <ol>
             <li>
-              <strong>Utilizzare le ore rimanenti del pacchetto e creare una lezione singola</strong> per le ore eccedenti: 
+              <strong>Utilizzare le ore rimanenti del pacchetto e creare una lezione singola</strong> per le ore eccedenti:
               questa opzione crea automaticamente una lezione singola per le ore che superano quelle disponibili
               nel pacchetto.
             </li>
@@ -103,6 +103,8 @@ function FAQSection4({ searchQuery = '' }) {
           </ol>
           <Typography>
             Scegli l'opzione più adatta in base alle preferenze dello studente e alla tua organizzazione.
+            Attenzione: se stai aggiungendo la lezione dalla dashboard, il sistema semplicemente non ti permetterà di crearla.
+            Per farlo dovrai andare nella sezione Lezioni.
           </Typography>
         </>
       )
@@ -111,8 +113,8 @@ function FAQSection4({ searchQuery = '' }) {
       question: 'Come gestisco le lezioni che si sovrappongono?',
       answer: (
         <Typography paragraph>
-          Il sistema rileva automaticamente eventuali sovrapposizioni per lo stesso studente e ti avviserà nel 
-          caso in cui tenti di creare una lezione che si sovrappone a un'altra. Non è possibile avere due 
+          Il sistema rileva automaticamente eventuali sovrapposizioni per lo stesso studente e ti avviserà nel
+          caso in cui tenti di creare una lezione che si sovrappone a un'altra. Non è possibile avere due
           lezioni contemporanee per lo stesso studente. Dovrai modificare l'orario di una delle lezioni
           se desideri programmarle nella stessa giornata.
         </Typography>
@@ -176,7 +178,7 @@ function FAQSection4({ searchQuery = '' }) {
         <Typography paragraph>
           Per modificare una lezione, vai alla pagina di dettaglio della lezione (cliccando sulla lezione
           dalla dashboard o dalla lista lezioni) e clicca sul pulsante "Modifica" in alto a destra.
-          Potrai modificare tutti i dettagli come data, orario, durata, professore, studente e 
+          Potrai modificare tutti i dettagli come data, orario, durata, professore, studente e
           se la lezione fa parte di un pacchetto o è singola.
         </Typography>
       )
@@ -216,20 +218,40 @@ function FAQSection4({ searchQuery = '' }) {
   ];
 
   // If there's a search query, filter the items
-  const filteredItems = searchQuery 
-    ? items.filter(item => 
-        item.question.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        item.answer.props.children.some(child => 
-          (typeof child === 'object' && child.props && child.props.children && 
-          typeof child.props.children === 'string' && 
-          child.props.children.toLowerCase().includes(searchQuery.toLowerCase())) ||
-          (Array.isArray(child) && child.some(subChild =>
-            typeof subChild === 'object' && subChild.props && subChild.props.children &&
-            typeof subChild.props.children === 'string' &&
-            subChild.props.children.toLowerCase().includes(searchQuery.toLowerCase())
-          ))
-        )
-      )
+  // Modifica la funzione di filtro in ogni sezione
+  const filteredItems = searchQuery
+    ? items.filter(item => {
+      // Controlla che la domanda contenga la query di ricerca
+      if (item.question.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return true;
+      }
+
+      // Controlla il contenuto della risposta
+      const { children } = item.answer.props;
+
+      // Handle diversi tipi di children
+      if (Array.isArray(children)) {
+        // Se children è un array, usa .some
+        return children.some(child => {
+          if (typeof child === 'string') {
+            return child.toLowerCase().includes(searchQuery.toLowerCase());
+          }
+          if (child && typeof child === 'object' && child.props) {
+            const childText = child.props.children;
+            if (typeof childText === 'string') {
+              return childText.toLowerCase().includes(searchQuery.toLowerCase());
+            }
+          }
+          return false;
+        });
+      } else if (typeof children === 'string') {
+        // Se children è una stringa, cerca direttamente
+        return children.toLowerCase().includes(searchQuery.toLowerCase());
+      }
+
+      // Nessuna corrispondenza trovata
+      return false;
+    })
     : items;
 
   if (searchQuery && filteredItems.length === 0) {
@@ -243,7 +265,7 @@ function FAQSection4({ searchQuery = '' }) {
           Gestione Lezioni
         </Typography>
       )}
-      
+
       {filteredItems.map((item, index) => (
         <FAQItem key={index} question={item.question} answer={item.answer} />
       ))}

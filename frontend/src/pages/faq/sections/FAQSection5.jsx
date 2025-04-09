@@ -10,8 +10,8 @@ function FAQSection5({ searchQuery = '' }) {
       question: 'Cosa succede se devo annullare l\'estensione di un pacchetto?',
       answer: (
         <Typography paragraph>
-          Se hai esteso un pacchetto ma hai necessità di annullare l'estensione, puoi farlo dalla pagina di 
-          dettaglio del pacchetto cliccando su "Annulla estensione (-1)". Nota che questa operazione non è 
+          Se hai esteso un pacchetto ma hai necessità di annullare l'estensione, puoi farlo dalla pagina di
+          dettaglio del pacchetto cliccando su "Annulla estensione (-1)". Nota che questa operazione non è
           possibile se ci sono lezioni programmate nella settimana che verrebbe rimossa. Dovrai prima eliminare
           o spostare tali lezioni.
         </Typography>
@@ -21,7 +21,7 @@ function FAQSection5({ searchQuery = '' }) {
       question: 'Cosa succede se una lezione ha più ore di quelle rimanenti su un pacchetto?',
       answer: (
         <Typography paragraph>
-          Il sistema chiederà cosa fare con le ore eccedenti e basterà seguire le istruzioni: potrai scegliere di 
+          Il sistema chiederà cosa fare con le ore eccedenti e basterà seguire le istruzioni: potrai scegliere di
           creare una lezione singola per le ore eccedenti oppure far partire un nuovo pacchetto. In entrambi i casi,
           il sistema gestirà automaticamente la divisione delle ore tra il pacchetto esistente e la nuova soluzione
           scelta.
@@ -32,8 +32,8 @@ function FAQSection5({ searchQuery = '' }) {
       question: 'Cosa succede se elimino un pacchetto che ha lezioni associate?',
       answer: (
         <Typography paragraph>
-          Eliminando un pacchetto, verranno eliminate anche tutte le lezioni associate. Il sistema mostrerà 
-          un avviso con l'elenco delle lezioni che verranno eliminate, chiedendo conferma prima di 
+          Eliminando un pacchetto, verranno eliminate anche tutte le lezioni associate. Il sistema mostrerà
+          un avviso con l'elenco delle lezioni che verranno eliminate, chiedendo conferma prima di
           procedere. Se desideri conservare le lezioni, dovresti modificarle per dissociarle dal pacchetto
           prima di eliminare quest'ultimo.
         </Typography>
@@ -67,8 +67,8 @@ function FAQSection5({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Gli amministratori possono modificare l'importo di un pacchetto dalla pagina di dettaglio 
-            cliccando su "Modifica prezzo". Questo può essere utile quando il pacchetto è stato inizialmente 
+            Gli amministratori possono modificare l'importo di un pacchetto dalla pagina di dettaglio
+            cliccando su "Modifica prezzo". Questo può essere utile quando il pacchetto è stato inizialmente
             creato senza specificare l'importo o se è necessario modificarlo.
           </Typography>
           <Typography>
@@ -77,39 +77,7 @@ function FAQSection5({ searchQuery = '' }) {
         </>
       )
     },
-    {
-      question: 'Come faccio a vedere quante ore di lezione ho svolto in un determinato periodo?',
-      answer: (
-        <Typography paragraph>
-          Nella tua dashboard personale, troverai un riepilogo delle ore di lezione svolte nel periodo selezionato.
-          Puoi filtrare per diversi periodi (settimana, mese, anno) per visualizzare il totale delle ore e il
-          relativo compenso. Inoltre, il calendario settimanale offre una rappresentazione visiva della distribuzione
-          delle tue lezioni.
-        </Typography>
-      )
-    },
-    {
-      question: 'Come posso inserire una lezione che si ripete ogni settimana?',
-      answer: (
-        <>
-          <Typography paragraph>
-            Attualmente, il sistema non supporta la creazione automatica di lezioni ricorrenti. Per inserire lezioni
-            che si ripetono settimanalmente, dovrai creare manualmente ciascuna lezione.
-          </Typography>
-          <Typography paragraph>
-            Un approccio pratico è:
-          </Typography>
-          <ol>
-            <li>Creare la prima lezione con tutti i dettagli corretti</li>
-            <li>Per le lezioni successive, utilizzare la funzione "Copia lezione" 
-            (selezionando una lezione esistente e usando il pulsante "Copia") e modificare solo la data</li>
-          </ol>
-          <Typography>
-            In questo modo, puoi mantenere tutti gli altri dettagli invariati (studente, orario, durata, pacchetto).
-          </Typography>
-        </>
-      )
-    },
+    
     {
       question: 'Cosa faccio se devo spostare una lezione da un pacchetto all\'altro?',
       answer: (
@@ -160,20 +128,40 @@ function FAQSection5({ searchQuery = '' }) {
   ];
 
   // If there's a search query, filter the items
-  const filteredItems = searchQuery 
-    ? items.filter(item => 
-        item.question.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        item.answer.props.children.some(child => 
-          (typeof child === 'object' && child.props && child.props.children && 
-          typeof child.props.children === 'string' && 
-          child.props.children.toLowerCase().includes(searchQuery.toLowerCase())) ||
-          (Array.isArray(child) && child.some(subChild =>
-            typeof subChild === 'object' && subChild.props && subChild.props.children &&
-            typeof subChild.props.children === 'string' &&
-            subChild.props.children.toLowerCase().includes(searchQuery.toLowerCase())
-          ))
-        )
-      )
+  // Modifica la funzione di filtro in ogni sezione
+  const filteredItems = searchQuery
+    ? items.filter(item => {
+      // Controlla che la domanda contenga la query di ricerca
+      if (item.question.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return true;
+      }
+
+      // Controlla il contenuto della risposta
+      const { children } = item.answer.props;
+
+      // Handle diversi tipi di children
+      if (Array.isArray(children)) {
+        // Se children è un array, usa .some
+        return children.some(child => {
+          if (typeof child === 'string') {
+            return child.toLowerCase().includes(searchQuery.toLowerCase());
+          }
+          if (child && typeof child === 'object' && child.props) {
+            const childText = child.props.children;
+            if (typeof childText === 'string') {
+              return childText.toLowerCase().includes(searchQuery.toLowerCase());
+            }
+          }
+          return false;
+        });
+      } else if (typeof children === 'string') {
+        // Se children è una stringa, cerca direttamente
+        return children.toLowerCase().includes(searchQuery.toLowerCase());
+      }
+
+      // Nessuna corrispondenza trovata
+      return false;
+    })
     : items;
 
   if (searchQuery && filteredItems.length === 0) {
@@ -187,7 +175,7 @@ function FAQSection5({ searchQuery = '' }) {
           Casi Particolari e Funzionalità Avanzate
         </Typography>
       )}
-      
+
       {filteredItems.map((item, index) => (
         <FAQItem key={index} question={item.question} answer={item.answer} />
       ))}
