@@ -22,7 +22,7 @@ if not SECRET_KEY:
     print("WARNING: JWT_SECRET_KEY not set in environment. Using temporary key.")
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 ore
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
