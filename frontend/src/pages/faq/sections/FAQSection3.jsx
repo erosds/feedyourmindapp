@@ -145,11 +145,15 @@ function FAQSection3({ searchQuery = '' }) {
       )
     },
     {
-      question: 'Voglio aggiungere le mie lezioni per la settimana prossima, ma il pacchetto è scaduto questa settimana. Come faccio?',
+      question: 'Voglio aggiungere le mie lezioni per la settimana prossima, ma un pacchetto è scaduto questa settimana. Come faccio?',
       answer: (
         <>
           <Typography paragraph>
-            Se il pacchetto è scaduto ma ha ancora ore disponibili, estendi la durata del vecchio pacchetto e aggiungi la lezione a questo.
+            All'aggiunta di una lezione futura, potresti non trovare il pacchetto corretto per
+            associarlo. Questo può succedere se il pacchetto è scaduto o se non ha più ore disponibili.
+          </Typography>
+          <Typography paragraph>
+            Se un pacchetto è scaduto ma ha ancora ore disponibili, estendi la durata del vecchio pacchetto: dopo sarà possibile aggiungere la lezione a questo.
           </Typography>
           <Typography paragraph>
             Se invece il pacchetto è terminato (non ha più ore disponibili), informati se lo studente intende rinnovare il pacchetto e per quante ore. In caso rinnovi, puoi creare il pacchetto tu stesso.
