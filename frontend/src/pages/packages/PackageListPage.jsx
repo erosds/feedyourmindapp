@@ -115,6 +115,7 @@ function PackageListPage() {
 
       // Ricarica i pacchetti
       const packagesResponse = await packageService.getAll();
+      // Aggiorna lo stato dei pacchetti ma NON resettare la pagina
       setPackages(packagesResponse.data);
     } catch (err) {
       console.error('Error updating payment status:', err);
@@ -378,8 +379,21 @@ function PackageListPage() {
       filtered = sortedFiltered;
     }
 
+    // Prima di impostare i dati filtrati, preserva la paginazione corrente
+    // se il numero di elementi filtrati è sufficiente a mantenere la pagina attuale
+    let newPage = page;
+    const maxPage = Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1);
+
+    // Se la pagina corrente supera il nuovo maxPage, aggiustiamo a maxPage
+    if (page > maxPage) {
+      newPage = maxPage;
+    }
+
     setFilteredPackages(filtered);
-    setPage(0); // Reset to first page after filtering
+    // Imposta la nuova pagina solo se è diversa dalla corrente
+    if (newPage !== page) {
+      setPage(newPage);
+    }
   }, [searchTerm, packages, students, timeFilter, statusFilter, paymentFilter, order, orderBy]);
 
   const handleStatusFilterChange = (event) => {

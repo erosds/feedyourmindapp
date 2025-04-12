@@ -279,8 +279,23 @@ function LessonListPage() {
 
     // Applica l'ordinamento
     const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
+
+    // Prima di impostare i dati filtrati, preserva la paginazione corrente
+    // se il numero di elementi filtrati è sufficiente a mantenere la pagina attuale
+    let newPage = page;
+    const maxPage = Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1);
+
+    // Se la pagina corrente supera il nuovo maxPage, aggiustiamo a maxPage
+    if (page > maxPage) {
+      newPage = maxPage;
+    }
+
     setFilteredLessons(sortedFiltered);
-    setPage(0); // Reset to first page after filtering
+
+    // Imposta la nuova pagina solo se è diversa dalla corrente
+    if (newPage !== page) {
+      setPage(newPage);
+    }
   }, [searchTerm, lessons, students, professors, timeFilter, paymentFilter, order, orderBy]);
 
   const handleChangePage = (event, newPage) => {
@@ -337,6 +352,8 @@ function LessonListPage() {
 
       // Ricarica le lezioni
       const lessonsData = await fetchLessons();
+
+      // Aggiorna lo stato delle lezioni
       setLessons(lessonsData);
 
     } catch (err) {
