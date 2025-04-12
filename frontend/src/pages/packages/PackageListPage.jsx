@@ -765,22 +765,28 @@ function PackageListPage() {
                       </TableCell>
                     )}
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      <Tooltip title="Modifica">
-                        <IconButton
-                          color="primary"
-                          onClick={(e) => handleEditPackage(pkg.id, e)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Elimina">
-                        <IconButton
-                          color="error"
-                          onClick={(e) => handleDeletePackage(pkg.id, e)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
+                      <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        minWidth: 'auto'
+                      }}>
+                        <Tooltip title="Modifica">
+                          <IconButton
+                            color="primary"
+                            onClick={(e) => handleEditPackage(pkg.id, e)}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Elimina">
+                          <IconButton
+                            color="error"
+                            onClick={(e) => handleDeletePackage(pkg.id, e)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))
