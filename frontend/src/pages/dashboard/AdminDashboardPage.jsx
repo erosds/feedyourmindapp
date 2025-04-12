@@ -321,11 +321,12 @@ function AdminDashboardPage() {
 
     return {
       ...professor,
-      weeklyLessons: professorLessons.length,
+      weeklyLessons: professorLessons, // Passa l'array completo delle lezioni invece del conteggio
       totalPayment,
       lastLessonDate,
     };
-  }).filter(prof => prof.weeklyLessons > 0); // Filter only professors with lessons this week
+  }).filter(prof => prof.weeklyLessons.length > 0); // Filter only professors with lessons this week
+
 
   // Calculate total payments for all professors for the week
   const totalProfessorPayments = professorWeeklyData.reduce(

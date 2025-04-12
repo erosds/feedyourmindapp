@@ -33,8 +33,13 @@ function ProfessorWeeklyTable({
     return firstNameComparison !== 0 ? firstNameComparison : a.last_name.localeCompare(b.last_name);
   });
 
-  // Calcola il totale delle lezioni
-  const totalLessons = professorWeeklyData.reduce((total, prof) => total + prof.weeklyLessons, 0);
+  // Calcola il totale delle ore
+  const totalHours = professorWeeklyData.reduce((total, prof) => {
+    // Prendi le ore dalle lezioni settimanali del professore
+    const professorsHours = prof.weeklyLessons.reduce((sum, lesson) => 
+      sum + parseFloat(lesson.duration), 0);
+    return total + professorsHours;
+  }, 0);
 
   return (
     <Paper sx={{ p: 2, height: '100%', mb: 2 }}>
@@ -56,67 +61,73 @@ function ProfessorWeeklyTable({
             <TableHead>
               <TableRow>
                 <TableCell>Professore</TableCell>
-                <TableCell align="center">Lezioni</TableCell>
+                <TableCell align="center">Ore</TableCell>
                 <TableCell align="right">Ultimo giorno</TableCell>
                 <TableCell align="right">Pagamento</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {sortedProfessors.map((prof) => (
-                <TableRow
-                  key={prof.id}
-                  hover
-                  onClick={() => handleProfessorClick(prof.id)}
-                  sx={{ cursor: 'pointer', height: 20 }}
-                >
-                  <TableCell>
-                    <Box display="flex" alignItems="center">
-                      <Avatar
-                        sx={{
-                          width: 16,
-                          height: 16,
-                          mr: 1,
-                          ml: -1,
-                          bgcolor: 'primary.main',
-                          fontSize: '0.6rem'
-                        }}
-                      >
-                        {prof.first_name.charAt(0)}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="body1" sx={{ lineHeight: 1.2 }}>
-                          {prof.first_name}
-                        </Typography>
-                        <Typography variant="body1" sx={{ lineHeight: 1.2 }}>
-                          {prof.last_name}
-                        </Typography>
+              {sortedProfessors.map((prof) => {
+                // Calcola il totale delle ore per questo professore
+                const professorHours = prof.weeklyLessons.reduce((sum, lesson) => 
+                  sum + parseFloat(lesson.duration), 0);
+                
+                return (
+                  <TableRow
+                    key={prof.id}
+                    hover
+                    onClick={() => handleProfessorClick(prof.id)}
+                    sx={{ cursor: 'pointer', height: 20 }}
+                  >
+                    <TableCell>
+                      <Box display="flex" alignItems="center">
+                        <Avatar
+                          sx={{
+                            width: 16,
+                            height: 16,
+                            mr: 1,
+                            ml: -1,
+                            bgcolor: 'primary.main',
+                            fontSize: '0.6rem'
+                          }}
+                        >
+                          {prof.first_name.charAt(0)}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body1" sx={{ lineHeight: 1.2 }}>
+                            {prof.first_name}
+                          </Typography>
+                          <Typography variant="body1" sx={{ lineHeight: 1.2 }}>
+                            {prof.last_name}
+                          </Typography>
+                        </Box>
                       </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Typography variant="body1">
-                      {prof.weeklyLessons}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body1">
-                      {prof.lastLessonDate ? format(prof.lastLessonDate, "EEEE dd/MM", { locale: it }) : '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body1">
-                      €{prof.totalPayment.toFixed(2)}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography variant="body1">
+                        {professorHours.toFixed(1)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body1">
+                        {prof.lastLessonDate ? format(prof.lastLessonDate, "EEEE dd/MM", { locale: it }) : '-'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body1">
+                        €{prof.totalPayment.toFixed(2)}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               <TableRow>
                 <TableCell colSpan={1} sx={{ fontWeight: 'bold' }}>
                   <Typography variant="subtitle1" fontWeight="medium">Totale</Typography>
                 </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 'bold' }}>
                   <Typography variant="subtitle1" fontWeight="medium">
-                    {totalLessons}
+                    {totalHours.toFixed(1)}
                   </Typography>
                 </TableCell>
                 <TableCell align="right"></TableCell>
