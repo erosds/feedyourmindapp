@@ -46,8 +46,6 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { DatePicker } from '@mui/x-date-pickers';
 
 
-
-
 function PackageListPage() {
   const navigate = useNavigate();
   const [packages, setPackages] = useState([]);
@@ -635,11 +633,11 @@ function PackageListPage() {
           <TableHead>
             <TableRow>
               <SortableTableCell id="id" label="ID" />
-              <SortableTableCell id="student_ids" label="Studente/i" width={250} />
-              <SortableTableCell id="start_date" label="Data Inizio" />
-              <SortableTableCell id="expiry_date" label="Data Scadenza" />
-              <SortableTableCell id="total_hours" label="Totale Ore" />
-              <SortableTableCell id="remaining_hours" label="Ore Rimanenti" />
+              <SortableTableCell id="student_ids" label="Studente/i"/>
+              <SortableTableCell id="start_date" label="Inizio" />
+              <SortableTableCell id="expiry_date" label="Scadenza"/>
+              <SortableTableCell id="total_hours" label="Ore Tot." />
+              <SortableTableCell id="remaining_hours" label="Ore Rim." />
               <SortableTableCell id="status" label="Stato" />
               <SortableTableCell id="is_paid" label="Pagamento" />
               <SortableTableCell id="payment_date" label="Data Pagamento" />
@@ -671,10 +669,19 @@ function PackageListPage() {
                     }}
                   >
                     <TableCell>#{pkg.id}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ width: 190, maxWidth: 190 }}>
                       <Box>
                         {pkg.student_ids.map(studentId => (
-                          <Typography key={studentId} variant="body2" component="div">
+                          <Typography
+                            key={studentId}
+                            variant="body2"
+                            component="div"
+                            sx={{
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
                             {students[studentId] || `Studente #${studentId}`}
                           </Typography>
                         ))}
@@ -688,13 +695,12 @@ function PackageListPage() {
                         <Typography component="span" variant="inherit">
                           {format(parseISO(pkg.expiry_date), 'dd/MM/yyyy', { locale: it })}
                         </Typography>
-
                         {pkg.extension_count > 0 && (
                           <Chip
                             label={`+${pkg.extension_count}`}
                             color="secondary"
                             size="small"
-                            sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
+                            sx={{ ml: 0.5, height: 20, fontSize: '0.7rem' }}
                           />
                         )}
                       </Box>
@@ -758,7 +764,7 @@ function PackageListPage() {
                       >
                         €{parseFloat(pkg.package_cost).toFixed(2)}
                         {parseFloat(pkg.package_cost) === 0 && (
-                          <Typography variant="caption" color="error" component="span" sx={{ ml: 1 }}>
+                          <Typography variant="caption" color="error" component="span" sx={{ ml: 0.5 }}>
                             (da inserire)
                           </Typography>
                         )}
