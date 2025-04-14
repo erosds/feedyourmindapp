@@ -1,7 +1,7 @@
 env/
 venv/
 frontend/node_modules/
-feedyourmind/backend/app/__pycache__/
+feedyourmindapp/backend/app/__pycache__/
 .env
 # Chiave segreta JWT
 .jwt_secret_key
