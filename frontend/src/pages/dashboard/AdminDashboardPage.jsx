@@ -28,7 +28,7 @@ import {
 import { it } from 'date-fns/locale';
 
 import { useNavigate } from 'react-router-dom';
-import { lessonService, professorService, packageService } from '../../services/api';
+import { lessonService, professorService, packageService, studentService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 // Import the modular components
@@ -46,6 +46,7 @@ function AdminDashboardPage() {
   const [lessons, setLessons] = useState([]);
   const [packages, setPackages] = useState([]);
   const [professors, setProfessors] = useState([]);
+  const [students, setStudents] = useState([]); // Aggiunta per memorizzare tutti gli studenti
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [periodFilter, setPeriodFilter] = useState('week');
   const [currentTab, setCurrentTab] = useState(0);
@@ -77,6 +78,10 @@ function AdminDashboardPage() {
         // Retrieve all packages
         const packagesResponse = await packageService.getAll();
         setPackages(packagesResponse.data);
+
+        // Retrieve all students
+        const studentsResponse = await studentService.getAll();
+        setStudents(studentsResponse.data);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Impossibile caricare i dati. Prova a riaggiornare la pagina.');
@@ -112,6 +117,12 @@ function AdminDashboardPage() {
     navigate(`/professors/${professorId}`);
   };
 
+  // Navigate to student or lesson detail (new)
+  const handleStudentClick = (student) => {
+    // Navigate to the lesson detail page for this student's lesson
+    navigate(`/lessons/${student.lesson_id}`);
+  };
+
   // Function to get professors with lessons on a specific day
   const getProfessorsForDay = (day) => {
     // Get lessons for that day
@@ -128,6 +139,48 @@ function AdminDashboardPage() {
 
     // Filter the professors array to get only those with lessons
     return professors.filter(professor => professorIds.includes(professor.id));
+  };
+
+  // Function to get students with lessons on a specific day
+  const getStudentsForDay = (day) => {
+    // Get lessons for that day
+    const dayLessons = lessons.filter(lesson => {
+      const lessonDate = parseISO(lesson.lesson_date);
+      return isEqual(
+        new Date(lessonDate.getFullYear(), lessonDate.getMonth(), lessonDate.getDate()),
+        new Date(day.getFullYear(), day.getMonth(), day.getDate())
+      );
+    });
+
+    // Mappa le lezioni agli oggetti studente arricchiti
+    return dayLessons.map(lesson => {
+      // Trova lo studente associato a questa lezione
+      const student = students.find(s => s.id === lesson.student_id) || {
+        id: lesson.student_id,
+        first_name: 'Studente',
+        last_name: `#${lesson.student_id}`
+      };
+
+      // Trova il professore associato a questa lezione
+      const professor = professors.find(p => p.id === lesson.professor_id) || {
+        id: lesson.professor_id,
+        first_name: 'Professore',
+        last_name: `#${lesson.professor_id}`
+      };
+
+      // Restituisci un oggetto arricchito con tutti i dati necessari
+      return {
+        ...student,
+        lesson_id: lesson.id,
+        professor_id: lesson.professor_id,
+        professor: professor,
+        start_time: lesson.start_time,
+        duration: lesson.duration,
+        is_package: lesson.is_package,
+        is_online: lesson.is_online || false,
+        hourly_rate: lesson.hourly_rate
+      };
+    });
   };
 
   // Function to handle day click and show professor details dialog
@@ -207,7 +260,6 @@ function AdminDashboardPage() {
     setDayDialogOpen(true);
   };
 
-  // Function to get lessons for the period
   // Function to get lessons for the period
   const getLessonsForPeriod = () => {
     if (!Array.isArray(lessons)) return [];
@@ -411,7 +463,9 @@ function AdminDashboardPage() {
           <AdminDashboardCalendar
             currentWeekStart={currentWeekStart}
             getProfessorsForDay={getProfessorsForDay}
+            getStudentsForDay={getStudentsForDay}
             handleProfessorClick={handleProfessorClick}
+            handleStudentClick={handleStudentClick}
             handleDayClick={handleDayClick}
           />
         </Grid>
