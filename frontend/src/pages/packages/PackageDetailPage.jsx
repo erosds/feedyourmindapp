@@ -429,6 +429,43 @@ function PackageDetailPage() {
   const totalHours = parseFloat(packageData.total_hours);
   const completionPercentage = (usedHours / totalHours) * 100;
 
+
+  // Aggiungi questa funzione che calcola le ore per settimana
+  const calculateWeeklyLessons = () => {
+    // Considera teoriche le ore totali diviso 4 settimane
+    const theoreticalHoursPerWeek = totalHours / 4;
+
+    // Solo se abbiamo lezioni e non è un pacchetto aperto (>24 ore)
+    if (lessons.length === 0 || totalHours > 24) return null;
+
+    // Analizza le lezioni per settimana
+    const weeklyLessons = [0, 0, 0, 0]; // Ore per settimana (4 settimane)
+
+    // Calcola le settimane dal pacchetto
+    const packageStartDate = parseISO(packageData.start_date);
+
+    lessons.forEach(lesson => {
+      const lessonDate = parseISO(lesson.lesson_date);
+      // Calcola la differenza in giorni tra la data della lezione e l'inizio del pacchetto
+      const daysDiff = differenceInDays(lessonDate, packageStartDate);
+      // Determina in quale settimana cade (0-6 giorni = settimana 1, 7-13 = settimana 2, ecc.)
+      const weekIndex = Math.min(3, Math.floor(daysDiff / 7));
+      // Aggiungi le ore della lezione alla settimana corrispondente
+      if (weekIndex >= 0) {
+        weeklyLessons[weekIndex] += parseFloat(lesson.duration);
+      }
+    });
+
+    return {
+      weeklyLessons,
+      theoreticalHoursPerWeek
+    };
+  };
+
+  // Calcola ore per settimana
+  const weeklyStats = calculateWeeklyLessons();
+
+
   // Check if package is expired
   const expiryDate = parseISO(packageData.expiry_date);
   const isExpired = isAfter(new Date(), expiryDate);
@@ -512,7 +549,7 @@ function PackageDetailPage() {
               </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 {/* Left Column */}
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={5}>
                   <Typography variant="body2" color="text.secondary">
                     Studente/i
                   </Typography>
@@ -562,7 +599,7 @@ function PackageDetailPage() {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
                     Stato Pagamento
                   </Typography>
@@ -581,7 +618,7 @@ function PackageDetailPage() {
                   <Divider />
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={5}>
                   <Typography variant="body2" color="text.secondary">
                     Data di Inizio
                   </Typography>
@@ -590,7 +627,7 @@ function PackageDetailPage() {
                   </Typography>
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Data di Scadenza
                   </Typography>
@@ -633,7 +670,7 @@ function PackageDetailPage() {
                 </Grid>
 
                 {isAdmin() && (
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={5}>
                     <Box display="flex" alignItems="center" mb={1}>
                       <Typography variant="body2" color="text.secondary">
                         Prezzo Pacchetto
@@ -641,7 +678,7 @@ function PackageDetailPage() {
                     </Box>
 
                     {isEditingPrice ? (
-                      <Box display="flex" alignItems="center" mt={1}>
+                      <Box display="flex" alignItems="center">
                         <TextField
                           size="small"
                           type="number"
@@ -661,7 +698,7 @@ function PackageDetailPage() {
                         </Button>
                       </Box>
                     ) : (
-                      <>
+                      <Box display="flex" alignItems="center">
                         <Typography
                           variant="h6"
                           fontWeight="medium"
@@ -669,29 +706,31 @@ function PackageDetailPage() {
                           color={!packageData.is_paid || parseFloat(packageData.package_cost) === 0 ? "error.main" : "inherit"}
                         >
                           €{parseFloat(packageData.package_cost).toFixed(2)}
-                          {parseFloat(packageData.package_cost) === 0 && (
-                            <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
-                              Prezzo da impostare
-                            </Typography>
-                          )}
                         </Typography>
+
+                        {(parseFloat(packageData.package_cost) === 0) && (
+                          <Typography variant="caption" color="error" sx={{ ml: 1, alignSelf: "flex-end", mb: 0.5 }}>
+                            (da impostare)
+                          </Typography>
+                        )}
+
                         {packageData.is_paid && (
                           <Button
                             size="small"
                             variant="outlined"
                             startIcon={<EditIcon />}
                             onClick={handleEditPrice}
-                            sx={{ mt: 1 }}
+                            sx={{ ml: 2 }}
                           >
-                            Modifica prezzo
+                            Modifica
                           </Button>
                         )}
-                      </>
+                      </Box>
                     )}
                   </Grid>
                 )}
 
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Ore Totali
                   </Typography>
@@ -719,49 +758,77 @@ function PackageDetailPage() {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Box display="flex" flexDirection="column" >
-                    <Typography variant="body2" color="text.secondary">
-                      Completamento
-                    </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Completamento
+                  </Typography>
+                  <Box display="flex" flexDirection="column" mt={1}>
                     <Typography variant="h5" fontWeight="medium">
                       {completionPercentage.toFixed(0)}%
                     </Typography>
-
+                    <LinearProgress
+                      variant="determinate"
+                      value={completionPercentage}
+                      color={packageData.status === 'completed' ? 'success' : 'primary'}
+                      sx={{
+                        mt: 1,
+                        height: 10,
+                        borderRadius: 1,
+                      }}
+                    />
 
                   </Box>
 
-                  <LinearProgress
-                    variant="determinate"
-                    value={completionPercentage}
-                    color={packageData.status === 'completed' ? 'success' : 'primary'}
-                    sx={{
-                      mt: 1,
-                      height: 10,
-                      borderRadius: 1,
-                    }}
-                  />
 
-                  <Box display="flex" justifyContent="space-between">
-                    <Grid item xs={12} md={4}>
-                      <Typography variant="caption" color="text.secondary">
-                        prima settimana
+
+                  <Box display="flex" justifyContent="space-between" mt={1}>
+                    {totalHours <= 24 ? (
+                      <>
+                        <Grid item xs={12} md={3}>
+                          <Typography variant="caption" color="text.primary">
+                            prima settimana
+                          </Typography>
+                          {weeklyStats && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {weeklyStats.weeklyLessons[0].toFixed(1)}/{weeklyStats.theoreticalHoursPerWeek.toFixed(1)} ore
+                            </Typography>
+                          )}
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Typography variant="caption" color="text.primary">
+                            | seconda settimana
+                          </Typography>
+                          {weeklyStats && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {weeklyStats.weeklyLessons[1].toFixed(1)}/{weeklyStats.theoreticalHoursPerWeek.toFixed(1)} ore
+                            </Typography>
+                          )}
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Typography variant="caption" color="text.primary">
+                            | terza settimana
+                          </Typography>
+                          {weeklyStats && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {weeklyStats.weeklyLessons[2].toFixed(1)}/{weeklyStats.theoreticalHoursPerWeek.toFixed(1)} ore
+                            </Typography>
+                          )}
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Typography variant="caption" color="text.primary">
+                            | quarta settimana
+                          </Typography>
+                          {weeklyStats && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {weeklyStats.weeklyLessons[3].toFixed(1)}/{weeklyStats.theoreticalHoursPerWeek.toFixed(1)} ore
+                            </Typography>
+                          )}
+                        </Grid>
+                      </>
+                    ) : (
+                      <Typography variant="caption" color="text.secondary" fontStyle="italic">
+                        Pacchetto aperto (non limitato a settimane specifiche)
                       </Typography>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Typography variant="caption" color="text.secondary">
-                        | seconda settimana
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Typography variant="caption" color="text.secondary">
-                        | terza settimana
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <Typography variant="caption" color="text.secondary">
-                        | quarta settimana
-                      </Typography>
-                    </Grid>
+                    )}
                   </Box>
 
                 </Grid>
