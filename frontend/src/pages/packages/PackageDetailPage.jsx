@@ -32,7 +32,7 @@ import {
   Cancel as CancelIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { format, parseISO, isAfter, differenceInDays } from 'date-fns';
+import { format, parseISO, isAfter, isEqual, differenceInDays, startOfWeek, addWeeks } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { packageService, studentService, lessonService } from '../../services/api';
 import PackageCalendar from '../../components/packages/PackageCalendar';
@@ -319,6 +319,22 @@ function PackageDetailPage() {
     }
   };
 
+  // Funzione per verificare se un pacchetto è estendibile
+  const isPackageExtendable = (pkg) => {
+    if (!pkg) return false;
+
+    // Se il pacchetto non ha ore rimanenti, non è estendibile
+    if (parseFloat(pkg.remaining_hours) <= 0) return false;
+
+    const startDate = parseISO(pkg.start_date);
+    // Calcola il lunedì della prima settimana
+    const mondayWeek1 = startOfWeek(startDate, { weekStartsOn: 1 });
+    // Calcola il lunedì della quarta settimana
+    const mondayWeek4 = addWeeks(mondayWeek1, 3);
+    // Il pacchetto è estendibile se la data odierna è dopo o uguale al lunedì della quarta settimana
+    return isAfter(new Date(), mondayWeek4) || isEqual(new Date(), mondayWeek4);
+  };
+
   const handleCancelExtension = async () => {
     try {
       // Calcola la settimana di estensione
@@ -451,17 +467,16 @@ function PackageDetailPage() {
           </Button>
 
           {/* Aggiungi questo pulsante per l'estensione solo se il pacchetto è scaduto e ha ore rimanenti */}
-          {(packageData.status === 'expired' || packageData.status === 'completed') &&
-            parseFloat(packageData.remaining_hours) > 0 && (
-              <Button
-                variant="outlined"
-                color="secondary"
-                onClick={handleExtendPackage}
-                sx={{ mr: 1 }}
-              >
-                Estendi scadenza +1
-              </Button>
-            )}
+          {isPackageExtendable(packageData) && (
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={handleExtendPackage}
+              sx={{ mr: 1 }}
+            >
+              Estendi scadenza +1
+            </Button>
+          )}
 
           {/* Pulsante per annullare l'estensione, visibile solo se ci sono estensioni */}
           {packageData.extension_count > 0 && (
