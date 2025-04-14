@@ -815,7 +815,7 @@ function PackageDetailPage() {
                         </Grid>
                         <Grid item xs={12} md={3}>
                           <Typography variant="caption" color="text.primary">
-                            | quarta settimana
+                            | quarta settimana e oltre
                           </Typography>
                           {weeklyStats && (
                             <Typography variant="caption" color="text.secondary" display="block">
