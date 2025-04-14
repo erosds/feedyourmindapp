@@ -101,7 +101,7 @@ const PackageNotes = ({ packageId, initialNotes, onNotesUpdate }) => {
           )
         }
         // Reduce bottom padding of the header
-        sx={{ pb: 0 }}
+        sx={{ pb: 1 }}
       />
       <CardContent sx={{ pt: 1 }}>  {/* Reduce top padding of content */}
         {error && (

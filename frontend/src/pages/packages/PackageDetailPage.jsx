@@ -512,7 +512,7 @@ function PackageDetailPage() {
               </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 {/* Left Column */}
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={6}>
                   <Typography variant="body2" color="text.secondary">
                     Studente/i
                   </Typography>
@@ -538,7 +538,7 @@ function PackageDetailPage() {
                   </Box>
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Stato
                   </Typography>
@@ -562,7 +562,7 @@ function PackageDetailPage() {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Stato Pagamento
                   </Typography>
@@ -663,8 +663,9 @@ function PackageDetailPage() {
                     ) : (
                       <>
                         <Typography
-                          variant="body1"
+                          variant="h6"
                           fontWeight="medium"
+                          mt={-1}
                           color={!packageData.is_paid || parseFloat(packageData.package_cost) === 0 ? "error.main" : "inherit"}
                         >
                           €{parseFloat(packageData.package_cost).toFixed(2)}
@@ -714,14 +715,18 @@ function PackageDetailPage() {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Divider /> {/* Divisore aggiunto */}
+                  <Divider />
+                </Grid>
+
+                <Grid item xs={12}>
                   <Box display="flex" flexDirection="column" >
-                    <Box display="flex" justifyContent="space-between" sx={{ mt: 2 }}>
-                      <Typography variant="body2" color="text.secondary">Completamento</Typography>
-                      <Typography variant="h5" fontWeight="medium">
-                        {completionPercentage.toFixed(0)}%
-                      </Typography>
-                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Completamento
+                    </Typography>
+                    <Typography variant="h5" fontWeight="medium">
+                      {completionPercentage.toFixed(0)}%
+                    </Typography>
+
 
                   </Box>
 
@@ -733,12 +738,31 @@ function PackageDetailPage() {
                       mt: 1,
                       height: 10,
                       borderRadius: 1,
-                      backgroundImage: `repeating-linear-gradient(to right, transparent, transparent 24.5%, 
-                      #fff 24.5%, #fff 25%, transparent 25%, transparent 49.5%, #fff 49.5%, #fff 50%, 
-                      transparent 50%, transparent 74.5%, #fff 74.5%, #fff 75%, transparent 75%)`,
-                      backgroundSize: '100% 100%',
                     }}
                   />
+
+                  <Box display="flex" justifyContent="space-between">
+                    <Grid item xs={12} md={4}>
+                      <Typography variant="caption" color="text.secondary">
+                        prima settimana
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant="caption" color="text.secondary">
+                        | seconda settimana
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant="caption" color="text.secondary">
+                        | terza settimana
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant="caption" color="text.secondary">
+                        | quarta settimana
+                      </Typography>
+                    </Grid>
+                  </Box>
 
                 </Grid>
               </Grid>
@@ -746,14 +770,13 @@ function PackageDetailPage() {
           </Card>
         </Grid>
 
-        {/* Calendario lezioni */}
         <Grid item xs={12} md={5}>
-          <Card sx={{ height: '100%' }}>
+          <Card sx={{ mb: 1 }}>  {/* Aggiungi margin-bottom di 16px */}
             <CardContent>
               <Typography variant="h6">
                 Calendario lezioni
               </Typography>
-              <Typography variant="body2" color="text.secondary" mb={4} fontStyle={'italic'}>
+              <Typography variant="body2" color="text.secondary" mb={1} fontStyle={'italic'}>
                 Clicca su un giorno per aggiungere una lezione
               </Typography>
               <PackageCalendar
@@ -763,20 +786,20 @@ function PackageDetailPage() {
                 expiryDate={packageData.expiry_date}
                 startDate={packageData.start_date}
               />
-
             </CardContent>
           </Card>
 
-        </Grid>
-
-
-        {/* Lesson Table */}
-        <Grid item xs={12}>
+          {/* Mantiene le note nello stesso Grid item, ma ora c'è spazio sufficiente grazie al margin */}
           <PackageNotes
             packageId={packageData.id}
             initialNotes={packageData.notes}
             onNotesUpdate={handleNotesUpdate}
           />
+        </Grid>
+
+
+        {/* Lesson Table */}
+        <Grid item xs={12}>
           <Paper sx={{ p: 2, mt: 1 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="h6">
