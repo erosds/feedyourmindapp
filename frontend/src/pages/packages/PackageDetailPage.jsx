@@ -443,6 +443,9 @@ function PackageDetailPage() {
     const weeklyLessons = [0, 0, 0, 0]; // Ore per settimana (4 settimane)
     let extraHours = 0; // Ore extra oltre le 4 settimane
 
+    let hoursBeforeStart = 0;
+
+
     // Calcola le settimane dal pacchetto
     const packageStartDate = parseISO(packageData.start_date);
 
@@ -458,6 +461,8 @@ function PackageDetailPage() {
         // Aggiungi le ore della lezione alla settimana corrispondente
         if (weekIndex >= 0) {
           weeklyLessons[weekIndex] += parseFloat(lesson.duration);
+        } else {
+          hoursBeforeStart += parseFloat(lesson.duration);
         }
       } else {
         // Se la lezione è oltre le 4 settimane, aggiungi alle ore extra
@@ -468,7 +473,8 @@ function PackageDetailPage() {
     return {
       weeklyLessons,
       extraHours,
-      theoreticalHoursPerWeek
+      theoreticalHoursPerWeek,
+      hoursBeforeStart,
     };
   };
 
@@ -778,6 +784,7 @@ function PackageDetailPage() {
                         totalHours={totalHours}
                         weeklyLessons={weeklyData.weeklyLessons}
                         extraHours={weeklyData.extraHours}
+                        hoursBeforeStart={weeklyData.hoursBeforeStart}
                       />
                     );
                   })()}
@@ -788,7 +795,7 @@ function PackageDetailPage() {
         </Grid>
 
         <Grid item xs={12} md={5}>
-          <Card sx={{ mb: 1 }}>  {/* Aggiungi margin-bottom di 16px */}
+          <Card sx={{ mb: 1 }}> 
             <CardContent>
               <Typography variant="h6">
                 Calendario lezioni
