@@ -14,7 +14,7 @@ const ProgressArc = ({ value, max, color, label, index, isExtra = false }) => {
   // Angolo di apertura (in radianti) - lasciamo un'apertura di 60 gradi
   const openingAngle = (Math.PI / 3);
   // Angolo iniziale (in radianti) - varia in base all'indice per posizionare l'anello
-  const startAngle = (-Math.PI / 2) + (index * Math.PI / 10) - (isExtra ? 0 : 0);
+  const startAngle = (-Math.PI * 4/3);
   
   // Calcola l'arco da disegnare (tenendo conto dell'apertura)
   const arcAngle = (2 * Math.PI) - openingAngle; 
