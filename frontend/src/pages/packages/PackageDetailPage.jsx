@@ -40,6 +40,7 @@ import AddLessonDialog from '../../components/dashboard/AddLessonDialog';
 import { useAuth } from '../../context/AuthContext'; // Assicurati di importare useAuth
 import getProfessorNameById from '../../utils/professorMapping';
 import PackageNotes from '../../components/packages/PackageNotes';
+import PackageCompletion from '../../components/packages/PackageCompletion';
 
 
 function PackageDetailPage() {
@@ -435,11 +436,12 @@ function PackageDetailPage() {
     // Considera teoriche le ore totali diviso 4 settimane
     const theoreticalHoursPerWeek = totalHours / 4;
 
-    // Solo se abbiamo lezioni e non è un pacchetto aperto (>24 ore)
-    if (lessons.length === 0 || totalHours > 24) return null;
+    // Solo se abbiamo lezioni
+    if (lessons.length === 0) return { weeklyLessons: [0, 0, 0, 0], extraHours: 0 };
 
-    // Analizza le lezioni per settimana
+    // Inizializza gli array per le lezioni settimanali e ore extra
     const weeklyLessons = [0, 0, 0, 0]; // Ore per settimana (4 settimane)
+    let extraHours = 0; // Ore extra oltre le 4 settimane
 
     // Calcola le settimane dal pacchetto
     const packageStartDate = parseISO(packageData.start_date);
@@ -448,16 +450,24 @@ function PackageDetailPage() {
       const lessonDate = parseISO(lesson.lesson_date);
       // Calcola la differenza in giorni tra la data della lezione e l'inizio del pacchetto
       const daysDiff = differenceInDays(lessonDate, packageStartDate);
-      // Determina in quale settimana cade (0-6 giorni = settimana 1, 7-13 = settimana 2, ecc.)
-      const weekIndex = Math.min(3, Math.floor(daysDiff / 7));
-      // Aggiungi le ore della lezione alla settimana corrispondente
-      if (weekIndex >= 0) {
-        weeklyLessons[weekIndex] += parseFloat(lesson.duration);
+
+      // Se è entro le prime 4 settimane (28 giorni)
+      if (daysDiff < 28) {
+        // Determina in quale settimana cade (0-6 giorni = settimana 1, 7-13 = settimana 2, ecc.)
+        const weekIndex = Math.min(3, Math.floor(daysDiff / 7));
+        // Aggiungi le ore della lezione alla settimana corrispondente
+        if (weekIndex >= 0) {
+          weeklyLessons[weekIndex] += parseFloat(lesson.duration);
+        }
+      } else {
+        // Se la lezione è oltre le 4 settimane, aggiungi alle ore extra
+        extraHours += parseFloat(lesson.duration);
       }
     });
 
     return {
       weeklyLessons,
+      extraHours,
       theoreticalHoursPerWeek
     };
   };
@@ -758,79 +768,19 @@ function PackageDetailPage() {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary">
-                    Completamento
-                  </Typography>
-                  <Box display="flex" flexDirection="column" mt={1}>
-                    <Typography variant="h5" fontWeight="medium">
-                      {completionPercentage.toFixed(0)}%
-                    </Typography>
-                    <LinearProgress
-                      variant="determinate"
-                      value={completionPercentage}
-                      color={packageData.status === 'completed' ? 'success' : 'primary'}
-                      sx={{
-                        mt: 1,
-                        height: 10,
-                        borderRadius: 1,
-                      }}
-                    />
+                  {/* Nuovo componente per la visualizzazione del completamento */}
+                  {(() => {
+                    // Calcola dati settimanali per il nuovo componente
+                    const weeklyData = calculateWeeklyLessons();
 
-                  </Box>
-
-
-
-                  <Box display="flex" justifyContent="space-between" mt={1}>
-                    {totalHours <= 24 ? (
-                      <>
-                        <Grid item xs={12} md={3}>
-                          <Typography variant="caption" color="text.primary">
-                            prima settimana
-                          </Typography>
-                          {weeklyStats && (
-                            <Typography variant="caption" color="text.secondary" display="block">
-                              {weeklyStats.weeklyLessons[0].toFixed(1)}/{weeklyStats.theoreticalHoursPerWeek.toFixed(1)} ore
-                            </Typography>
-                          )}
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                          <Typography variant="caption" color="text.primary">
-                            | seconda settimana
-                          </Typography>
-                          {weeklyStats && (
-                            <Typography variant="caption" color="text.secondary" display="block">
-                              {weeklyStats.weeklyLessons[1].toFixed(1)}/{weeklyStats.theoreticalHoursPerWeek.toFixed(1)} ore
-                            </Typography>
-                          )}
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                          <Typography variant="caption" color="text.primary">
-                            | terza settimana
-                          </Typography>
-                          {weeklyStats && (
-                            <Typography variant="caption" color="text.secondary" display="block">
-                              {weeklyStats.weeklyLessons[2].toFixed(1)}/{weeklyStats.theoreticalHoursPerWeek.toFixed(1)} ore
-                            </Typography>
-                          )}
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                          <Typography variant="caption" color="text.primary">
-                            | quarta settimana e oltre
-                          </Typography>
-                          {weeklyStats && (
-                            <Typography variant="caption" color="text.secondary" display="block">
-                              {weeklyStats.weeklyLessons[3].toFixed(1)}/{weeklyStats.theoreticalHoursPerWeek.toFixed(1)} ore
-                            </Typography>
-                          )}
-                        </Grid>
-                      </>
-                    ) : (
-                      <Typography variant="caption" color="text.secondary" fontStyle="italic">
-                        Pacchetto aperto (non limitato a settimane specifiche)
-                      </Typography>
-                    )}
-                  </Box>
-
+                    return (
+                      <PackageCompletion
+                        totalHours={totalHours}
+                        weeklyLessons={weeklyData.weeklyLessons}
+                        extraHours={weeklyData.extraHours}
+                      />
+                    );
+                  })()}
                 </Grid>
               </Grid>
             </CardContent>
