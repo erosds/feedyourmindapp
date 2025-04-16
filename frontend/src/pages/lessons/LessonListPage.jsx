@@ -1,6 +1,6 @@
 // src/pages/lessons/LessonListPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -52,6 +52,7 @@ import { DatePicker } from '@mui/x-date-pickers';
 
 function LessonListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser, isAdmin } = useAuth();
   const [lessons, setLessons] = useState([]);
   const [students, setStudents] = useState({});
@@ -59,16 +60,29 @@ function LessonListPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState('');
+  //const [page, setPage] = useState(0);
+  //const [rowsPerPage, setRowsPerPage] = useState(10);
+  //const [searchTerm, setSearchTerm] = useState('');
   const [filteredLessons, setFilteredLessons] = useState([]);
-  const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, lastWeek, nextWeek, month
-  const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid, package
-  const [showOnlyMine, setShowOnlyMine] = useState(!isAdmin()); // Default: professori normali vedono solo le proprie lezioni
+  //const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, lastWeek, nextWeek, month
+  //const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid, package
+  //const [showOnlyMine, setShowOnlyMine] = useState(!isAdmin()); // Default: professori normali vedono solo le proprie lezioni
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [paymentDate, setPaymentDate] = useState(new Date());
+
+  // Aggiungi searchParams
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Assicurati di inizializzare la pagina dal parametro URL
+  const [page, setPage] = useState(parseInt(searchParams.get('page') || '0', 10));
+  const [rowsPerPage, setRowsPerPage] = useState(parseInt(searchParams.get('rows') || '10', 10));
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [timeFilter, setTimeFilter] = useState(searchParams.get('time') || 'all');
+  const [paymentFilter, setPaymentFilter] = useState(searchParams.get('payment') || 'all');
+  const [showOnlyMine, setShowOnlyMine] = useState(
+    searchParams.get('mine') === 'true' || (!isAdmin())
+  );
 
   // Stato per l'ordinamento
   const [order, setOrder] = useState('desc');
@@ -81,8 +95,16 @@ function LessonListPage() {
     setOrderBy(property);
   };
 
-  // Aggiungi queste righe all'inizio della funzione LessonListPage, dopo l'inizializzazione degli stati
-  const location = useLocation();
+  // Funzione di utilità per aggiornare i parametri di ricerca
+  const updateSearchParams = (key, value) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value && value !== '' && value !== 'all' && value !== '0') {
+      newParams.set(key, value);
+    } else {
+      newParams.delete(key);
+    }
+    setSearchParams(newParams);
+  };
 
   // Gestione dei filtri iniziali che arrivano dalla dashboard
   useEffect(() => {
@@ -298,33 +320,49 @@ function LessonListPage() {
     }
   }, [searchTerm, lessons, students, professors, timeFilter, paymentFilter, order, orderBy]);
 
+  // Aggiorna i gestori degli eventi per modificare anche l'URL
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
+    updateSearchParams('page', newPage.toString());
   };
 
   const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+    const value = parseInt(event.target.value, 10);
+    setRowsPerPage(value);
+    setPage(0); // Reset alla prima pagina
+    updateSearchParams('rows', value.toString());
+    updateSearchParams('page', '0');
   };
 
   const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
+    const value = event.target.value;
+    setSearchTerm(value);
+    updateSearchParams('search', value);
   };
 
   const handleTimeFilterChange = (event) => {
-    setTimeFilter(event.target.value);
+    const value = event.target.value;
+    setTimeFilter(value);
+    updateSearchParams('time', value);
   };
 
   const handlePaymentFilterChange = (event) => {
-    setPaymentFilter(event.target.value);
+    const value = event.target.value;
+    setPaymentFilter(value);
+    updateSearchParams('payment', value);
   };
 
   const handleToggleShowMine = () => {
-    setShowOnlyMine(!showOnlyMine);
+    const newValue = !showOnlyMine;
+    setShowOnlyMine(newValue);
+    updateSearchParams('mine', newValue.toString());
   };
 
+  // Modifica la funzione di navigazione al dettaglio
   const handleViewLesson = (id) => {
-    navigate(`/lessons/${id}`);
+    navigate(`/lessons/${id}`, {
+      state: { returnUrl: `${location.pathname}${location.search}` }
+    });
   };
 
   const handleEditLesson = (id, event) => {

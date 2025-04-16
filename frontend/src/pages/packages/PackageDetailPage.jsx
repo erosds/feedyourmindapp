@@ -1,6 +1,6 @@
 // src/pages/packages/PackageDetailPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -77,6 +77,17 @@ function PackageDetailPage() {
     is_paid: true,
     payment_date: new Date(), // Default oggi
   });
+  const location = useLocation();
+
+  const handleBackToPackages = () => {
+    // Se c'è un URL di ritorno, usalo
+    if (location.state?.returnUrl) {
+      navigate(location.state.returnUrl);
+    } else {
+      // Fallback al comportamento precedente
+      navigate('/packages');
+    }
+  };
 
 
   useEffect(() => {
@@ -295,10 +306,6 @@ function PackageDetailPage() {
 
   const handleEditPackage = () => {
     navigate(`/packages/edit/${id}`);
-  };
-
-  const handleBackToPackages = () => {
-    navigate('/packages');
   };
 
 

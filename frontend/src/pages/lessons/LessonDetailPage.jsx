@@ -1,6 +1,6 @@
 // src/pages/lessons/LessonDetailPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -41,6 +41,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 function LessonDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser, isAdmin } = useAuth();
   const [lesson, setLesson] = useState(null);
   const [student, setStudent] = useState(null);
@@ -122,7 +123,13 @@ function LessonDetailPage() {
   };
 
   const handleBackToLessons = () => {
-    navigate('/lessons');
+    // Se c'è un URL di ritorno, usalo
+    if (location.state?.returnUrl) {
+      navigate(location.state.returnUrl);
+    } else {
+      // Fallback al comportamento precedente
+      navigate('/lessons');
+    }
   };
 
   const handleDeleteLesson = async () => {

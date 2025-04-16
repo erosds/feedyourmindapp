@@ -1,6 +1,6 @@
 // src/pages/packages/PackageListPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -52,13 +52,13 @@ function PackageListPage() {
   const [students, setStudents] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState('');
+  //const [page, setPage] = useState(0);
+  //const [rowsPerPage, setRowsPerPage] = useState(10);
+  //const [searchTerm, setSearchTerm] = useState('');
   const [filteredPackages, setFilteredPackages] = useState([]);
-  const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, month
-  const [statusFilter, setStatusFilter] = useState('all'); // all, in_progress, expiring, expired, completed
-  const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid
+  //const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, month
+  //const [statusFilter, setStatusFilter] = useState('all'); // all, in_progress, expiring, expired, completed
+  //const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid
   const { currentUser, isAdmin } = useAuth(); // Add isAdmin here
   // Aggiungi questi stati
   const [updating, setUpdating] = useState(false);
@@ -66,6 +66,17 @@ function PackageListPage() {
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [paymentDate, setPaymentDate] = useState(new Date());
 
+  // Usa searchParams invece dello stato locale per i filtri
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Inizializza gli stati dai parametri URL o dai valori predefiniti
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [timeFilter, setTimeFilter] = useState(searchParams.get('time') || 'all');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
+  const [paymentFilter, setPaymentFilter] = useState(searchParams.get('payment') || 'all');
+  const [page, setPage] = useState(parseInt(searchParams.get('page') || '0', 10));
+  const [rowsPerPage, setRowsPerPage] = useState(
+    parseInt(searchParams.get('rows') || '10', 10)
+  );
 
   // State for sorting
   const [order, setOrder] = useState('desc');
@@ -394,33 +405,60 @@ function PackageListPage() {
     }
   }, [searchTerm, packages, students, timeFilter, statusFilter, paymentFilter, order, orderBy]);
 
+  // Funzione di utilità per aggiornare i parametri di ricerca
+  const updateSearchParams = (key, value) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value && value !== '' && value !== 'all' && value !== '0') {
+      newParams.set(key, value);
+    } else {
+      newParams.delete(key);
+    }
+    setSearchParams(newParams);
+  };
+
+  const handleSearchChange = (event) => {
+    const value = event.target.value;
+    setSearchTerm(value);
+    updateSearchParams('search', value);
+  };
+
+  const handleTimeFilterChange = (event) => {
+    const value = event.target.value;
+    setTimeFilter(value);
+    updateSearchParams('time', value);
+  };
+
   const handleStatusFilterChange = (event) => {
-    setStatusFilter(event.target.value);
+    const value = event.target.value;
+    setStatusFilter(value);
+    updateSearchParams('status', value);
+  };
+
+  const handlePaymentFilterChange = (event) => {
+    const value = event.target.value;
+    setPaymentFilter(value);
+    updateSearchParams('payment', value);
   };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
+    updateSearchParams('page', newPage.toString());
   };
 
   const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+    const value = parseInt(event.target.value, 10);
+    setRowsPerPage(value);
+    setPage(0); // Reset alla prima pagina
+    updateSearchParams('rows', value.toString());
+    updateSearchParams('page', '0');
   };
 
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-  };
-
-  const handleTimeFilterChange = (event) => {
-    setTimeFilter(event.target.value);
-  };
-
-  const handlePaymentFilterChange = (event) => {
-    setPaymentFilter(event.target.value);
-  };
-
+  // Modifica la funzione di navigazione al dettaglio
   const handleViewPackage = (id) => {
-    navigate(`/packages/${id}`);
+    // Aggiungi l'URL corrente (con filtri) come state
+    navigate(`/packages/${id}`, {
+      state: { returnUrl: `${location.pathname}${location.search}` }
+    });
   };
 
   const handleEditPackage = (id, event) => {
@@ -633,9 +671,9 @@ function PackageListPage() {
           <TableHead>
             <TableRow>
               <SortableTableCell id="id" label="ID" />
-              <SortableTableCell id="student_ids" label="Studente/i"/>
+              <SortableTableCell id="student_ids" label="Studente/i" />
               <SortableTableCell id="start_date" label="Inizio" />
-              <SortableTableCell id="expiry_date" label="Scadenza"/>
+              <SortableTableCell id="expiry_date" label="Scadenza" />
               <SortableTableCell id="total_hours" label="Ore Tot." />
               <SortableTableCell id="remaining_hours" label="Ore Rim." />
               <SortableTableCell id="status" label="Stato" />
