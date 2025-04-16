@@ -1,4 +1,5 @@
 import React from 'react';
+import { useMediaQuery, useTheme } from '@mui/material';
 
 // Un componente per visualizzare un anello aperto che mostra il progresso
 const ProgressArc = ({ value, max, label, index, isExtra = false }) => {
@@ -28,7 +29,6 @@ const ProgressArc = ({ value, max, label, index, isExtra = false }) => {
   const openingAngle = (Math.PI / 2);
   // Angolo iniziale (in radianti) - varia in base all'indice per posizionare l'anello
   const startAngle = (-Math.PI * 5 / 4);
-
 
   // Calcola l'arco da disegnare (tenendo conto dell'apertura)
   const arcAngle = (2 * Math.PI) - openingAngle;
@@ -129,57 +129,118 @@ const OpenPackageRing = ({ totalHours, usedHours }) => {
     color = '#7986cb'; // Primary light
   }
 
+  // Raggio dell'anello
+  const radius = 40;
+  // Spessore dell'anello
+  const strokeWidth = 8;
+  // Circonferenza del cerchio
+  const circumference = 2 * Math.PI * radius;
+  // Angolo di apertura (in radianti) - lasciamo un'apertura di 60 gradi
+  const openingAngle = (Math.PI / 2);
+  // Angolo iniziale (in radianti) - varia in base all'indice per posizionare l'anello
+  const startAngle = (-Math.PI * 5 / 4);
+
+  // Calcola l'arco da disegnare (tenendo conto dell'apertura)
+  const arcAngle = (2 * Math.PI) - openingAngle;
+  // Lunghezza dell'arco
+  const arcLength = circumference * (arcAngle / (2 * Math.PI));
+  // Quanto dell'arco è colorato in base al progresso
+  const strokeDasharray = `${arcLength * (percentage / 100)} ${arcLength}`;
+
+  // Calcola punti di inizio e fine dell'arco
+  const startX = 50 + radius * Math.cos(startAngle);
+  const startY = 50 + radius * Math.sin(startAngle);
+  const endX = 50 + radius * Math.cos(startAngle + arcAngle);
+  const endY = 50 + radius * Math.sin(startAngle + arcAngle);
+
+  // Flag per determinare se l'arco è grande o piccolo
+  const largeArcFlag = arcAngle > Math.PI ? 1 : 0;
+
+  // Percorso SVG per l'arco
+  const path = `
+    M ${startX},${startY}
+    A ${radius},${radius} 0 ${largeArcFlag},1 ${endX},${endY}
+  `;
+
   return (
     <div
-      className="open-package-ring"
+      className="progress-arc-wrapper"
       title={`Pacchetto aperto: ${usedHours.toFixed(1)} di ${totalHours.toFixed(1)} ore - ${percentage.toFixed(0)}% utilizzato`}
       style={{
         position: 'relative',
-        width: 160,
-        height: 160,
+        width: 150,
+        height: 150,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        flexDirection: 'column'
       }}
     >
-      <svg width="160" height="160" viewBox="0 0 100 100">
-        {/* Cerchio grigio di sfondo */}
-        <circle
-          cx="50"
-          cy="50"
-          r="45"
+      <svg width="150" height="150" viewBox="0 0 100 100">
+        {/* Sfondo grigio dell'arco */}
+        <path
+          d={path}
           fill="none"
           stroke="#e0e0e0"
-          strokeWidth="8"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
         />
-        {/* Cerchio colorato che rappresenta il progresso */}
-        <circle
-          cx="50"
-          cy="50"
-          r="45"
+        {/* Arco colorato che rappresenta il progresso */}
+        <path
+          d={path}
           fill="none"
           stroke={color}
-          strokeWidth="8"
-          strokeDasharray={`${2 * Math.PI * 45 * (percentage / 100)} ${2 * Math.PI * 45}`}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={strokeDasharray}
           strokeDashoffset="0"
-          transform="rotate(-90 50 50)"
         />
       </svg>
+      {/* Ore svolte/ore teoriche al centro */}
       <div
         style={{
           position: 'absolute',
           textAlign: 'center',
           fontWeight: 'bold',
-          fontSize: '0.875rem'
+          fontSize: '0.7rem'
         }}
       >
-        {usedHours.toFixed(1)}/{totalHours.toFixed(1)} ore
+        {usedHours.toFixed(1)}/{totalHours.toFixed(1)} h
+      </div>
+      {/* Etichetta pacchetto aperto nell'apertura dell'anello */}
+      <div
+        style={{
+          position: 'absolute',
+          textAlign: 'center',
+          fontWeight: 'normal',
+          fontSize: '0.65rem',
+          bottom: '10px',
+          color: '#555'
+        }}
+      >
+        Pacc. aperto
       </div>
     </div>
   );
 };
 
 const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHours = 0, hoursBeforeStart = 0 }) => {
+  // Usa il tema e i media query di Material-UI per rendere il componente responsive
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+
+  // Determina il numero di colonne in base alla dimensione dello schermo
+  const getGridColumns = () => {
+    if (isMobile) {
+      return 'repeat(2, 1fr)'; // 2 colonne su mobile
+    } else if (isTablet) {
+      return 'repeat(3, 1fr)'; // 3 colonne su tablet 
+    } else {
+      return showExtraHours ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)'; // 4-5 colonne su desktop
+    }
+  };
+
   // Valore teorico di ore per settimana
   const theoreticalHoursPerWeek = totalHours <= 24 ? totalHours / 4 : 0;
 
@@ -203,7 +264,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
   if (isOpenPackage) {
     return (
       <div style={{ marginTop: '1px' }}>
-        <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)', marginBottom: '8px' }}>
+        <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)', marginBottom: '26px' }}>
           Utilizzo ore pacchetto
         </div>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -221,11 +282,10 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: showExtraHours
-          ? 'repeat(5, 1fr)' // Se c'è l'anello extra, dividiamo in 5 colonne
-          : 'repeat(4, 1fr)', // Altrimenti in 4 colonne
+        gridTemplateColumns: getGridColumns(),
         gap: '4px',
-        width: '100%'
+        width: '100%',
+        overflowX: 'auto'
       }}>
         {/* Anelli per le 4 settimane */}
         {weeklyLessons.map((hours, index) => (
