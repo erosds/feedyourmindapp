@@ -11,7 +11,6 @@ import {
   Divider,
   Grid,
   IconButton,
-  LinearProgress,
   Paper,
   Table,
   TableBody,
@@ -432,11 +431,8 @@ function PackageDetailPage() {
   }
 
   // Calculate package statistics
-  const usedHours = lessons.reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
   const remainingHours = parseFloat(packageData.remaining_hours);
   const totalHours = parseFloat(packageData.total_hours);
-  const completionPercentage = (usedHours / totalHours) * 100;
-
 
   // Aggiungi questa funzione che calcola le ore per settimana
   const calculateWeeklyLessons = () => {
@@ -485,14 +481,10 @@ function PackageDetailPage() {
     };
   };
 
-  // Calcola ore per settimana
-  const weeklyStats = calculateWeeklyLessons();
-
 
   // Check if package is expired
   const expiryDate = parseISO(packageData.expiry_date);
   const isExpired = isAfter(new Date(), expiryDate);
-  const daysUntilExpiry = differenceInDays(expiryDate, new Date());
 
   return (
     <Box>

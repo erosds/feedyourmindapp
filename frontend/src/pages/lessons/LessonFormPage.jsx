@@ -450,25 +450,7 @@ function LessonFormPage() {
       totalAvailable: availableHours + originalLessonHours
     };
   };
-
-  // Save lesson and navigate
-  const saveLesson = async (formattedValues) => {
-    if (isEditMode) {
-      await lessonService.update(id, formattedValues);
-    } else {
-      await lessonService.create(formattedValues);
-    }
-
-    // Return to the appropriate page based on context
-    if (isPackageDetailContext && fixedPackageId) {
-      navigate(`/packages/${fixedPackageId}`);
-    } else if (location.state?.returnToPackage && formattedValues.is_package && formattedValues.package_id) {
-      navigate(`/packages/${formattedValues.package_id}`, { state: { refreshPackage: true } });
-    } else {
-      navigate('/lessons');
-    }
-  };
-
+  
   // Handle form submission
   const handleSubmit = async (values) => {
     try {
@@ -528,8 +510,6 @@ function LessonFormPage() {
         navigate(`/lessons/${newLessonId}`);
       }
 
-      // Save the lesson
-      // await saveLesson(formattedValues);
       return true;
     } catch (err) {
       console.error('Error saving lesson:', err);
@@ -538,16 +518,6 @@ function LessonFormPage() {
     }
   };
 
-  // Inoltre, modifica il tasto annulla per tornare al dettaglio se in modalità modifica
-  const handleCancel = () => {
-    if (isEditMode) {
-      navigate(`/lessons/${id}`, { 
-        state: location.state?.returnUrl ? { returnUrl: location.state.returnUrl } : undefined 
-      });
-    } else {
-      navigate('/lessons');
-    }
-  };
 
   if (loading) {
     return (

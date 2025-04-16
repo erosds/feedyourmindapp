@@ -52,20 +52,13 @@ function PackageListPage() {
   const [students, setStudents] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  //const [page, setPage] = useState(0);
-  //const [rowsPerPage, setRowsPerPage] = useState(10);
-  //const [searchTerm, setSearchTerm] = useState('');
   const [filteredPackages, setFilteredPackages] = useState([]);
-  //const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, month
-  //const [statusFilter, setStatusFilter] = useState('all'); // all, in_progress, expiring, expired, completed
-  //const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid
   const { currentUser, isAdmin } = useAuth(); // Add isAdmin here
   // Aggiungi questi stati
   const [updating, setUpdating] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [paymentDate, setPaymentDate] = useState(new Date());
-
   // Usa searchParams invece dello stato locale per i filtri
   const [searchParams, setSearchParams] = useSearchParams();
   // Inizializza gli stati dai parametri URL o dai valori predefiniti

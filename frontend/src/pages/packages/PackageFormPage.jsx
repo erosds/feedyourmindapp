@@ -7,7 +7,6 @@ import {
   Button,
   CircularProgress,
   Divider,
-  FormControl,
   FormControlLabel,
   Grid,
   InputAdornment,

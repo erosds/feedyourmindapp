@@ -1,6 +1,6 @@
 // src/pages/lessons/LessonListPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -30,9 +30,7 @@ import {
 import {
   Add as AddIcon,
   Edit as EditIcon,
-  Visibility as ViewIcon,
   Search as SearchIcon,
-  FilterList as FilterIcon,
   Today as TodayIcon,
   Payment as PaymentIcon,
   Delete as DeleteIcon
@@ -60,21 +58,11 @@ function LessonListPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
-  //const [page, setPage] = useState(0);
-  //const [rowsPerPage, setRowsPerPage] = useState(10);
-  //const [searchTerm, setSearchTerm] = useState('');
   const [filteredLessons, setFilteredLessons] = useState([]);
-  //const [timeFilter, setTimeFilter] = useState('all'); // all, today, week, lastWeek, nextWeek, month
-  //const [paymentFilter, setPaymentFilter] = useState('all'); // all, paid, unpaid, package
-  //const [showOnlyMine, setShowOnlyMine] = useState(!isAdmin()); // Default: professori normali vedono solo le proprie lezioni
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [paymentDate, setPaymentDate] = useState(new Date());
-
-  // Aggiungi searchParams
   const [searchParams, setSearchParams] = useSearchParams();
-
-  // Assicurati di inizializzare la pagina dal parametro URL
   const [page, setPage] = useState(parseInt(searchParams.get('page') || '0', 10));
   const [rowsPerPage, setRowsPerPage] = useState(parseInt(searchParams.get('rows') || '10', 10));
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');

@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   Box,
   Card,
   CardContent,
-  Divider,
   FormControl,
   Grid,
   InputLabel,
@@ -15,12 +14,8 @@ import {
   Tab,
   Tabs,
   Typography,
-  IconButton,
-  Tooltip,
-  Button
 } from '@mui/material';
 import {
-  EuroSymbol as EuroIcon,
   Person as PersonIcon,
   EventNote as LessonIcon,
   Timer as TimerIcon,
@@ -30,22 +25,11 @@ import {
   AccountBalance as TrendingUpIcon,
 } from '@mui/icons-material';
 import {
-  isWithinInterval,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  startOfYear,
-  endOfYear,
   parseISO,
-  isAfter,
-  isBefore,
-  addDays
 } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
 function AdminDashboardSummary({
-  currentWeekStart,
   professorWeeklyData = [],
   periodFilter = 'week',
   setPeriodFilter,
@@ -89,32 +73,6 @@ const navigateToLessons = (filter) => {
   }
 };
 
-  // Function to get the period interval
-  const getPeriodInterval = () => {
-    const today = new Date();
-    switch (periodFilter) {
-      case 'week':
-        return {
-          start: startOfWeek(today, { weekStartsOn: 1 }),
-          end: endOfWeek(today, { weekStartsOn: 1 })
-        };
-      case 'month':
-        return {
-          start: startOfMonth(today),
-          end: endOfMonth(today)
-        };
-      case 'year':
-        return {
-          start: startOfYear(today),
-          end: endOfYear(today)
-        };
-      default:
-        return {
-          start: startOfWeek(today, { weekStartsOn: 1 }),
-          end: endOfWeek(today, { weekStartsOn: 1 })
-        };
-    }
-  };
 
   // Calculate expiring packages
   const expiringPackages = useMemo(() => {
@@ -406,14 +364,6 @@ const navigateToLessons = (filter) => {
                     <ListItem>
                       {(() => {
                         const packageLessons = periodLessons.filter(lesson => lesson.is_package);
-                        const paidPackageIds = new Set(
-                          periodPackages
-                            .filter(pkg => pkg.is_paid)
-                            .map(pkg => pkg.id)
-                        );
-                        const paidLessons = packageLessons.filter(lesson => 
-                          paidPackageIds.has(lesson.package_id)
-                        ).length;
                         const totalLessons = packageLessons.length;
                         
                         return (
@@ -430,15 +380,7 @@ const navigateToLessons = (filter) => {
                     </ListItem>
                     <ListItem>
                       {(() => {
-                        const packageLessons = periodLessons.filter(lesson => lesson.is_package);
-                        const paidPackageIds = new Set(
-                          periodPackages
-                            .filter(pkg => pkg.is_paid)
-                            .map(pkg => pkg.id)
-                        );
-                        const paidLessonsHours = packageLessons
-                          .filter(lesson => paidPackageIds.has(lesson.package_id))
-                          .reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
+                        const packageLessons = periodLessons.filter(lesson => lesson.is_package);                     
                         const totalHours = packageLessons
                           .reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
 
