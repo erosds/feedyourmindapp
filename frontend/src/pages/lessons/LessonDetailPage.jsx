@@ -28,13 +28,12 @@ import {
   Delete as DeleteIcon,
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
+  Timer as TimerIcon,
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { lessonService, studentService, professorService, packageService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-
-// Aggiungi all'import section:
 import WifiIcon from '@mui/icons-material/Wifi';
 import VideocamIcon from '@mui/icons-material/Videocam';
 
@@ -235,7 +234,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Data */}
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={2.5}>
               <Box display="flex" alignItems="center" mb={1}>
                 <CalendarIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -261,7 +260,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Durata */}
-            <Grid item xs={12} md={1.5}>
+            <Grid item xs={12} md={2}>
               <Box display="flex" alignItems="center" mb={1}>
                 <TimeIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -271,22 +270,6 @@ function LessonDetailPage() {
               <Typography variant="body1" fontWeight="medium">
                 {lesson.duration} ore
               </Typography>
-            </Grid>
-
-            <Grid item xs={12} md={2}>
-              <Box display="flex" alignItems="center" mb={1}>
-                <VideocamIcon sx={{ mr: 1 }} color="primary" />
-                <Typography variant="body2" color="text.secondary">
-                  Modalità
-                </Typography>
-              </Box>
-              <Chip
-                icon={lesson.is_online ? <WifiIcon /> : null}
-                label={lesson.is_online ? "Online" : "In presenza"}
-                color={lesson.is_online ? "info" : "default"}
-                variant="outlined"
-                size="small"
-              />
             </Grid>
 
             {/* Divider */}
@@ -310,85 +293,144 @@ function LessonDetailPage() {
                 </Typography>
               </Box>
               {lesson.is_package ? (
-                <Chip label={`Pacchetto #${lesson.package_id}`} color="primary" variant="outlined" />
+                <Chip 
+                  component={Link}
+                  to={`/packages/${packageData.id}`}
+                  label={`Pacchetto #${lesson.package_id}`} 
+                  color="primary" 
+                  variant="outlined"
+                  clickable
+                  sx={{ cursor: 'pointer' }}
+                />
               ) : (
                 <Chip label="Lezione singola" variant="outlined" />
               )}
             </Grid>
 
-            {/* Stato pagamento (solo per lezioni singole) */}
-            {!lesson.is_package && (
-              <Grid item xs={12} md={3}>
-                <Box display="flex" alignItems="center" mb={1}>
-                  <EuroIcon sx={{ mr: 1 }} color="primary" />
-                  <Typography variant="body2" color="text.secondary">
-                    Stato pagamento
-                  </Typography>
-                </Box>
-                <Chip
-                  icon={lesson.is_paid ? <CheckIcon /> : <CancelIcon />}
-                  label={lesson.is_paid ? 'Pagata' : 'Non pagata'}
-                  color={lesson.is_paid ? 'success' : 'error'}
-                  variant="outlined"
-                />
-              </Grid>
-            )}
-
-            {/* Data pagamento (solo per lezioni singole pagate) */}
-            {!lesson.is_package && lesson.is_paid && lesson.payment_date && (
-              <Grid item xs={12} md={3}>
-                <Box display="flex" alignItems="center" mb={1}>
-                  <CalendarIcon sx={{ mr: 1 }} color="primary" />
-                  <Typography variant="body2" color="text.secondary">
-                    Data pagamento
-                  </Typography>
-                </Box>
-                <Typography variant="body1" fontWeight="medium">
-                  {format(parseISO(lesson.payment_date), 'dd/MM/yyyy', { locale: it })}
-                </Typography>
-              </Grid>
-            )}
-
-            {/* Add this Grid item for admins only */}
-            {isAdmin() && (
-              <Grid item xs={12} md={3}>
-                <Box display="flex" alignItems="center" mb={1}>
-                  <EuroIcon sx={{ mr: 1 }} color="primary" />
-                  <Typography variant="body2" color="text.secondary">
-                    Prezzo studente
-                  </Typography>
-                </Box>
-
-                {isEditingPrice ? (
-                  <Box display="flex" alignItems="center" mt={1}>
-                    <TextField
-                      size="small"
-                      type="number"
-                      value={priceValue}
-                      onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                        inputProps: { min: 0, step: 0.5 }
-                      }}
-                      sx={{ width: '120px', mr: 1 }}
-                    />
-                    <Button size="small" variant="contained" onClick={handleSavePrice}>
-                      Salva
-                    </Button>
-                    <Button size="small" onClick={() => setIsEditingPrice(false)} sx={{ ml: 1 }}>
-                      Annulla
-                    </Button>
+            {/* Informazioni pacchetto (solo se è lezione da pacchetto) */}
+            {lesson.is_package && packageData ? (
+              <>
+                {/* Stato pacchetto */}
+                <Grid item xs={12} md={3}>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <TimerIcon sx={{ mr: 1 }} color="primary" />
+                    <Typography variant="body2" color="text.secondary">
+                      Stato pacchetto
+                    </Typography>
                   </Box>
-                ) : (
-                  <>
-                    {lesson.is_package ? (
-                      <Typography variant="body1" fontWeight="medium" color="success.main">
-                        — <Typography variant="caption" color="success.main" sx={{ display: 'inline', ml: 1 }}>
-                          (Incluso nel pacchetto)
-                        </Typography>
+                  <Chip
+                    label={packageData.status === 'in_progress' ? 'In corso' : packageData.status === 'expired' ? 'Scaduto' : 'Terminato'}
+                    color={packageData.status === 'in_progress' ? 'primary' : packageData.status === 'expired' ? 'error' : 'default'}
+                    size="small"
+                  />
+                </Grid>
+                
+                {/* Costo totale (solo admin) */}
+                {isAdmin() && (
+                  <Grid item xs={12} md={2.5}>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <EuroIcon sx={{ mr: 1 }} color="primary" />
+                      <Typography variant="body2" color="text.secondary">
+                        Costo pacchetto
                       </Typography>
+                    </Box>
+                    <Typography variant="body1">
+                      €{parseFloat(packageData.package_cost).toFixed(2)}
+                    </Typography>
+                  </Grid>
+                )}
+
+                {/* Ore totali */}
+                <Grid item xs={12} md={1.5}>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <TimeIcon sx={{ mr: 1 }} color="primary" />
+                    <Typography variant="body2" color="text.secondary">
+                      Ore totali
+                    </Typography>
+                  </Box>
+                  <Typography variant="body1">
+                    {packageData.total_hours}
+                  </Typography>
+                </Grid>
+                
+                {/* Ore rimanenti */}
+                <Grid item xs={12} md={2}>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <TimeIcon sx={{ mr: 1 }} color="primary" />
+                    <Typography variant="body2" color="text.secondary">
+                      Ore rimanenti
+                    </Typography>
+                  </Box>
+                  <Typography variant="body1" fontWeight="bold" color="primary">
+                    {packageData.remaining_hours}
+                  </Typography>
+                </Grid>
+              </>
+            ) : (
+              <>
+                {/* Stato pagamento (solo per lezioni singole) */}
+                <Grid item xs={12} md={3}>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <EuroIcon sx={{ mr: 1 }} color="primary" />
+                    <Typography variant="body2" color="text.secondary">
+                      Stato pagamento
+                    </Typography>
+                  </Box>
+                  <Chip
+                    icon={lesson.is_paid ? <CheckIcon /> : <CancelIcon />}
+                    label={lesson.is_paid ? 'Pagata' : 'Non pagata'}
+                    color={lesson.is_paid ? 'success' : 'error'}
+                    variant="outlined"
+                  />
+                </Grid>
+
+                {/* Data pagamento (solo per lezioni singole pagate) */}
+                {lesson.is_paid && lesson.payment_date && (
+                  <Grid item xs={12} md={2.5}>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <CalendarIcon sx={{ mr: 1 }} color="primary" />
+                      <Typography variant="body2" color="text.secondary">
+                        Data pagamento
+                      </Typography>
+                    </Box>
+                    <Typography variant="body1" fontWeight="medium">
+                      {format(parseISO(lesson.payment_date), 'EEEE dd/MM/yyyy', { locale: it })}
+                    </Typography>
+                  </Grid>
+                )}
+
+                {/* Prezzo studente (solo per admin) */}
+                {isAdmin() && (
+                  <Grid item xs={12} md={3}>
+                    <Box display="flex" alignItems="center" mb={1}>
+                      <EuroIcon sx={{ mr: 1 }} color="primary" />
+                      <Typography variant="body2" color="text.secondary">
+                        Prezzo studente
+                      </Typography>
+                    </Box>
+
+                    {isEditingPrice ? (
+                      <Box display="flex" alignItems="center">
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={priceValue}
+                          onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                            inputProps: { min: 0, step: 0.5 }
+                          }}
+                          sx={{ width: '120px', mr: 1 }}
+                        />
+                        <Button size="small" variant="contained" onClick={handleSavePrice}>
+                          Salva
+                        </Button>
+                        <Button size="small" onClick={() => setIsEditingPrice(false)} sx={{ ml: 1 }}>
+                          Annulla
+                        </Button>
+                      </Box>
                     ) : (
-                      <>
+                      <Box display="flex" alignItems="center">
                         <Typography
                           variant="body1"
                           fontWeight="medium"
@@ -396,8 +438,8 @@ function LessonDetailPage() {
                         >
                           €{parseFloat(lesson.price || 0).toFixed(2)}
                           {parseFloat(lesson.price) === 0 && (
-                            <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
-                              Prezzo da impostare
+                            <Typography variant="caption" color="error" sx={{ display: 'inline', ml: 1 }}>
+                              (da impostare)
                             </Typography>
                           )}
                         </Typography>
@@ -406,78 +448,14 @@ function LessonDetailPage() {
                           variant="outlined"
                           startIcon={<EditIcon />}
                           onClick={handleEditPrice}
-                          sx={{ mt: 1 }}
+                          sx={{ ml: 2 }}
                         >
-                          Modifica prezzo
+                          Modifica
                         </Button>
-                      </>
+                      </Box>
                     )}
-                  </>
+                  </Grid>
                 )}
-              </Grid>
-            )}
-
-            {/* Sezione Dettagli Pacchetto se applicabile */}
-            {lesson.is_package && packageData && (
-              <>
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 2 }} />
-                  <Typography variant="h6" gutterBottom color="primary">
-                    Dettagli Pacchetto
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" color="text.secondary">
-                    Ore totali pacchetto
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {packageData.total_hours}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" color="text.secondary">
-                    Ore rimanenti
-                  </Typography>
-                  <Typography variant="body1" fontWeight="bold" color="primary" gutterBottom>
-                    {packageData.remaining_hours}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" color="text.secondary">
-                    Stato pacchetto
-                  </Typography>
-                  <Chip
-                    label={packageData.status === 'in_progress' ? 'In corso' : 'Terminato'}
-                    color={packageData.status === 'in_progress' ? 'primary' : 'default'}
-                    size="small"
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" color="text.secondary">
-                    Costo totale pacchetto
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    €{parseFloat(packageData.package_cost).toFixed(2)}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Button
-                    component={Link}
-                    to={`/packages/${packageData.id}`}
-                    color="primary"
-                    variant="outlined"
-                    startIcon={<PackageIcon />}
-                    size="small"
-                    sx={{ mt: 1 }}
-                  >
-                    Vai al pacchetto
-                  </Button>
-                </Grid>
               </>
             )}
 
@@ -518,6 +496,23 @@ function LessonDetailPage() {
                 €{parseFloat(lesson.total_payment).toFixed(2)}
               </Typography>
             </Grid>
+
+            <Grid item xs={12} md={3}>
+              <Box display="flex" alignItems="center" mb={1}>
+                <VideocamIcon sx={{ mr: 1 }} color="primary" />
+                <Typography variant="body2" color="text.secondary">
+                  Modalità
+                </Typography>
+              </Box>
+              <Chip
+                icon={lesson.is_online ? <WifiIcon /> : null}
+                label={lesson.is_online ? "Online" : "In presenza"}
+                color={lesson.is_online ? "info" : "default"}
+                variant="outlined"
+                size="small"
+              />
+            </Grid>
+
           </Grid>
         </CardContent>
       </Card>

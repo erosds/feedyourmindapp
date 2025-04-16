@@ -79,7 +79,7 @@ const PackageNotes = ({ packageId, initialNotes, onNotesUpdate }) => {
   return (
     <Card>
       <CardHeader 
-        title={<Typography variant="h6">Annotazioni pacchetto</Typography>}
+        title={<Typography variant="h6" color="primary">Annotazioni pacchetto</Typography>}
         action={
           !isEditing ? (
             <IconButton color="primary" onClick={handleToggleEdit}>

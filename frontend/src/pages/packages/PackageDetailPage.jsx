@@ -559,7 +559,7 @@ function PackageDetailPage() {
         <Grid item xs={12} md={7} >
           <Card sx={{ height: '100%' }}>
             <CardContent>
-              <Typography variant="h6" >
+              <Typography variant="h6" color="primary">
                 Informazioni pacchetto
               </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -796,7 +796,7 @@ function PackageDetailPage() {
         <Grid item xs={12} md={5}>
           <Card sx={{ mb: 1 }}> 
             <CardContent>
-              <Typography variant="h6">
+              <Typography variant="h6" color="primary">
                 Calendario lezioni
               </Typography>
               <Typography variant="body2" color="text.secondary" mb={1} fontStyle={'italic'}>
@@ -825,7 +825,7 @@ function PackageDetailPage() {
         <Grid item xs={12}>
           <Paper sx={{ p: 2, mt: 1 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="h6">
+              <Typography variant="h6" color="primary">
                 Lezioni del pacchetto
               </Typography>
             </Box>

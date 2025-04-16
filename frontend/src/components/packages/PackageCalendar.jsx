@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Grid, IconButton, Typography } from '@mui/material';
+import { Box, Grid, IconButton, Typography, Tooltip } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import TodayIcon from '@mui/icons-material/Today';
 import { format, getYear, getMonth, getDaysInMonth, getDay, startOfMonth, parseISO, addMonths, subMonths, isSameDay } from 'date-fns';
@@ -48,7 +48,7 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate, startDat
   if (Array.isArray(lessons)) {
     lessons.forEach(lesson => {
       if (!lesson.lesson_date) return;
-      
+
       const lessonDate = parseISO(lesson.lesson_date);
       const dateKey = format(lessonDate, 'yyyy-MM-dd');
 
@@ -59,8 +59,8 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate, startDat
       // Add this lesson to the day's array
       lessonsByDay[dateKey].push({
         professorId: lesson.professor_id,
-        professorName: professors && professors[lesson.professor_id] ? 
-          professors[lesson.professor_id] : 
+        professorName: professors && professors[lesson.professor_id] ?
+          professors[lesson.professor_id] :
           `Prof. ${lesson.professor_id}`,
         duration: parseFloat(lesson.duration)
       });
@@ -71,7 +71,7 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate, startDat
   const packageStartDate = startDate ? parseISO(startDate) : null;
 
   return (
-    <Box>
+    <Box sx={{ position: 'relative', overflow: 'visible' }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
         <IconButton size="small" onClick={() => changeMonth(-1)}>
           <ArrowBackIcon fontSize="small" />
@@ -121,9 +121,24 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate, startDat
           const dayLessons = hasLesson ? lessonsByDay[dateKey] : [];
           const isToday = isSameDay(dateObj, new Date());
           const isPastExpiryDate = expiryDate && dateObj > new Date(expiryDate);
-          
+
           // Check if this is the package start date
           const isPackageStartDate = packageStartDate && isSameDay(dateObj, packageStartDate);
+
+          // Prepare tooltip content for lessons
+          const lessonsTooltipContent = hasLesson ? (
+            <Box sx={{ p: 0.5 }}>
+              {dayLessons.map((lesson, i) => (
+                <Box key={i} sx={{
+                  textAlign: 'left',
+                  py: 0.2,
+                  borderBottom: i < dayLessons.length - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none'
+                }}>
+                  {lesson.duration} {lesson.duration === 1 || lesson.duration === 1.0 ? 'ora' : 'ore'} con {getProfessorNameById(lesson.professorId)}
+                </Box>
+              ))}
+            </Box>
+          ) : null;
 
           return (
             <Grid item xs={12 / 7} key={`day-${index}`}>
@@ -134,98 +149,90 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate, startDat
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-                <Box
-                  sx={{
-                    position: 'relative',
-                    textAlign: 'center',
-                    borderRadius: '50%',
-                    height: 32,
-                    width: 32,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: isToday ? 1 : 0,
-                    borderColor: 'primary.main',
-                    bgcolor: hasLesson ? 'primary.main' : 'transparent',
-                    color: hasLesson ? 'primary.contrastText' : (isPastExpiryDate ? 'text.disabled' : 'text.primary'),
-                    opacity: isPastExpiryDate ? 0.5 : 1,
-                    // Modificato il cursore per indicare che è cliccabile se esiste onDayClick
-                    cursor: isPastExpiryDate ? 'not-allowed' : (onDayClick ? 'pointer' : 'default'),
-                    // Effetto hover migliorato per indicare che è cliccabile
-                    '&:hover': {
-                      ...(onDayClick && !isPastExpiryDate && {
-                        transform: 'scale(1.1)',
-                        boxShadow: '0 0 5px rgba(0,0,0,0.2)',
-                      }),
-                      '& .lessons-tooltip': {
-                        opacity: 1,
-                        top: -3 - (dayLessons.length * 20),
-                        visibility: 'visible'
-                      }
-                    },
+                <Tooltip
+                  title={
+                    <>
+                      {isPackageStartDate && <Box>Inizio pacchetto</Box>}
+                      {lessonsTooltipContent}
+                    </>
+                  }
+                  arrow
+                  placement="top"
+                  PopperProps={{
+                    style: { zIndex: 1400 },
+                    modifiers: [{
+                      name: 'preventOverflow',
+                      enabled: false
+                    }]
                   }}
-                  // Aggiunto onClick che usa onDayClick se la prop è stata fornita
-                  onClick={() => {
-                    if (onDayClick && !isPastExpiryDate) {
-                      onDayClick(dateObj);
-                    } else if (isPastExpiryDate) {
-                      alert("Non è possibile aggiungere lezioni oltre la data di scadenza del pacchetto");
+                  // Aggiungi questa riga:
+                  disableHoverListener={!isPackageStartDate && !hasLesson}
+                  componentsProps={{
+                    tooltip: {
+                      sx: {
+                        bgcolor: 'primary.main',  // Colore di sfondo del tooltip
+                        opacity: 0.5,
+                        color: 'primary.contrastText',  // Colore del testo
+                        '& .MuiTooltip-arrow': {
+                          color: 'primary.main'  // Colore della freccia
+                        }
+                      }
                     }
                   }}
                 >
-                  {day}
-                  {/* Add a small circle indicator for package start date */}
-                  {isPackageStartDate && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        bottom: 11,
-                        left: '0%',
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        bgcolor: 'secondary.main'
-                      }}
-                    />
-                  )}
-                  {hasLesson && (
-                    <Box
-                      className="lessons-tooltip"
-                      sx={{
-                        position: 'absolute',
-                        top: -15,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        bgcolor: 'primary.main',
-                        color: 'primary.contrastText',
-                        borderRadius: 1.5,
-                        px: 1.5,
-                        py: 0.8,
-                        fontSize: '0.75rem',
-                        opacity: 0,
-                        visibility: 'hidden',
-                        transition: 'all 0.3s ease',
-                        whiteSpace: 'nowrap',
-                        zIndex: 10,
-                        boxShadow: 2,
-                        minWidth: 130
-                      }}
-                    >
-                      {dayLessons.map((lesson, i) => {
-                        // Get name and surname initial                        
-                        return (
-                          <Box key={i} sx={{
-                            textAlign: 'left',
-                            py: 0.2,
-                            borderBottom: i < dayLessons.length - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none'
-                          }}>
-                            {lesson.duration} {lesson.duration === 1 || lesson.duration === 1.0 ? 'ora' : 'ore'} con {getProfessorNameById(lesson.professorId)}
-                          </Box>
-                        );
-                      })}
-                    </Box>
-                  )}
-                </Box>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      textAlign: 'center',
+                      borderRadius: '50%',
+                      height: 32,
+                      width: 32,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: isToday ? 1 : 0,
+                      borderColor: 'primary.main',
+                      bgcolor: hasLesson ? 'primary.main' : 'transparent',
+                      color: hasLesson ? 'primary.contrastText' : (isPastExpiryDate ? 'text.disabled' : 'text.primary'),
+                      opacity: isPastExpiryDate ? 0.5 : 1,
+                      cursor: isPastExpiryDate ? 'not-allowed' : (onDayClick ? 'pointer' : 'default'),
+                      '&:hover': {
+                        ...(onDayClick && !isPastExpiryDate && {
+                          transform: 'scale(1.1)',
+                          boxShadow: '0 0 5px rgba(0,0,0,0.2)',
+                        })
+                      },
+                    }}
+                    onClick={() => {
+                      if (onDayClick && !isPastExpiryDate) {
+                        onDayClick(dateObj);
+                      } else if (isPastExpiryDate) {
+                        alert("Non è possibile aggiungere lezioni oltre la data di scadenza del pacchetto");
+                      }
+                    }}
+                  >
+                    {day}
+                    {/* Semicirconferenza per indicare l'inizio del pacchetto */}
+                    {isPackageStartDate && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          left: -1,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: 16,
+                          height: 32,
+                          borderRadius: '16px 0 0 16px',
+                          border: '2px solid',
+                          borderColor: 'secondary.main',
+                          borderRight: 'none',
+                          boxSizing: 'border-box',
+                          zIndex: 1
+                        }}
+                      />
+                    )}
+                  </Box>
+                </Tooltip>
               </Box>
             </Grid>
           );
