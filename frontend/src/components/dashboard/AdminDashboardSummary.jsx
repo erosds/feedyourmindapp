@@ -66,40 +66,28 @@ function AdminDashboardSummary({
   const navigateToPackages = (filter) => {
     if (filter === 'expiring') {
       // Naviga alla pagina pacchetti con filtro per pacchetti in scadenza
-      navigate('/packages', {
-        state: {
-          initialFilter: 'expiring',
-          statusFilter: 'expiring'
-        }
-      });
+      // Usa searchParams invece di state
+      navigate('/packages?status=expiring');
     } else if (filter === 'unpaid') {
       // Naviga alla pagina pacchetti con filtro per pacchetti non pagati
-      navigate('/packages', {
-        state: {
-          initialFilter: 'expired',
-          paymentFilter: 'unpaid'
-        }
-      });
+      navigate('/packages?payment=unpaid');
     } else {
       // Navigazione di default senza filtri
       navigate('/packages');
     }
   };
+  
 
-  // Function to navigate to lessons page with proper filter
-  const navigateToLessons = (filter) => {
-    if (filter === 'unpaid') {
-      // Navigate to lessons page with filter for unpaid lessons
-      navigate('/lessons', {
-        state: {
-          initialFilter: 'unpaid'
-        }
-      });
-    } else {
-      // Default navigation without filters
-      navigate('/lessons');
-    }
-  };
+  // Funzione corretta per navigare alla pagina lezioni con i filtri appropriati
+const navigateToLessons = (filter) => {
+  if (filter === 'unpaid') {
+    // Navigate to lessons page with filter for unpaid lessons
+    navigate('/lessons?payment=unpaid');
+  } else {
+    // Default navigation without filters
+    navigate('/lessons');
+  }
+};
 
   // Function to get the period interval
   const getPeriodInterval = () => {
