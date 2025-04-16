@@ -512,13 +512,40 @@ function LessonFormPage() {
         if (shouldShowOverflowDialog) return false;
       }
 
+      // Quando salvi la lezione:
+      if (isEditMode) {
+        await lessonService.update(id, formattedValues);
+        // Dopo l'aggiornamento, torna al dettaglio lezione invece che alla lista
+        navigate(`/lessons/${id}`, { 
+          // Passiamo l'URL di ritorno originale (se presente) per mantenere il percorso completo
+          state: location.state?.returnUrl ? { returnUrl: location.state.returnUrl } : undefined 
+        });
+      } else {
+        // Per una nuova lezione, crea e poi vai al dettaglio
+        const response = await lessonService.create(formattedValues);
+        // Supponendo che l'API restituisca l'ID della nuova lezione
+        const newLessonId = response.data.id;
+        navigate(`/lessons/${newLessonId}`);
+      }
+
       // Save the lesson
-      await saveLesson(formattedValues);
+      // await saveLesson(formattedValues);
       return true;
     } catch (err) {
       console.error('Error saving lesson:', err);
       setError('Errore durante il salvataggio. Controlla i dati e riprova.');
       return false;
+    }
+  };
+
+  // Inoltre, modifica il tasto annulla per tornare al dettaglio se in modalità modifica
+  const handleCancel = () => {
+    if (isEditMode) {
+      navigate(`/lessons/${id}`, { 
+        state: location.state?.returnUrl ? { returnUrl: location.state.returnUrl } : undefined 
+      });
+    } else {
+      navigate('/lessons');
     }
   };
 

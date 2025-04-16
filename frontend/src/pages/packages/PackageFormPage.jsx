@@ -339,7 +339,21 @@ function PackageFormPage() {
         }
       }
 
-      navigate('/packages');
+      // Quando salvi il pacchetto:
+      if (isEditMode) {
+        await packageService.update(id, packageData);
+        // Dopo l'aggiornamento, torna al dettaglio pacchetto
+        navigate(`/packages/${id}`, { 
+          state: location.state?.returnUrl ? { returnUrl: location.state.returnUrl } : undefined 
+        });
+      } else {
+        // Per un nuovo pacchetto, crea e poi vai al dettaglio
+        const allowMultiple = location.state?.allow_multiple || false;
+        const response = await packageService.create(packageData, allowMultiple);
+        const newPackageId = response.data.id;
+        navigate(`/packages/${newPackageId}`);
+      }
+      
     } catch (err) {
       console.error('Error saving package:', err);
 

@@ -205,7 +205,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Studente */}
-            <Grid item xs={12} md={2.5}>
+            <Grid item xs={12} md={3}>
               <Box display="flex" alignItems="center" mb={1}>
                 <StudentIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -235,7 +235,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Data */}
-            <Grid item xs={12} md={2}>
+            <Grid item xs={12} md={3}>
               <Box display="flex" alignItems="center" mb={1}>
                 <CalendarIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -248,7 +248,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Orario */}
-            <Grid item xs={12} md={2.5}>
+            <Grid item xs={12} md={1.5}>
               <Box display="flex" alignItems="center" mb={1}>
                 <TimeIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -261,7 +261,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Durata */}
-            <Grid item xs={12} md={2.5}>
+            <Grid item xs={12} md={1.5}>
               <Box display="flex" alignItems="center" mb={1}>
                 <TimeIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -302,7 +302,7 @@ function LessonDetailPage() {
             </Grid>
 
             {/* Tipo di lezione */}
-            <Grid item xs={12} md={2.5}>
+            <Grid item xs={12} md={3}>
               <Box display="flex" alignItems="center" mb={1}>
                 <PackageIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
@@ -331,6 +331,21 @@ function LessonDetailPage() {
                   color={lesson.is_paid ? 'success' : 'error'}
                   variant="outlined"
                 />
+              </Grid>
+            )}
+
+            {/* Data pagamento (solo per lezioni singole pagate) */}
+            {!lesson.is_package && lesson.is_paid && lesson.payment_date && (
+              <Grid item xs={12} md={3}>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <CalendarIcon sx={{ mr: 1 }} color="primary" />
+                  <Typography variant="body2" color="text.secondary">
+                    Data pagamento
+                  </Typography>
+                </Box>
+                <Typography variant="body1" fontWeight="medium">
+                  {format(parseISO(lesson.payment_date), 'dd/MM/yyyy', { locale: it })}
+                </Typography>
               </Grid>
             )}
 
@@ -402,50 +417,6 @@ function LessonDetailPage() {
               </Grid>
             )}
 
-            {/* Tariffa oraria */}
-            <Grid item xs={12} md={2}>
-              <Box display="flex" alignItems="center" mb={1}>
-                <EuroIcon sx={{ mr: 1 }} color="primary" />
-                <Typography variant="body2" color="text.secondary">
-                  Tariffa oraria
-                </Typography>
-              </Box>
-              <Typography variant="body1" fontWeight="medium">
-                €{parseFloat(lesson.hourly_rate).toFixed(2)}
-              </Typography>
-            </Grid>
-
-            {/* Totale lezione */}
-            <Grid item xs={12} md={1}>
-              <Box display="flex" alignItems="center" mb={1}>
-                <EuroIcon sx={{ mr: 1 }} color="primary" />
-                <Typography variant="body2" color="text.secondary">
-                  Totale
-                </Typography>
-              </Box>
-              <Typography variant="body1" fontWeight="bold" color="primary">
-                €{parseFloat(lesson.total_payment).toFixed(2)}
-              </Typography>
-            </Grid>
-
-
-
-
-            {/* Data pagamento (solo per lezioni singole pagate) */}
-            {!lesson.is_package && lesson.is_paid && lesson.payment_date && (
-              <Grid item xs={12} md={4}>
-                <Box display="flex" alignItems="center" mb={1}>
-                  <CalendarIcon sx={{ mr: 1 }} color="primary" />
-                  <Typography variant="body2" color="text.secondary">
-                    Data pagamento
-                  </Typography>
-                </Box>
-                <Typography variant="body1" fontWeight="medium">
-                  {format(parseISO(lesson.payment_date), 'dd/MM/yyyy', { locale: it })}
-                </Typography>
-              </Grid>
-            )}
-
             {/* Sezione Dettagli Pacchetto se applicabile */}
             {lesson.is_package && packageData && (
               <>
@@ -456,7 +427,7 @@ function LessonDetailPage() {
                   </Typography>
                 </Grid>
 
-                <Grid item xs={12} md={2.5}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Ore totali pacchetto
                   </Typography>
@@ -474,7 +445,7 @@ function LessonDetailPage() {
                   </Typography>
                 </Grid>
 
-                <Grid item xs={12} md={2}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Stato pacchetto
                   </Typography>
@@ -485,7 +456,7 @@ function LessonDetailPage() {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={2}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
                     Costo totale pacchetto
                   </Typography>
@@ -509,6 +480,44 @@ function LessonDetailPage() {
                 </Grid>
               </>
             )}
+
+            {/* Divider */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+            </Grid>
+
+            {/* Sezione Tipo di Lezione e Pagamento */}
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom color="primary">
+                Compenso Professore
+              </Typography>
+            </Grid>
+
+            {/* Tariffa oraria */}
+            <Grid item xs={12} md={3}>
+              <Box display="flex" alignItems="center" mb={1}>
+                <EuroIcon sx={{ mr: 1 }} color="primary" />
+                <Typography variant="body2" color="text.secondary">
+                  Tariffa oraria
+                </Typography>
+              </Box>
+              <Typography variant="body1" fontWeight="medium">
+                €{parseFloat(lesson.hourly_rate).toFixed(2)}
+              </Typography>
+            </Grid>
+
+            {/* Totale lezione */}
+            <Grid item xs={12} md={3}>
+              <Box display="flex" alignItems="center" mb={1}>
+                <EuroIcon sx={{ mr: 1 }} color="primary" />
+                <Typography variant="body2" color="text.secondary">
+                  Totale
+                </Typography>
+              </Box>
+              <Typography variant="body1" fontWeight="bold" color="primary">
+                €{parseFloat(lesson.total_payment).toFixed(2)}
+              </Typography>
+            </Grid>
           </Grid>
         </CardContent>
       </Card>
