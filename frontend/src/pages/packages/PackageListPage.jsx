@@ -470,6 +470,39 @@ function PackageListPage() {
     navigate('/packages/new');
   };
 
+  useEffect(() => {
+    // Questo useEffect si attiva quando cambia la posizione o i parametri di ricerca
+    const fetchAndApplyFilters = async () => {
+      try {
+        setLoading(true);
+
+        // Carica i dati iniziali
+        const packagesResponse = await packageService.getAll();
+        setPackages(packagesResponse.data);
+
+        // ... altro codice per caricare studenti, ecc.
+
+        // Importante: aggiorna lo stato dei filtri basandosi sull'URL
+        // Questo fa sì che i filtri vengano applicati correttamente ai dati
+        setPage(parseInt(searchParams.get('page') || '0', 10));
+        setRowsPerPage(parseInt(searchParams.get('rows') || '10', 10));
+        setSearchTerm(searchParams.get('search') || '');
+        setTimeFilter(searchParams.get('time') || 'all');
+        setStatusFilter(searchParams.get('status') || 'all');
+        setPaymentFilter(searchParams.get('payment') || 'all');
+
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Impossibile caricare i dati. Prova a riaggiornare la pagina.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAndApplyFilters();
+  }, [location.key]); // location.key cambia ad ogni navigazione
+
+
   const handleDeletePackage = async (id, event) => {
     event.stopPropagation(); // Prevent navigation to details view
 

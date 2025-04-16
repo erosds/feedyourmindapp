@@ -358,12 +358,74 @@ function LessonListPage() {
     updateSearchParams('mine', newValue.toString());
   };
 
-  // Modifica la funzione di navigazione al dettaglio
+  useEffect(() => {
+    // Questo useEffect si attiva quando cambia la posizione o i parametri di ricerca
+    const fetchAndApplyFilters = async () => {
+      try {
+        setLoading(true);
+
+        // Carica i dati delle lezioni in base al ruolo e alle preferenze dell'utente
+        let lessonsData;
+        if (isAdmin() && !showOnlyMine) {
+          const lessonsResponse = await lessonService.getAll();
+          lessonsData = lessonsResponse.data;
+        } else {
+          const lessonsResponse = await lessonService.getByProfessor(currentUser.id);
+          lessonsData = lessonsResponse.data;
+        }
+        setLessons(lessonsData);
+
+        // Carica tutti gli studenti per mostrare i loro nomi
+        const studentsResponse = await studentService.getAll();
+        const studentsMap = {};
+        studentsResponse.data.forEach(student => {
+          studentsMap[student.id] = `${student.first_name} ${student.last_name}`;
+        });
+        setStudents(studentsMap);
+
+        // Carica i professori se l'utente è admin
+        if (isAdmin()) {
+          const professorsResponse = await professorService.getAll();
+          const professorsMap = {};
+          professorsResponse.data.forEach(professor => {
+            professorsMap[professor.id] = `${professor.first_name} ${professor.last_name}`;
+          });
+          setProfessors(professorsMap);
+        } else {
+          // Se non è admin, aggiungi solo il professore corrente
+          setProfessors({
+            [currentUser.id]: `${currentUser.first_name} ${currentUser.last_name}`
+          });
+        }
+
+        // Importante: aggiorna lo stato dei filtri basandosi sull'URL
+        setPage(parseInt(searchParams.get('page') || '0', 10));
+        setRowsPerPage(parseInt(searchParams.get('rows') || '10', 10));
+        setSearchTerm(searchParams.get('search') || '');
+        setTimeFilter(searchParams.get('time') || 'all');
+        setPaymentFilter(searchParams.get('payment') || 'all');
+        setShowOnlyMine(
+          searchParams.get('mine') === 'true' || (!isAdmin())
+        );
+
+      } catch (err) {
+        console.error('Error fetching lessons:', err);
+        setError('Impossibile caricare la lista delle lezioni. Prova a riaggiornare la pagina.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAndApplyFilters();
+  }, [location.key, currentUser, isAdmin]); // location.key cambia ad ogni navigazione
+
+  // Modifica anche la funzione di navigazione al dettaglio
   const handleViewLesson = (id) => {
     navigate(`/lessons/${id}`, {
       state: { returnUrl: `${location.pathname}${location.search}` }
     });
   };
+
 
   const handleEditLesson = (id, event) => {
     event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
@@ -440,6 +502,8 @@ function LessonListPage() {
       setPaymentDialogOpen(true);
     }
   };
+
+
 
   const handleDeleteLesson = async (id, event) => {
     event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
