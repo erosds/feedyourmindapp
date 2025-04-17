@@ -263,7 +263,7 @@ function PackageFormPage() {
     try {
       setError(null);
 
-      // Migliora la raccolta degli IDs studente, assicurandosi che siano numeri
+      // Migliora la raccolta degli IDs studente
       const student_ids = [
         values.student_id_1,
         values.student_id_2,
@@ -281,9 +281,9 @@ function PackageFormPage() {
         return;
       }
 
-      // Prepara i dati per l'API, assicurandosi che student_ids sia incluso
+      // Prepara i dati per l'API
       const packageData = {
-        student_ids,  // Esplicitamente incluso
+        student_ids,
         start_date: format(new Date(values.start_date), 'yyyy-MM-dd'),
         total_hours: values.total_hours,
         package_cost: values.package_cost || '0',
@@ -297,19 +297,15 @@ function PackageFormPage() {
       console.log("Dati pacchetto da inviare all'API:", packageData);
 
       let newPackageId;
+      let response;
 
-      // Chiamata API con gestione migliorata degli errori
+      // Chiamata API una sola volta
       if (isEditMode) {
-        try {
-          const response = await packageService.update(id, packageData);
-          console.log("Risposta aggiornamento:", response);
-        } catch (err) {
-          console.error("Dettagli errore API:", err.response?.data || err);
-          throw err;
-        }
+        response = await packageService.update(id, packageData);
+        console.log("Risposta aggiornamento:", response);
       } else {
         const allowMultiple = location.state?.allow_multiple || false;
-        const response = await packageService.create(packageData, allowMultiple);
+        response = await packageService.create(packageData, allowMultiple);
         newPackageId = response.data.id;
       }
 
@@ -318,41 +314,33 @@ function PackageFormPage() {
         // Prepara i dati della lezione
         const lessonData = {
           professor_id: location.state.lesson_data.professor_id,
-          student_id: student_ids[0], // Usiamo il primo studente associato al pacchetto
+          student_id: student_ids[0],
           lesson_date: location.state.lesson_data.lesson_date,
           start_time: location.state.lesson_data.start_time,
           duration: location.state.overflow_hours,
           is_package: true,
           package_id: newPackageId,
           hourly_rate: location.state.lesson_data.hourly_rate,
-          is_paid: false, // Lezione non pagata perché il pacchetto non è pagato
+          is_paid: false
         };
 
         try {
           console.log("Creazione automatica lezione sul nuovo pacchetto:", lessonData);
           await lessonService.create(lessonData);
-          // Nessuna necessità di attendere la risposta o di fare altre operazioni
         } catch (err) {
           console.error("Errore nella creazione automatica della lezione:", err);
-          // Non blocchiamo l'esecuzione se la creazione della lezione fallisce
         }
       }
 
-      // Quando salvi il pacchetto:
+      // Navigazione dopo il salvataggio
       if (isEditMode) {
-        await packageService.update(id, packageData);
-        // Dopo l'aggiornamento, torna al dettaglio pacchetto
-        navigate(`/packages/${id}`, { 
-          state: location.state?.returnUrl ? { returnUrl: location.state.returnUrl } : undefined 
+        navigate(`/packages/${id}`, {
+          state: location.state?.returnUrl ? { returnUrl: location.state.returnUrl } : undefined
         });
       } else {
-        // Per un nuovo pacchetto, crea e poi vai al dettaglio
-        const allowMultiple = location.state?.allow_multiple || false;
-        const response = await packageService.create(packageData, allowMultiple);
-        const newPackageId = response.data.id;
         navigate(`/packages/${newPackageId}`);
       }
-      
+
     } catch (err) {
       console.error('Error saving package:', err);
 
@@ -364,7 +352,6 @@ function PackageFormPage() {
           const responseData = err.response.data;
 
           if (typeof responseData.detail === 'object') {
-            // Handle the specific case of multiple future packages
             if (responseData.detail.message && responseData.detail.message.includes('ha già un pacchetto attivo e un pacchetto futuro')) {
               errorMessage = responseData.detail.message ||
                 'Lo studente ha già un pacchetto attivo e un pacchetto futuro. Non è possibile creare un ulteriore pacchetto.';

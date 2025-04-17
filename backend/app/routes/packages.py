@@ -106,7 +106,6 @@ def package_orm_to_response(package_orm):
 
 # In backend/app/routes/packages.py
 # Update the create_package function to check for existing future packages
-
 @router.post("/", response_model=models.PackageResponse)
 def create_package(package: models.PackageCreate, allow_multiple: bool = False, db: Session = Depends(get_db)):
     # Verifica che tutti gli studenti esistano
@@ -115,51 +114,48 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
         if not student:
             raise HTTPException(status_code=404, detail=f"Student with ID {student_id} not found")
     
-    # Controlla pacchetti attivi e futuri (salta se allow_multiple è True)
+    # Controlla sovrapposizioni con pacchetti esistenti (salta se allow_multiple è True)
     if not allow_multiple:
         for student_id in package.student_ids:
-            # Controlla prima i pacchetti attivi
-            active_package = db.query(models.Package).join(
+            # Calcola la data di scadenza del nuovo pacchetto
+            new_package_expiry = calculate_expiry_date(package.start_date)
+            
+            # Ottieni tutti i pacchetti dello studente (attivi, completati, scaduti)
+            existing_packages = db.query(models.Package).join(
                 models.PackageStudent
             ).filter(
-                models.PackageStudent.student_id == student_id,
-                models.Package.status == "in_progress"
-            ).first()
+                models.PackageStudent.student_id == student_id
+            ).all()
             
-            if active_package:
-                # Se il nuovo pacchetto inizia dopo la scadenza del pacchetto attuale
-                if package.start_date > active_package.expiry_date:
-                    # Controlla se esiste già un pacchetto futuro per questo studente
-                    future_package = db.query(models.Package).join(
-                        models.PackageStudent
-                    ).filter(
-                        models.PackageStudent.student_id == student_id,
-                        models.Package.start_date > active_package.expiry_date
-                    ).first()
+            for existing_package in existing_packages:
+                # Controlla se c'è sovrapposizione
+                # (il nuovo pacchetto inizia prima che l'esistente finisca) E 
+                # (il nuovo pacchetto finisce dopo che l'esistente è iniziato)
+                if (package.start_date <= existing_package.expiry_date and 
+                    new_package_expiry >= existing_package.start_date):
                     
-                    if future_package:
-                        # Se esiste già un pacchetto futuro, blocca la creazione
+                    # Se il pacchetto esistente è attivo, aggiungi info aggiuntive
+                    if existing_package.status == "in_progress":
                         raise HTTPException(
                             status_code=http_status.HTTP_409_CONFLICT,
                             detail={
-                                "message": f"Lo studente con ID {student_id} ha già un pacchetto attivo e un pacchetto futuro. Non è possibile creare un ulteriore pacchetto.",
-                                "active_package_id": active_package.id,
-                                "future_package_id": future_package.id,
-                                "active_package_expiry": active_package.expiry_date.isoformat()
+                                "message": f"Il nuovo pacchetto si sovrappone a un pacchetto attivo per lo studente con ID {student_id}.",
+                                "existing_package_id": existing_package.id,
+                                "existing_package_dates": f"{existing_package.start_date} - {existing_package.expiry_date}",
+                                "existing_package_status": existing_package.status,
+                                "remaining_hours": float(existing_package.remaining_hours)
                             }
                         )
-                    # Se non c'è un pacchetto futuro, permetti la creazione
-                    continue
-                
-                # Se il pacchetto inizia prima della scadenza, non permettere la creazione
-                raise HTTPException(
-                    status_code=http_status.HTTP_409_CONFLICT,
-                    detail={
-                        "message": f"Student with ID {student_id} already has an active package during that time.",
-                        "active_package_id": active_package.id,
-                        "active_package_remaining_hours": float(active_package.remaining_hours)
-                    }
-                )
+                    else:
+                        raise HTTPException(
+                            status_code=http_status.HTTP_409_CONFLICT,
+                            detail={
+                                "message": f"Il nuovo pacchetto si sovrappone a un pacchetto esistente per lo studente con ID {student_id}.",
+                                "existing_package_id": existing_package.id,
+                                "existing_package_dates": f"{existing_package.start_date} - {existing_package.expiry_date}",
+                                "existing_package_status": existing_package.status
+                            }
+                        )
     
     # Assicurati che total_hours e cost siano positivi
     total_hours = max(Decimal('0.5'), package.total_hours)
@@ -179,7 +175,6 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
     
     # Crea nuovo pacchetto
     db_package = models.Package(
-        # Rimuovi student_id
         start_date=package.start_date,
         total_hours=total_hours,
         package_cost=package_cost,
@@ -207,7 +202,6 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
     db.refresh(db_package)
     
     return package_orm_to_response(db_package)
-
 
 @router.get("/", response_model=List[models.PackageResponse])
 def read_packages(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):
