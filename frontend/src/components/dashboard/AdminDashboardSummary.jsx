@@ -103,7 +103,7 @@ const navigateToLessons = (filter) => {
   // Calculate expired unpaid packages
   const expiredPackages = useMemo(() => {
     return allPackages.filter(pkg =>
-      pkg.status === 'expired' && !pkg.is_paid
+      !pkg.is_paid
     );
   }, [allPackages]);
 
