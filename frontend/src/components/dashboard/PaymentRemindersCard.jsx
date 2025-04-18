@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -23,15 +23,24 @@ import { Add as AddIcon } from '@mui/icons-material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { professorService } from '../../services/api';
 
-function PaymentRemindersCard({ professors, onNoteAdded = () => {} }) {
+function PaymentRemindersCard({
+  professors = [],
+  onNotesUpdate = () => { }
+}) {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedProfessorId, setSelectedProfessorId] = useState('');
   const [newNote, setNewNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const [professorsWithNotes, setProfessorsWithNotes] = useState([]);
 
-  const professorsWithNotes = professors
-    .filter((prof) => prof.notes)
-    .sort((a, b) => a.first_name.localeCompare(b.first_name));
+  // Effetto per aggiornare i professori con note ogni volta che cambiano i professori
+  useEffect(() => {
+    const filteredProfessors = professors
+      .filter((prof) => prof.notes && prof.notes.trim() !== '')
+      .sort((a, b) => a.first_name.localeCompare(b.first_name));
+
+    setProfessorsWithNotes(filteredProfessors);
+  }, [professors]);
 
   const handleOpen = () => setOpenDialog(true);
   const handleClose = () => {
@@ -47,15 +56,25 @@ function PaymentRemindersCard({ professors, onNoteAdded = () => {} }) {
     try {
       await professorService.update(selectedProfessorId, { notes: newNote.trim() });
 
-      if (onNoteAdded) {
-        onNoteAdded(); // richiama la funzione nel componente genitore per aggiornare i dati
-      }
+      // Chiamare la funzione di callback per notificare l'aggiornamento
+      onNotesUpdate();
 
       handleClose();
     } catch (error) {
       console.error('Errore nel salvataggio della nota:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteNote = async (professorId) => {
+    try {
+      await professorService.update(professorId, { notes: '' });
+
+      // Chiamare la funzione di callback per notificare l'aggiornamento
+      onNotesUpdate();
+    } catch (err) {
+      console.error('Errore durante l\'eliminazione della nota:', err);
     }
   };
 
@@ -70,83 +89,95 @@ function PaymentRemindersCard({ professors, onNoteAdded = () => {} }) {
         </Box>
 
         <List dense>
-          {professorsWithNotes.map((prof) => (
-            <ListItem key={prof.id} divider
-              secondaryAction={
-                <IconButton edge="end" aria-label="delete" color="error" onClick={async () => {
-                  try {
-                    await professorService.update(prof.id, { notes: '' });
-                    if (onNoteAdded) onNoteAdded();
-                  } catch (err) {
-                    console.error('Errore durante l\'eliminazione della nota:', err);
-                  }
-                }}>
-                  <DeleteIcon fontSize="small"/>
-                </IconButton>
-              }
+          {professorsWithNotes.length === 0 ? (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              align="center"
+              sx={{ py: 2 }}
             >
-              <ListItemText
-                primary={`${prof.first_name} ${prof.last_name}`}
-                secondary={
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      whiteSpace: 'pre-wrap',
-                      maxHeight: 100,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}
+              Nessun reminder presente
+            </Typography>
+          ) : (
+            professorsWithNotes.map((prof) => (
+              <ListItem
+                key={prof.id}
+                divider
+                secondaryAction={
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    color="error"
+                    onClick={() => handleDeleteNote(prof.id)}
                   >
-                    {prof.notes}
-                  </Typography>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
                 }
-              />
-            </ListItem>
-
-          ))}
+              >
+                <ListItemText
+                  primary={`${prof.first_name} ${prof.last_name}`}
+                  secondary={
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        whiteSpace: 'pre-wrap',
+                        maxHeight: 100,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {prof.notes}
+                    </Typography>
+                  }
+                />
+              </ListItem>
+            ))
+          )}
         </List>
       </CardContent>
 
       <Dialog open={openDialog} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>Aggiungi Nota</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel shrink htmlFor="professor-select">Professore</InputLabel>
-            <Select
-              label="Professore"
-              value={selectedProfessorId}
-              onChange={(e) => setSelectedProfessorId(e.target.value)}
-              inputProps={{
-                id: 'professor-select'
-              }}
-              displayEmpty
-            >
-              <MenuItem value="" disabled>
-                Seleziona un professore
-              </MenuItem>
-              {professors.map((prof) => (
-                <MenuItem key={prof.id} value={prof.id}>
-                  {prof.first_name} {prof.last_name}
+
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={3} mt={1}>
+
+            <FormControl fullWidth required>
+              <InputLabel id="professor-select-label">Professore</InputLabel>
+              <Select
+                labelId="professor-select-label"
+                id="professor-select"
+                value={selectedProfessorId}
+                onChange={(e) => setSelectedProfessorId(e.target.value)}
+                label="Professore"
+              >
+                <MenuItem value="" disabled>
+                  Seleziona un professore
                 </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+                {professors
+                  .filter(prof => !prof.notes || prof.notes.trim() === '')
+                  .sort((a, b) => a.first_name.localeCompare(b.first_name)) // <-- Ordinamento per nome
+                  .map((prof) => (
+                    <MenuItem key={prof.id} value={prof.id}>
+                      {prof.first_name} {prof.last_name}
+                    </MenuItem>
+                  ))}
 
+              </Select>
+            </FormControl>
 
-
-          <TextField
-            label="Nota"
-            multiline
-            rows={4}
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-            fullWidth
-            variant="outlined"
-            placeholder="Inserisci una nota per il professore selezionato"
-            InputLabelProps={{ shrink: true }}
-          />
+            <TextField
+              required
+              id="outlined-required"
+              label="Nota"
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              placeholder="Inserisci una nota per il professore selezionato"
+            />
+          </Box>
         </DialogContent>
+
         <DialogActions>
           <Button onClick={handleClose} disabled={loading}>Annulla</Button>
           <Button
@@ -158,6 +189,7 @@ function PaymentRemindersCard({ professors, onNoteAdded = () => {} }) {
           </Button>
         </DialogActions>
       </Dialog>
+
     </Card>
   );
 }
