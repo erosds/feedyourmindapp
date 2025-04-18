@@ -53,13 +53,9 @@ def read_professor(professor_id: int, db: Session = Depends(get_db), current_use
     if db_professor is None:
         raise HTTPException(status_code=404, detail="Professor not found")
     
-    # Verifica che l'utente sia admin o stia vedendo il proprio profilo
-    if not current_user.is_admin and current_user.id != professor_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Non hai il permesso di vedere questo professore"
-        )
-        
+    # Rimuoviamo la restrizione per la visualizzazione
+    # Tutti gli utenti autenticati possono vedere i dettagli di qualsiasi professore
+    
     return db_professor
 
 @router.put("/{professor_id}", response_model=models.ProfessorResponse)

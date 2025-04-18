@@ -794,7 +794,7 @@ function PackageDetailPage() {
         </Grid>
 
         <Grid item xs={12} md={5}>
-          <Card sx={{ mb: 1 }}> 
+          <Card sx={{ mb: 1 }}>
             <CardContent>
               <Typography variant="h6" color="primary">
                 Calendario lezioni
@@ -882,23 +882,26 @@ function PackageDetailPage() {
                             <TableCell>
                               {getProfessorNameById(lesson.professor_id)}
                             </TableCell>
-
                             <TableCell>{lesson.duration}</TableCell>
                             <TableCell>€{parseFloat(lesson.hourly_rate).toFixed(2)}</TableCell>
                             <TableCell>€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>
                             <TableCell align="right">
-                              <Tooltip title="Elimina">
-                                <IconButton
-                                  color="error"
-                                  onClick={(e) => handleDeleteLesson(lesson, e)}
-                                  size="small"
-                                >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </Tooltip>
+                              {/* Mostra il pulsante Elimina solo se l'utente è admin o è il professore della lezione */}
+                              {(isAdmin() || currentUser.id === lesson.professor_id) && (
+                                <Tooltip title="Elimina">
+                                  <IconButton
+                                    color="error"
+                                    onClick={(e) => handleDeleteLesson(lesson, e)}
+                                    size="small"
+                                  >
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
                             </TableCell>
                           </TableRow>
-                        ))}
+                        ))
+                      }
                     </TableBody>
                   </Table>
                 </TableContainer>

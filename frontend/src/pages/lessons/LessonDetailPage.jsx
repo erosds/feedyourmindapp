@@ -53,7 +53,13 @@ function LessonDetailPage() {
 
   // Verifica autorizzazioni: gli admin possono vedere tutte le lezioni,
   // i professori standard possono vedere solo le proprie
-  const canViewLesson = (lessonData) => {
+  const canViewLesson = () => {
+    // Tutti possono vedere le lezioni, quindi sempre true
+    return true;
+  };
+
+  // Aggiungi questa nuova funzione per verificare i permessi di modifica
+  const canModifyLesson = (lessonData) => {
     if (isAdmin()) return true;
     return currentUser && currentUser.id === lessonData.professor_id;
   };
@@ -182,14 +188,16 @@ function LessonDetailPage() {
           </Typography>
         </Box>
 
-        <Box>
-          <Button variant="outlined" color="secondary" startIcon={<EditIcon />} onClick={handleEditLesson} sx={{ mr: 1 }}>
-            Modifica
-          </Button>
-          <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteLesson}>
-            Elimina
-          </Button>
-        </Box>
+        {canModifyLesson(lesson) && (
+          <Box>
+            <Button variant="outlined" color="secondary" startIcon={<EditIcon />} onClick={handleEditLesson} sx={{ mr: 1 }}>
+              Modifica
+            </Button>
+            <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDeleteLesson}>
+              Elimina
+            </Button>
+          </Box>
+        )}
       </Box>
 
       {/* Card principale con informazioni organizzate in Grid */}
@@ -293,11 +301,11 @@ function LessonDetailPage() {
                 </Typography>
               </Box>
               {lesson.is_package ? (
-                <Chip 
+                <Chip
                   component={Link}
                   to={`/packages/${packageData.id}`}
-                  label={`Pacchetto #${lesson.package_id}`} 
-                  color="primary" 
+                  label={`Pacchetto #${lesson.package_id}`}
+                  color="primary"
                   variant="outlined"
                   clickable
                   sx={{ cursor: 'pointer' }}
@@ -324,7 +332,7 @@ function LessonDetailPage() {
                     size="small"
                   />
                 </Grid>
-                
+
                 {/* Costo totale (solo admin) */}
                 {isAdmin() && (
                   <Grid item xs={12} md={2.5}>
@@ -352,7 +360,7 @@ function LessonDetailPage() {
                     {packageData.total_hours}
                   </Typography>
                 </Grid>
-                
+
                 {/* Ore rimanenti */}
                 <Grid item xs={12} md={2}>
                   <Box display="flex" alignItems="center" mb={1}>
