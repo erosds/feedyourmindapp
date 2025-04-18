@@ -23,6 +23,7 @@ class Professor(Base):
     username = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     is_admin = Column(Boolean, default=False)
+    notes = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     lessons = relationship("Lesson", back_populates="professor")
@@ -83,6 +84,7 @@ class ProfessorBase(BaseModel):
     last_name: str
     username: str
     is_admin: bool = False
+    notes: Optional[str] = None
 
 class ProfessorCreate(ProfessorBase):
     password: str
@@ -93,6 +95,7 @@ class ProfessorUpdate(BaseModel):
     username: Optional[str] = None
     is_admin: Optional[bool] = None
     password: Optional[str] = None
+    notes: Optional[str] = None
     
 class ProfessorResponse(ProfessorBase):
     id: int

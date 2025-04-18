@@ -37,7 +37,6 @@ import AdminDashboardCalendar from '../../components/dashboard/AdminDashboardCal
 import AdminDashboardSummary from '../../components/dashboard/AdminDashboardSummary';
 import DayProfessorsDialog from '../../components/dashboard/DayProfessorsDialog';
 
-
 function AdminDashboardPage() {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -49,7 +48,7 @@ function AdminDashboardPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [periodFilter, setPeriodFilter] = useState('week');
   const [currentTab, setCurrentTab] = useState(0);
-
+ 
   // State for day professors dialog
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
@@ -405,7 +404,7 @@ function AdminDashboardPage() {
         </Box>
       </Paper>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         {/* Calendar */}
         <Grid item xs={12}>
           <AdminDashboardCalendar
@@ -433,6 +432,7 @@ function AdminDashboardPage() {
           <AdminDashboardSummary
             currentWeekStart={currentWeekStart}
             professorWeeklyData={professorWeeklyData}
+            professors={professors}
             periodFilter={periodFilter}
             setPeriodFilter={setPeriodFilter}
             periodLessons={periodLessons}

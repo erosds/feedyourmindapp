@@ -28,9 +28,11 @@ import {
   parseISO,
 } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import PaymentRemindersCard from './PaymentRemindersCard'; // Import the PaymentRemindersCard component
 
 function AdminDashboardSummary({
   professorWeeklyData = [],
+  professors = [],
   periodFilter = 'week',
   setPeriodFilter,
   periodLessons = [],
@@ -60,18 +62,18 @@ function AdminDashboardSummary({
       navigate('/packages');
     }
   };
-  
+
 
   // Funzione corretta per navigare alla pagina lezioni con i filtri appropriati
-const navigateToLessons = (filter) => {
-  if (filter === 'unpaid') {
-    // Navigate to lessons page with filter for unpaid lessons
-    navigate('/lessons?payment=unpaid');
-  } else {
-    // Default navigation without filters
-    navigate('/lessons');
-  }
-};
+  const navigateToLessons = (filter) => {
+    if (filter === 'unpaid') {
+      // Navigate to lessons page with filter for unpaid lessons
+      navigate('/lessons?payment=unpaid');
+    } else {
+      // Default navigation without filters
+      navigate('/lessons');
+    }
+  };
 
 
   // Calculate expiring packages
@@ -182,7 +184,7 @@ const navigateToLessons = (filter) => {
   );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {/* Prima Card: Statistiche basate sul periodo selezionato */}
       <Card>
         <CardContent>
@@ -278,7 +280,7 @@ const navigateToLessons = (filter) => {
                         const singleLessons = periodLessons.filter(lesson => !lesson.is_package);
                         const paidLessons = singleLessons.filter(lesson => lesson.is_paid).length;
                         const totalLessons = singleLessons.length;
-                        
+
                         return (
                           <ListItemText
                             primary="Numero lezioni"
@@ -299,7 +301,7 @@ const navigateToLessons = (filter) => {
                           .reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
                         const totalHours = singleLessons
                           .reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
-                          
+
                         return (
                           <ListItemText
                             primary="Ore di lezione"
@@ -316,18 +318,18 @@ const navigateToLessons = (filter) => {
                       {(() => {
                         // Ottieni tutte le lezioni singole nel periodo
                         const singleLessons = periodLessons.filter(lesson => !lesson.is_package);
-                        
+
                         // Entrate effettive (solo lezioni pagate con prezzo > 0)
                         const actualIncome = lessonsPriceIncome;
-                        
+
                         // Entrate teoriche (somma di tutti i prezzi delle lezioni, anche se non pagate)
-                        const theoreticalIncome = singleLessons.reduce((total, lesson) => 
+                        const theoreticalIncome = singleLessons.reduce((total, lesson) =>
                           total + parseFloat(lesson.price || 0), 0);
-                        
+
                         // Verifica se ci sono lezioni con prezzo a zero
-                        const zeroPrice = singleLessons.some(lesson => 
+                        const zeroPrice = singleLessons.some(lesson =>
                           (!lesson.price || parseFloat(lesson.price) === 0) && lesson.is_paid);
-                        
+
                         return (
                           <ListItemText
                             primary="Entrate lezioni"
@@ -337,10 +339,10 @@ const navigateToLessons = (filter) => {
                                   €{actualIncome.toFixed(2)}/{theoreticalIncome.toFixed(2)}
                                 </Typography>
                                 {zeroPrice && (
-                                  <Typography 
-                                    variant="caption" 
-                                    component="div" 
-                                    color="error.main" 
+                                  <Typography
+                                    variant="caption"
+                                    component="div"
+                                    color="error.main"
                                     sx={{ mt: 0.5 }}
                                   >
                                     * Esistono lezioni pagate senza prezzo impostato
@@ -354,7 +356,7 @@ const navigateToLessons = (filter) => {
                     </ListItem>
                   </List>
                 </Grid>
-                
+
                 {/* Colonna lezioni da pacchetti */}
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="primary" gutterBottom>
@@ -365,13 +367,13 @@ const navigateToLessons = (filter) => {
                       {(() => {
                         const packageLessons = periodLessons.filter(lesson => lesson.is_package);
                         const totalLessons = packageLessons.length;
-                        
+
                         return (
                           <ListItemText
                             primary="Numero lezioni"
                             secondary={
                               <Typography variant="body2">
-                                {totalLessons} 
+                                {totalLessons}
                               </Typography>
                             }
                           />
@@ -380,7 +382,7 @@ const navigateToLessons = (filter) => {
                     </ListItem>
                     <ListItem>
                       {(() => {
-                        const packageLessons = periodLessons.filter(lesson => lesson.is_package);                     
+                        const packageLessons = periodLessons.filter(lesson => lesson.is_package);
                         const totalHours = packageLessons
                           .reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
 
@@ -405,10 +407,10 @@ const navigateToLessons = (filter) => {
                               €{packagesPriceIncome.toFixed(2)}
                             </Typography>
                             {periodPackages.some(pkg => (!pkg.package_cost || parseFloat(pkg.package_cost) === 0) && pkg.is_paid) && (
-                              <Typography 
-                                variant="caption" 
-                                component="div" 
-                                color="error.main" 
+                              <Typography
+                                variant="caption"
+                                component="div"
+                                color="error.main"
                                 sx={{ mt: 0.5 }}
                               >
                                 * Esistono pacchetti pagati con prezzo a zero
@@ -432,7 +434,7 @@ const navigateToLessons = (filter) => {
           <Typography variant="h6" gutterBottom>
             Informazioni Aggiuntive
           </Typography>
-          
+
           <Grid container spacing={2}>
             {/* Next row - clickable blocks */}
             <ClickableStatBlock
@@ -460,9 +462,12 @@ const navigateToLessons = (filter) => {
             />
           </Grid>
 
-          
+
         </CardContent>
       </Card>
+
+      <PaymentRemindersCard professors={professors}/>
+
     </Box>
   );
 }

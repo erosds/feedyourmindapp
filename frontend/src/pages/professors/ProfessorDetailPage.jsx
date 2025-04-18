@@ -52,11 +52,13 @@ import {
 import { it } from 'date-fns/locale';
 import { professorService, lessonService, studentService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import ProfessorNotes from '../../components/professors/ProfessorNotes';
+
 
 // COMPONENTI MODULARI
 
 const ProfessorProfile = ({ professor }) => (
-  <Card sx={{ height: '100%' }}>
+  <Card>
     <CardContent sx={{ textAlign: 'center', 
       display: 'flex', 
       flexDirection: 'column', 
@@ -64,6 +66,9 @@ const ProfessorProfile = ({ professor }) => (
       flexGrow: 1}}>
       <Typography variant="h5">
         {professor.first_name} {professor.last_name}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Username: {professor.username}
       </Typography>
       <Box my={1}>
         {professor.is_admin ? (
@@ -79,57 +84,6 @@ const ProfessorProfile = ({ professor }) => (
           />
         )}
       </Box>
-      <Typography variant="body2" color="text.secondary">
-        Username: {professor.username}
-      </Typography>
-    </CardContent>
-  </Card>
-);
-
-const TotalStatsCard = ({ totalLessons, totalHours, uniqueStudents, totalEarnings }) => (
-  <Card>
-    <CardContent>
-      <Typography variant="h6" gutterBottom>
-        Statistiche Totali
-      </Typography>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={3}>
-          <Box textAlign="center" p={1}>
-            <EventIcon />
-            <Typography variant="h6">{totalLessons}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Lezioni totali
-            </Typography>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Box textAlign="center" p={1}>
-            <SchoolIcon />
-            <Typography variant="h6">{uniqueStudents}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Studenti
-            </Typography>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Box textAlign="center" p={1}>
-            <EventIcon />
-            <Typography variant="h6">{totalHours.toFixed(1)}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Ore di lezione
-            </Typography>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Box textAlign="center" p={1}>
-            <EuroIcon />
-            <Typography variant="h6">€{totalEarnings.toFixed(2)}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Guadagni totali
-            </Typography>
-          </Box>
-        </Grid>
-      </Grid>
     </CardContent>
   </Card>
 );
@@ -443,6 +397,8 @@ function ProfessorDetailPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [studentsMap, setStudentsMap] = useState({});
+  const [professorNotes, setProfessorNotes] = useState(null);
+
   
   // Ordinamento e filtri
   const [order, setOrder] = useState('desc');
@@ -476,6 +432,7 @@ function ProfessorDetailPage() {
           studentsMapping[student.id] = `${student.first_name} ${student.last_name}`;
         });
         setStudentsMap(studentsMapping);
+        setProfessorNotes(professorResponse.data.notes);
       } catch (err) {
         console.error('Error fetching professor data:', err);
         setError('Impossibile caricare i dati del professore. Prova a riaggiornare la pagina.');
@@ -633,12 +590,11 @@ function ProfessorDetailPage() {
           <ProfessorProfile professor={professor} />
         </Grid>
         <Grid item xs={12} md={8}>
-          <TotalStatsCard 
-            totalLessons={totalLessons}
-            totalHours={totalHours}
-            uniqueStudents={uniqueStudents}
-            totalEarnings={totalEarnings}
-          />
+        <ProfessorNotes
+          professorId={professor.id}
+          initialNotes={professorNotes}
+          onNotesUpdate={(updatedNotes) => setProfessorNotes(updatedNotes)}
+        />
         </Grid>
       </Grid>
 
@@ -704,6 +660,7 @@ function ProfessorDetailPage() {
               labelDisplayedRows={({ from, to, count }) => `${from}-${to} di ${count}`}
             />
           </Grid>
+
         </Grid>
       </Box>
     </Box>

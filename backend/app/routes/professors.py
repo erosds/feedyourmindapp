@@ -63,7 +63,12 @@ def read_professor(professor_id: int, db: Session = Depends(get_db), current_use
     return db_professor
 
 @router.put("/{professor_id}", response_model=models.ProfessorResponse)
-def update_professor(professor_id: int, professor: models.ProfessorUpdate, db: Session = Depends(get_db), current_user: models.Professor = Depends(get_current_professor)):
+def update_professor(
+    professor_id: int, 
+    professor: models.ProfessorUpdate, 
+    db: Session = Depends(get_db), 
+    current_user: models.Professor = Depends(get_current_professor)
+):
     # Ottiene il professore da aggiornare
     db_professor = db.query(models.Professor).filter(models.Professor.id == professor_id).first()
     if db_professor is None:
@@ -76,15 +81,21 @@ def update_professor(professor_id: int, professor: models.ProfessorUpdate, db: S
             detail="Non hai il permesso di modificare questo professore"
         )
     
-    # Solo gli admin possono modificare lo stato di admin
-    if "is_admin" in professor.dict(exclude_unset=True) and not current_user.is_admin:
+    # Solo gli admin possono modificare lo stato di admin o le note
+    update_data = professor.dict(exclude_unset=True)
+    
+    if "is_admin" in update_data and not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="Solo gli amministratori possono modificare lo stato di admin"
         )
     
-    # Aggiorna i campi se presenti
-    update_data = professor.dict(exclude_unset=True)
+    # Solo gli admin possono modificare le note
+    if "notes" in update_data and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Solo gli amministratori possono modificare le note del professore"
+        )
     
     # Hash della password se presente
     if "password" in update_data and update_data["password"]:

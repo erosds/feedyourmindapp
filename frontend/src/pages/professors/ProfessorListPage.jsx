@@ -59,6 +59,27 @@ function ProfessorListPage() {
       return (b.is_admin === a.is_admin) ? 0 : b.is_admin ? -1 : 1;
     }
     
+    // Ordinamento speciale per annotazioni
+    if (orderBy === 'notes') {
+      // Se entrambi hanno note
+      if (a.notes && b.notes) {
+        return b.notes.localeCompare(a.notes);
+      }
+      
+      // Se solo a ha note, va prima
+      if (a.notes && !b.notes) {
+        return -1;
+      }
+      
+      // Se solo b ha note, va prima
+      if (!a.notes && b.notes) {
+        return 1;
+      }
+      
+      // Se nessuno ha note, sono uguali
+      return 0;
+    }
+    
     // Per altri campi
     if (b[orderBy] < a[orderBy]) {
       return -1;
@@ -256,6 +277,7 @@ function ProfessorListPage() {
               <SortableTableCell id="last_name" label="Cognome" />
               <SortableTableCell id="username" label="Username" />
               <SortableTableCell id="is_admin" label="Ruolo" />
+              <SortableTableCell id='notes' label='Annotazioni' />
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
@@ -302,6 +324,7 @@ function ProfessorListPage() {
                         />
                       )}
                     </TableCell>
+                    <TableCell>{professor.notes}</TableCell>
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       {isAdmin() && (
                         <>
