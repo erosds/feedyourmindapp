@@ -83,17 +83,6 @@ function LessonListPage() {
     setOrderBy(property);
   };
 
-  // Funzione di utilità per aggiornare i parametri di ricerca
-  const updateSearchParams = (key, value) => {
-    const newParams = new URLSearchParams(searchParams);
-    if (value && value !== '' && value !== 'all' && value !== '0') {
-      newParams.set(key, value);
-    } else {
-      newParams.delete(key);
-    }
-    setSearchParams(newParams);
-  };
-
   // Gestione dei filtri iniziali che arrivano dalla dashboard
   useEffect(() => {
     if (location.state) {
@@ -324,8 +313,35 @@ function LessonListPage() {
 
   const handleSearchChange = (event) => {
     const value = event.target.value;
-    setSearchTerm(value);
-    updateSearchParams('search', value);
+    setSearchTerm(value); // Aggiorna solo lo stato locale, la tabella si aggiorna immediatamente
+  };
+
+  // Aggiungi una nuova funzione per gestire l'evento onBlur (quando l'input perde focus)
+  const handleSearchBlur = () => {
+    // Aggiorna i parametri URL solo quando l'input perde focus
+    updateSearchParams('search', searchTerm);
+  };
+
+  // Aggiungi una nuova funzione per gestire il tasto Invio
+  const handleSearchKeyDown = (event) => {
+    // Codice 13 = tasto Invio
+    if (event.keyCode === 13) {
+      // Aggiorna i parametri URL quando si preme Invio
+      updateSearchParams('search', searchTerm);
+      // Rimuovi il focus dall'input
+      event.target.blur();
+    }
+  };
+
+  // Funzione helper per aggiornare i parametri URL
+  const updateSearchParams = (key, value) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value && value !== '' && value !== 'all' && value !== '0') {
+      newParams.set(key, value);
+    } else {
+      newParams.delete(key);
+    }
+    setSearchParams(newParams);
   };
 
   const handleTimeFilterChange = (event) => {
@@ -582,6 +598,8 @@ function LessonListPage() {
               label="Cerca lezione per studente o per professore"
               value={searchTerm}
               onChange={handleSearchChange}
+              onBlur={handleSearchBlur} // Aggiungi l'evento onBlur
+              onKeyDown={handleSearchKeyDown} // Aggiungi l'evento onKeyDown
               InputProps={{
                 startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
               }}

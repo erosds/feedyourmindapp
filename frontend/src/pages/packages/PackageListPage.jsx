@@ -412,7 +412,23 @@ function PackageListPage() {
   const handleSearchChange = (event) => {
     const value = event.target.value;
     setSearchTerm(value);
-    updateSearchParams('search', value);
+  };
+
+  // Aggiungi una nuova funzione per gestire l'evento onBlur (quando l'input perde focus)
+  const handleSearchBlur = () => {
+    // Aggiorna i parametri URL solo quando l'input perde focus
+    updateSearchParams('search', searchTerm);
+  };
+
+  // Aggiungi una nuova funzione per gestire il tasto Invio
+  const handleSearchKeyDown = (event) => {
+    // Codice 13 = tasto Invio
+    if (event.keyCode === 13) {
+      // Aggiorna i parametri URL quando si preme Invio
+      updateSearchParams('search', searchTerm);
+      // Rimuovi il focus dall'input
+      event.target.blur();
+    }
   };
 
   const handleTimeFilterChange = (event) => {
@@ -611,9 +627,11 @@ function PackageListPage() {
             <TextField
               fullWidth
               variant="outlined"
-              label="Ricerca per nome studente"
+              label="Cerca pacchetto per nome studente"
               value={searchTerm}
               onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown} // Aggiungi l'evento onKeyDown
+              onBlur={handleSearchBlur} // Aggiungi l'evento onBlur
               InputProps={{
                 startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
               }}
