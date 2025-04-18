@@ -23,7 +23,7 @@ import { Add as AddIcon } from '@mui/icons-material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { professorService } from '../../services/api';
 
-function PaymentRemindersCard({ professors, onNoteAdded }) {
+function PaymentRemindersCard({ professors, onNoteAdded = () => {} }) {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedProfessorId, setSelectedProfessorId] = useState('');
   const [newNote, setNewNote] = useState('');

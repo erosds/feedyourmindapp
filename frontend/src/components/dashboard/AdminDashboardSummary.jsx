@@ -29,6 +29,7 @@ import {
 } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import PaymentRemindersCard from './PaymentRemindersCard'; // Import the PaymentRemindersCard component
+ 
 
 function AdminDashboardSummary({
   professorWeeklyData = [],
@@ -45,9 +46,10 @@ function AdminDashboardSummary({
   // Props for total packages and lessons
   allPackages = [],
   allLessons = [],
+  onNotesUpdate
 }) {
   const navigate = useNavigate();
-
+ 
   // Function to navigate to packages page with proper filter
   const navigateToPackages = (filter) => {
     if (filter === 'expiring') {
@@ -466,8 +468,15 @@ function AdminDashboardSummary({
         </CardContent>
       </Card>
 
-      <PaymentRemindersCard professors={professors}/>
-
+      <PaymentRemindersCard
+        professors={professors}
+        onNotesUpdate={() => {
+          // Call the prop function to handle notes update
+          if (onNotesUpdate) {
+            onNotesUpdate();
+          }
+        }}
+      />
     </Box>
   );
 }

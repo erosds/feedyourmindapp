@@ -54,6 +54,18 @@ function AdminDashboardPage() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [professorSchedules, setProfessorSchedules] = useState([]);
 
+  // Function to fetch professors
+  const fetchProfessors = async () => {
+    try {
+      const professorsResponse = await professorService.getAll();
+      setProfessors(professorsResponse.data);
+      return professorsResponse.data;
+    } catch (err) {
+      console.error('Error fetching professors:', err);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     // Redirect if not admin
     if (!isAdmin()) {
@@ -444,6 +456,7 @@ function AdminDashboardPage() {
             setCurrentTab={setCurrentTab}
             allPackages={packages}
             allLessons={lessons}
+            onNotesUpdate={fetchProfessors} // Pass the fetch function
           />
         </Grid>
       </Grid>
