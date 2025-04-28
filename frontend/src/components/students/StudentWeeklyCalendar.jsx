@@ -8,7 +8,6 @@ import {
   Chip,
   ButtonGroup,
   Button,
-  Divider
 } from '@mui/material';
 import {
   format,
@@ -83,16 +82,38 @@ const StudentWeeklyCalendar = ({ currentWeekStart, lessons, onChangeWeek }) => {
         </ButtonGroup>
       </Box>
 
-      <Typography variant="subtitle1" align="center" gutterBottom
+      <Box
         sx={{
-          fontWeight: 'bold', 
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+          alignItems: 'center',
           backgroundColor: 'primary.light',
           color: 'primary.contrastText',
           py: 1,
-          borderRadius: 1
-        }}>
-        {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
-      </Typography>
+          px: 2,
+          borderRadius: 1,
+          mb: 1
+        }}
+      >
+        <Typography variant="subtitle1" fontWeight="bold">
+          {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
+        </Typography>
+        <Typography variant="subtitle1" fontWeight="bold">
+          Ore totali: {(() => {
+            // Filtra le lezioni nella settimana corrente
+            const weekLessons = lessons.filter(lesson => {
+              if (!lesson.lesson_date) return false;
+              const lessonDate = parseISO(lesson.lesson_date);
+              return lessonDate >= currentWeekStart &&
+                lessonDate <= endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+            });
+            // Calcola il totale delle ore
+            return weekLessons.reduce((total, lesson) =>
+              total + parseFloat(lesson.duration), 0).toFixed(1);
+          })()}
+        </Typography>
+      </Box>
 
       <Grid
         container
@@ -122,8 +143,8 @@ const StudentWeeklyCalendar = ({ currentWeekStart, lessons, onChangeWeek }) => {
               key={day.toString()}
             >
               <Paper
-                elevation={isCurrentDay ? 3 : 1}
                 sx={{
+                  boxShadow: 'none',
                   p: 1,
                   height: '100%',
                   display: 'flex',
