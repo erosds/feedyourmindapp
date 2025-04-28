@@ -45,17 +45,20 @@ import { it } from 'date-fns/locale';
 import { studentService, packageService, lessonService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import getProfessorNameById from '../../utils/professorMapping';
+import StudentWeeklyCalendar from '../../components/students/StudentWeeklyCalendar';
 
 
 // COMPONENTI MODULARI
 
 const StudentProfile = ({ student }) => (
   <Card sx={{ height: '100%' }}>
-    <CardContent sx={{ textAlign: 'center', 
-      display: 'flex', 
-      flexDirection: 'column', 
+    <CardContent sx={{
+      textAlign: 'center',
+      display: 'flex',
+      flexDirection: 'column',
       justifyContent: 'center',
-      flexGrow: 1}}>
+      flexGrow: 1
+    }}>
       <Typography variant="h5" gutterBottom>
         {student.first_name} {student.last_name}
       </Typography>
@@ -310,35 +313,15 @@ const WeekSelector = ({ currentWeekStart, onChangeWeek }) => (
   </Box>
 );
 
-const LessonsTable = ({ lessons, page, rowsPerPage, orderBy, order, onSort, onChangePage, onChangeRowsPerPage }) => (
+const LessonsTable = ({ lessons, page, rowsPerPage, onChangePage, onChangeRowsPerPage }) => (
   <TableContainer component={Paper}>
     <Table>
       <TableHead>
         <TableRow>
-          <TableCell sortDirection={orderBy === 'lesson_date' ? order : false}>
-            <TableSortLabel
-              active={orderBy === 'lesson_date'}
-              direction={orderBy === 'lesson_date' ? order : 'asc'}
-              onClick={() => onSort('lesson_date')}
-            >
-              Data
-            </TableSortLabel>
-          </TableCell>
-          <TableCell>
-            Professore
-          </TableCell>
-          <TableCell sortDirection={orderBy === 'duration' ? order : false}>
-            <TableSortLabel
-              active={orderBy === 'duration'}
-              direction={orderBy === 'duration' ? order : 'asc'}
-              onClick={() => onSort('duration')}
-            >
-              Durata (ore)
-            </TableSortLabel>
-          </TableCell>
-          <TableCell>
-            Tipo
-          </TableCell>
+          <TableCell>Data</TableCell>
+          <TableCell>Professore</TableCell>
+          <TableCell>Durata (ore)</TableCell>
+          <TableCell>Tipo</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
@@ -365,7 +348,7 @@ const LessonsTable = ({ lessons, page, rowsPerPage, orderBy, order, onSort, onCh
                   {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                 </TableCell>
                 <TableCell>
-                {getProfessorNameById(lesson.professor_id)}
+                  {getProfessorNameById(lesson.professor_id)}
                 </TableCell>
                 <TableCell>{lesson.duration}</TableCell>
                 <TableCell>
@@ -421,6 +404,7 @@ function StudentDetailPage() {
   }, [id]);
 
   // Filtro per tipo di lezione (singola vs pacchetto)
+  // Modifica questa parte nel secondo useEffect
   useEffect(() => {
     if (!lessons.length) return;
     let filtered = [...lessons];
@@ -428,8 +412,8 @@ function StudentDetailPage() {
       const isPackage = lessonTypeFilter === 'package';
       filtered = filtered.filter(lesson => lesson.is_package === isPackage);
     }
-    // Ordinamento per data
-    filtered.sort((a, b) => new Date(a.lesson_date) - new Date(b.lesson_date));
+    // Ordinamento per data decrescente (dalla più recente alla più vecchia)
+    filtered.sort((a, b) => new Date(b.lesson_date) - new Date(a.lesson_date));
     setFilteredLessons(filtered);
     setLessonsPage(0);
   }, [lessons, lessonTypeFilter]);
@@ -441,15 +425,6 @@ function StudentDetailPage() {
   const handleRowsPerPageChange = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setLessonsPage(0);
-  };
-
-  const handleRequestSort = (property) => {
-    // Semplice toggle asc/desc basato sulla data per questo esempio
-    const sorted = [...filteredLessons].sort((a, b) => {
-      let comparison = new Date(a[property]) - new Date(b[property]);
-      return comparison;
-    });
-    setFilteredLessons(sorted);
   };
 
   const handleChangeWeek = (action) => {
@@ -588,7 +563,7 @@ function StudentDetailPage() {
           <StudentProfile student={student} />
         </Grid>
         <Grid item xs={12} md={8}>
-          <TotalStatsCard 
+          <TotalStatsCard
             totalLessons={totalLessons}
             totalHours={totalHours}
             totalPackages={totalPackages}
@@ -597,14 +572,17 @@ function StudentDetailPage() {
         </Grid>
       </Grid>
 
-      {/* Middle Row: Calendario a sinistra e Selettore Settimana con Statistiche Settimanali a destra */}
+      {/* Middle Row: Calendario mensile a sinistra e calendario settimanale a destra */}
       <Grid container spacing={2} mt={2}>
         <Grid item xs={12} md={4}>
           <StudentCalendar currentMonth={currentWeekStart} lessons={lessons} />
         </Grid>
         <Grid item xs={12} md={8}>
-          <WeekSelector currentWeekStart={currentWeekStart} onChangeWeek={handleChangeWeek} />
-          <WeeklyStatsCard weeklyLessons={weeklyLessonsCount} weeklyHours={weeklyHours} />
+          <StudentWeeklyCalendar
+            currentWeekStart={currentWeekStart}
+            lessons={lessons}
+            onChangeWeek={handleChangeWeek}
+          />
         </Grid>
       </Grid>
 
@@ -628,13 +606,10 @@ function StudentDetailPage() {
             </FormControl>
           </Grid>
           <Grid item xs={12} md={8}>
-            <LessonsTable 
+            <LessonsTable
               lessons={filteredLessons}
               page={lessonsPage}
               rowsPerPage={rowsPerPage}
-              orderBy="lesson_date"
-              order="asc"
-              onSort={handleRequestSort}
               onChangePage={handleLessonsPageChange}
               onChangeRowsPerPage={handleRowsPerPageChange}
             />
