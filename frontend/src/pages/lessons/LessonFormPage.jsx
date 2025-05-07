@@ -657,6 +657,26 @@ function LessonFormPage() {
         </Alert>
       )}
 
+      {/* Avviso per più pacchetti disponibili */}
+      {packages.length > 0 && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            {packages.length > 1 ? (
+              <>
+                Sono stati trovati {packages.length} pacchetti attivi per questo studente.
+                Assicurati di spuntare l’opzione sotto che indica che la lezione fa parte di un pacchetto.
+                Solitamente andrebbero esaurite prima le ore del pacchetto più vecchio.
+              </>
+            ) : (
+              <>
+                È stato trovato un pacchetto attivo per questo studente.
+                Assicurati di spuntare l’opzione sotto che indica che la lezione fa parte di un pacchetto.
+              </>
+            )}
+          </Typography>
+        </Alert>
+      )}
+
       {/* Alert per pacchetti scaduti */}
       {expiredPackages.length > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>

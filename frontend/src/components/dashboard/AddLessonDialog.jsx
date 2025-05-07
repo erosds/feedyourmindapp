@@ -535,8 +535,28 @@ function AddLessonDialog({
               ))}
             </Alert>
           )}
+          {/* Avviso per più pacchetti disponibili */}
+          {lessonForm.student_id && localPackages.length > 0 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                {localPackages.length > 1 ? (
+                  <>
+                    Sono stati trovati {localPackages.length} pacchetti attivi per questo studente.
+                    Assicurati di spuntare l’opzione sotto che indica che la lezione fa parte di un pacchetto.
+                    Solitamente andrebbero esaurite prima le ore del pacchetto più vecchio.
+                  </>
+                ) : (
+                  <>
+                    È stato trovato un pacchetto attivo per questo studente.
+                    Assicurati di spuntare l’opzione sotto che indica che la lezione fa parte di un pacchetto.
+                  </>
+                )}
+              </Typography>
+            </Alert>
+          )}
+
           <Grid container spacing={3} sx={{ mt: 1 }}>
-            {/* Selezione studente - Condizionale in base al contesto */}
+            {/* Selezione studente */}
             <Grid item xs={12} md={6}>
               {context === 'packageDetail' ? (
                 <PackageStudentSelector
@@ -548,14 +568,16 @@ function AddLessonDialog({
                   error={!lessonForm.student_id}
                 />
               ) : (
-                <StudentAutocomplete
-                  students={students}
-                  value={lessonForm.student_id}
-                  onChange={handleStudentAutocomplete}
-                  disabled={submitting || context === 'packageDetail'}
-                  required
-                  helperText={!lessonForm.student_id ? "Seleziona uno studente" : ""}
-                />
+                <>
+                  <StudentAutocomplete
+                    students={students}
+                    value={lessonForm.student_id}
+                    onChange={handleStudentAutocomplete}
+                    disabled={submitting || context === 'packageDetail'}
+                    required
+                    helperText={!lessonForm.student_id ? "Seleziona uno studente" : ""}
+                  />
+                </>
               )}
             </Grid>
 
@@ -672,19 +694,20 @@ function AddLessonDialog({
                   }
                   label="Parte di un pacchetto"
                 />
+                {lessonForm.student_id && localPackages.length > 0 && (
+                  <FormHelperText sx={{
+                    color: 'primary.main',
+                    fontWeight: 'bold',
+                    fontSize: '0.9rem',
+                    ml: 1
+                  }}>
+                    {localPackages.length} pacchett{localPackages.length !== 1 ? 'i' : 'o'} disponibil{localPackages.length !== 1 ? 'i' : 'e'}
+                  </FormHelperText>
+                )}
                 <Box ml={2} display="inline">
                   {isPackageToggleDisabled && lessonForm.student_id && localPackages.length === 0 && (
                     <FormHelperText error>
                       Lo studente non ha pacchetti attivi.
-                    </FormHelperText>
-                  )}
-                  {lessonForm.student_id && localPackages.length > 0 && (
-                    <FormHelperText sx={{
-                      color: 'primary.main',
-                      fontWeight: 'bold',
-                      fontSize: '0.9rem'  // Aumentato da 0.75rem (default) a 0.9rem
-                    }}>
-                      {localPackages.length} pacchett{localPackages.length !== 1 ? 'i' : 'o'} disponibil{localPackages.length !== 1 ? 'i' : 'e'}
                     </FormHelperText>
                   )}
                 </Box>
