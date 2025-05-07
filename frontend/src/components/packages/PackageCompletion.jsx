@@ -242,10 +242,10 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
   };
 
   // Valore teorico di ore per settimana
-  const theoreticalHoursPerWeek = totalHours <= 24 ? totalHours / 4 : 0;
+  const theoreticalHoursPerWeek = totalHours <= 30 ? totalHours / 4 : 0;
 
   // Per i pacchetti aperti (> 24 ore)
-  const isOpenPackage = totalHours > 24;
+  const isOpenPackage = totalHours >= 30;
 
   // Calcola le ore totali utilizzate nelle 4 settimane (senza extra)
   const usedHoursInFourWeeks = weeklyLessons.reduce((total, hours) => total + hours, 0);
