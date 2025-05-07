@@ -155,25 +155,33 @@ function AddLessonDialog({
       setError('Seleziona un pacchetto');
       return false;
     }
-    if (lessonForm.is_package) {
-      // Se c'è un package_id nel form, verificare esplicitamente
-      if (lessonForm.package_id) {
-        const duration = parseFloat(lessonForm.duration);
-        // Calcola direttamente le ore disponibili senza dipendere da localSelectedPackage
-        const availableHours = getAvailableHours();
-        if (duration > availableHours) {
-          setError(`Ore eccedenti: il pacchetto ha solo ${availableHours.toFixed(1)} ore rimanenti mentre stai cercando di utilizzarne ${duration}. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.`);
+
+    // Aggiungi questa verifica per la data di scadenza del pacchetto
+    if (lessonForm.is_package && lessonForm.package_id) {
+      const selectedPkg = localPackages.find(pkg => pkg.id === parseInt(lessonForm.package_id)) ||
+        studentPackages.find(pkg => pkg.id === parseInt(lessonForm.package_id));
+
+      if (selectedPkg && lessonForm.lesson_date) {
+        const expiryDate = parseISO(selectedPkg.expiry_date);
+        if (lessonForm.lesson_date > expiryDate) {
+          setError(`Non è possibile inserire lezioni dopo la data di scadenza del pacchetto (${format(expiryDate, 'd MMMM yyyy', { locale: it })}).`);
           return false;
         }
-      } else {
-        setError('Seleziona un pacchetto');
+      }
+
+      // Continua con il controllo delle ore disponibili
+      const duration = parseFloat(lessonForm.duration);
+      const availableHours = getAvailableHours();
+      if (duration > availableHours) {
+        setError(`Ore eccedenti: il pacchetto ha solo ${availableHours.toFixed(1)} ore rimanenti mentre stai cercando di utilizzarne ${duration}. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.`);
         return false;
       }
     }
+
     return true;
   };
 
-  // Gestione degli errori dell'API
+  // Alla funzione handleApiError, aggiungi questa condizione
   const handleApiError = (err) => {
     console.error('Error saving lesson:', err);
     if (err.response?.status === 409 && err.response?.data?.detail) {
@@ -182,6 +190,9 @@ function AddLessonDialog({
         setError(`Ore eccedenti: il pacchetto ha solo ${detail.remaining_hours} ore rimanenti. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.`);
       } else if (typeof detail === 'string' && detail.includes('exceeds remaining')) {
         setError('Ore eccedenti nel pacchetto. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.');
+      } else if (typeof detail === 'string' && detail.includes('data della lezione non può essere successiva alla scadenza')) {
+        // Aggiungi questo caso specifico
+        setError('Non è possibile inserire lezioni dopo la data di scadenza del pacchetto.');
       } else {
         setError(typeof detail === 'string' ? detail : 'Errore durante il salvataggio della lezione.');
       }
@@ -673,7 +684,7 @@ function AddLessonDialog({
                       fontWeight: 'bold',
                       fontSize: '0.9rem'  // Aumentato da 0.75rem (default) a 0.9rem
                     }}>
-                      {localPackages.length} pacchetto disponibile
+                      {localPackages.length} pacchett{localPackages.length !== 1 ? 'i' : 'o'} disponibil{localPackages.length !== 1 ? 'i' : 'e'}
                     </FormHelperText>
                   )}
                 </Box>
@@ -733,7 +744,7 @@ function AddLessonDialog({
                     ) : (
                       localPackages.map((pkg) => (
                         <MenuItem key={pkg.id} value={pkg.id}>
-                          {`Pacchetto #${pkg.id} - ${pkg.remaining_hours} ore rimanenti`}
+                          {`Pacchetto #${pkg.id} (scad. ${format(parseISO(pkg.expiry_date), 'd MMMM yyyy', { locale: it })}) - ${pkg.remaining_hours} ore rimanenti`}
                         </MenuItem>
                       ))
                     )}

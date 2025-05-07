@@ -1049,8 +1049,15 @@ function PackageListPage() {
             </Button> in alto a destra nella pagina del pacchetto.
           </Typography>
 
-          <Typography variant="body2" paragraph sx={{ textAlign: 'justify', ml: 1 , mr: 2 }}>
+          <Typography variant="body2" paragraph sx={{ textAlign: 'justify', ml: 1, mr: 2 }}>
             • L'estensione aggiunge <b>una settimana</b> alla data di scadenza e riattiva il pacchetto.
+          </Typography>
+
+          <Typography variant="body2" paragraph sx={{ textAlign: 'justify', ml: 1, mr: 2 }}>
+            • Nei casi in cui un pacchetto è <b>in scadenza</b> e ha <b>poche ore rimanenti</b>, anziché estenderlo è possibile far partire il nuovo pacchetto <b>in sovrapposizione</b>.
+          </Typography>
+          <Typography variant="body2" paragraph sx={{ textAlign: 'justify', ml: 1, mr: 2 }}>
+            • Questo permetterà di inserire all'interno della stessa settimana sia le ore che vanno ad esaurire il <b>pacchetto precedente</b> sia le ore del <b>nuovo</b>.
           </Typography>
         </DialogContent>
         <DialogActions>

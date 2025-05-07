@@ -21,6 +21,8 @@ import * as Yup from 'yup';
 import EntityAutocomplete from '../../../components/common/EntityAutocomplete';
 import PackageStudentSelector from '../../../components/common/PackageStudentSelector';
 import { studentService, professorService } from '../../../services/api';
+import { format, parseISO } from 'date-fns';
+import { it } from 'date-fns/locale';
 
 // Schema di validazione
 const LessonSchema = Yup.object().shape({
@@ -32,7 +34,7 @@ const LessonSchema = Yup.object().shape({
   is_package: Yup.boolean(),
   package_id: Yup.number().nullable().when('is_package', {
     is: true,
-    then: () => Yup.number().required('Hai scelto parte di un pacchetto, ora seleziona il pacchetto'),
+    then: () => Yup.number().required('Hai scelto parte di un pacchetto, ora seleziona il pacchetto.'),
     otherwise: () => Yup.number().nullable(),
   }),
   hourly_rate: Yup.number().positive('La tariffa oraria deve essere positiva').required('Tariffa oraria obbligatoria'),
@@ -312,7 +314,7 @@ function LessonForm({
                       fontWeight: 'bold',
                       fontSize: '0.9rem'  // Aumentato da 0.75rem (default) a 0.9rem
                     }}>
-                      {packages.length} pacchetto{packages.length !== 1 ? 'i' : ''} disponibile{packages.length !== 1 ? 'i' : ''}
+                      {packages.length} pacchett{packages.length !== 1 ? 'i' : 'o'} disponibil{packages.length !== 1 ? 'i' : 'e'}
                     </FormHelperText>
                   )}
                 </Grid>
@@ -417,7 +419,7 @@ function LessonForm({
                       ) : (
                         packages.map((pkg) => (
                           <MenuItem key={pkg.id} value={pkg.id}>
-                            {`Pacchetto #${pkg.id} - ${pkg.remaining_hours} ore rimanenti`}
+                            {`Pacchetto #${pkg.id} (scad. ${format(parseISO(pkg.expiry_date), 'd MMMM yyyy', { locale: it })}) - ${pkg.remaining_hours} ore rimanenti`}
                             {pkg.status === 'completed' && ' (Completato)'}
                           </MenuItem>
                         ))

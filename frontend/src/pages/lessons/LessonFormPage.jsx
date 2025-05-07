@@ -19,6 +19,7 @@ import { checkLessonOverlap } from '../../utils/lessonOverlapUtils';
 import LessonOverlapDialog from '../../components/lessons/LessonOverlapDialog';
 import { Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
+import { it } from 'date-fns/locale'; // Aggiungi questa importazione
 
 function LessonFormPage() {
   const { id } = useParams();
@@ -500,7 +501,7 @@ function LessonFormPage() {
         start_time: values.start_time ? format(values.start_time, 'HH:mm:ss') : null,
         payment_date: values.is_paid && values.payment_date ? format(values.payment_date, 'yyyy-MM-dd') : null,
         price: values.is_package ? 0 : (values.price || values.duration * 20), // Set to 0 for package, otherwise use provided price or default
-        is_online: values.is_online || false  // Ensure this is included
+        is_online: values.is_online || false // Ensure this is included
       };
 
       // If in package detail context, ensure is_package is true and package_id is set
@@ -510,6 +511,20 @@ function LessonFormPage() {
       } else if (!formattedValues.is_package) {
         // If not a package, remove package ID
         formattedValues.package_id = null;
+      }
+
+      // Check if lesson date is after package expiry date
+      if (formattedValues.is_package && formattedValues.package_id) {
+        const selectedPkg = packages.find(pkg => pkg.id === parseInt(formattedValues.package_id));
+        if (selectedPkg) {
+          const expiryDate = parseISO(selectedPkg.expiry_date);
+          const lessonDate = parseISO(formattedValues.lesson_date);
+
+          if (lessonDate > expiryDate) {
+            setError(`Non è possibile inserire lezioni dopo la data di scadenza del pacchetto (${format(expiryDate, 'd MMMM yyyy', { locale: it })}).`);
+            return false;
+          }
+        }
       }
 
       // Check for overlaps with utility function
@@ -550,7 +565,18 @@ function LessonFormPage() {
       return true;
     } catch (err) {
       console.error('Error saving lesson:', err);
-      setError('Errore durante il salvataggio. Controlla i dati e riprova.');
+
+      // Migliora la gestione degli errori per intercettare errori di data futura
+      if (err.response?.data?.detail && typeof err.response.data.detail === 'string') {
+        if (err.response.data.detail.includes('data della lezione non può essere successiva alla scadenza')) {
+          setError('Non è possibile inserire lezioni dopo la data di scadenza del pacchetto.');
+        } else {
+          setError(err.response.data.detail);
+        }
+      } else {
+        setError('Errore durante il salvataggio. Controlla i dati e riprova.');
+      }
+
       return false;
     }
   };

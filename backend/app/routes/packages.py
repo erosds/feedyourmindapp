@@ -139,6 +139,12 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
                 if (package.start_date <= existing_package.expiry_date and 
                     new_package_expiry >= existing_package.start_date):
                     
+                    # NUOVA CONDIZIONE: Consenti sovrapposizione se il pacchetto esistente ha 
+                    # ore rimanenti <= delle ore settimanali (total_hours / 4)
+                    weekly_hours = existing_package.total_hours / Decimal('4')
+                    if existing_package.remaining_hours <= weekly_hours:
+                        continue  # Permetti la sovrapposizione in questo caso
+                    
                     # Se il pacchetto esistente è attivo, aggiungi info aggiuntive
                     if existing_package.status == "in_progress":
                         raise HTTPException(
