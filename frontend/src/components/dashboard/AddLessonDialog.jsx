@@ -509,7 +509,7 @@ function AddLessonDialog({
             <Alert severity="warning" sx={{ mb: 2 }}>
               <Typography variant="body2">
                 Attenzione: lo studente ha {expiredPackages.length} pacchett{expiredPackages.length === 1 ? 'o' : 'i'} scadut{expiredPackages.length === 1 ? 'o' : 'i'} con ore residue.
-                Valuta di estenderl{expiredPackages.length === 1 ? 'o' : 'i'} cliccando sul pacchetto.
+                Prima di usare nuovi pacchetti, valuta di estendere quell{expiredPackages.length === 1 ? 'o' : 'i'} scadut{expiredPackages.length === 1 ? 'o' : 'i'} cliccando qui sotto.
               </Typography>
               {expiredPackages.map((pkg, idx) => (
                 <Box component="div" key={pkg.id} sx={{ mt: 1.5, display: 'flex', alignItems: 'center' }}>
