@@ -79,83 +79,87 @@ const StudentProfile = ({ student }) => (
   </Card>
 );
 
-const TotalStatsCard = ({ totalLessons, totalHours, totalPackages, uniqueProfessors }) => (
-  <Card>
-    <CardContent>
-      <Typography variant="h6" gutterBottom>
-        Statistiche Totali
-      </Typography>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={3}>
-          <Box textAlign="center" p={1}>
-            <EventIcon />
-            <Typography variant="h6">{totalLessons}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Lezioni totali
-            </Typography>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Box textAlign="center" p={1}>
-            <MenuBookIcon />
-            <Typography variant="h6">{totalHours.toFixed(1)}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Ore di lezione
-            </Typography>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Box textAlign="center" p={1}>
-            <SchoolIcon />
-            <Typography variant="h6">{totalPackages}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Pacchetti totali
-            </Typography>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Box textAlign="center" p={1}>
-            <PersonIcon />
-            <Typography variant="h6">{uniqueProfessors}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Professori
-            </Typography>
-          </Box>
-        </Grid>
-      </Grid>
-    </CardContent>
-  </Card>
-);
+const TotalStatsCard = ({ totalLessons, totalHours, totalPackages, uniqueProfessors, studentName }) => {
+  const navigate = useNavigate();
 
-const WeeklyStatsCard = ({ weeklyLessons, weeklyHours }) => (
-  <Card sx={{ mt: 2 }}>
-    <CardContent>
-      <Typography variant="h6" gutterBottom>
-        Statistiche Settimanali
-      </Typography>
-      <Grid container spacing={2}>
-        <Grid item xs={6}>
-          <Box textAlign="center" p={1}>
-            <EventIcon />
-            <Typography variant="h6">{weeklyLessons}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Lezioni settimana
-            </Typography>
-          </Box>
+  const handleNavigateToLessons = () => {
+    navigate(`/lessons?search=${encodeURIComponent(studentName)}`);
+  };
+
+  const handleNavigateToPackages = () => {
+    navigate(`/packages?search=${encodeURIComponent(studentName)}`);
+  };
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
+          Statistiche Totali
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={3}>
+            <Box
+              textAlign="center"
+              p={1}
+              onClick={handleNavigateToLessons}
+              sx={{
+                cursor: 'pointer',
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                  borderRadius: 1
+                }
+              }}
+            >
+              <EventIcon color="primary" />
+              <Typography variant="h6">{totalLessons}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Lezioni totali
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Box textAlign="center" p={1}>
+              <MenuBookIcon />
+              <Typography variant="h6">{totalHours.toFixed(1)}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Ore di lezione
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Box
+              textAlign="center"
+              p={1}
+              onClick={handleNavigateToPackages}
+              sx={{
+                cursor: 'pointer',
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                  borderRadius: 1
+                }
+              }}
+            >
+              <SchoolIcon color="primary" />
+              <Typography variant="h6">{totalPackages}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Pacchetti totali
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Box textAlign="center" p={1}>
+              <PersonIcon />
+              <Typography variant="h6">{uniqueProfessors}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Professori
+              </Typography>
+            </Box>
+          </Grid>
         </Grid>
-        <Grid item xs={6}>
-          <Box textAlign="center" p={1}>
-            <MenuBookIcon />
-            <Typography variant="h6">{weeklyHours.toFixed(1)}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Ore settimana
-            </Typography>
-          </Box>
-        </Grid>
-      </Grid>
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
+};
 
 const StudentCalendar = ({ currentMonth, lessons }) => {
   const [displayMonth, setDisplayMonth] = useState(currentMonth);
@@ -568,6 +572,7 @@ function StudentDetailPage() {
             totalHours={totalHours}
             totalPackages={totalPackages}
             uniqueProfessors={uniqueProfessors}
+            studentName={`${student.first_name} ${student.last_name}`}
           />
         </Grid>
       </Grid>
