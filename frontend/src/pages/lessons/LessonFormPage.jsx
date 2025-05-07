@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Alert,
+  Button,
   Box,
   Chip,
   CircularProgress,
@@ -42,7 +43,8 @@ function LessonFormPage() {
   const [lessonsInPackage, setLessonsInPackage] = useState([]);
   const [originalLesson, setOriginalLesson] = useState(null);
   const [expiredPackages, setExpiredPackages] = useState([]);
-
+  // Nella sezione degli stati in LessonFormPage.jsx
+  const [recentlyEndedPackages, setRecentlyEndedPackages] = useState([]);
 
   // Overflow dialog
   const [overflowDialogOpen, setOverflowDialogOpen] = useState(false);
@@ -274,7 +276,7 @@ function LessonFormPage() {
     setInfoMessage(`Stai creando una lezione singola per ${overflow_hours} ore in eccesso da un'altra lezione. Puoi modificare la tariffa oraria o altri dettagli se necessario.`);
   };
 
-  // Handle student change
+  // Modifica la funzione handleStudentChange in LessonFormPage.jsx
   const handleStudentChange = async (studentId, setFieldValue) => {
     if (!studentId) return;
 
@@ -293,6 +295,8 @@ function LessonFormPage() {
 
         // Load student packages
         const packagesResponse = await packageService.getByStudent(studentId);
+
+        // Separa i pacchetti in categorie
         const activePackages = packagesResponse.data.filter(pkg => pkg.status === 'in_progress');
 
         // Identifica i pacchetti scaduti con ore rimanenti
@@ -300,14 +304,34 @@ function LessonFormPage() {
           pkg.status === 'expired' && parseFloat(pkg.remaining_hours) > 0
         );
 
+        // Trova pacchetti terminati recentemente (ultimi 14 giorni)
+        const today = new Date();
+        const twoWeeksAgo = new Date(today);
+        twoWeeksAgo.setDate(today.getDate() - 14);
+
+        const recentlyEnded = packagesResponse.data.filter(pkg => {
+          // Pacchetti scaduti con 0 ore o pacchetti completati
+          const isEndedPackage = (pkg.status === 'expired' && parseFloat(pkg.remaining_hours) <= 0) ||
+            (pkg.status === 'completed');
+
+          // Verifica se è terminato negli ultimi 14 giorni
+          const expiryDate = parseISO(pkg.expiry_date);
+          const isRecent = expiryDate >= twoWeeksAgo && expiryDate <= today;
+
+          return isEndedPackage && isRecent;
+        });
+
         setPackages(activePackages);
         setExpiredPackages(expiredWithHoursPackages);
+        setRecentlyEndedPackages(recentlyEnded);
       }
 
       // Load student lessons to check for overlaps
       await loadStudentLessons(studentId);
     } catch (err) {
       console.error('Error fetching student data:', err);
+      setError('Errore nel caricamento dei dati dello studente');
+      setRecentlyEndedPackages([]);
     }
   };
 
@@ -555,6 +579,55 @@ function LessonFormPage() {
       {infoMessage && (
         <Alert severity="info" sx={{ mb: 3 }}>
           {infoMessage}
+        </Alert>
+      )}
+
+      {/* Alert per pacchetti terminati recentemente */}
+      {recentlyEndedPackages.length > 0 && packages.length === 0 && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            {recentlyEndedPackages.length === 1
+              ? "È stato rilevato un pacchetto terminato recentemente."
+              : `Sono stati rilevati ${recentlyEndedPackages.length} pacchetti terminati recentemente.`}
+            {" "}
+            Se lo studente intende proseguire con un nuovo pacchetto, crealo prima gi aggiungere la lezione.
+          </Typography>
+
+          {recentlyEndedPackages.map((pkg, idx) => (
+            <Box component="div" key={pkg.id} sx={{ mt: 1.5, display: 'flex', alignItems: 'center' }}>
+              <Chip
+                component={Link}
+                to={`/packages/${pkg.id}`}
+                label={`Pacchetto #${pkg.id}`}
+                color="default"
+                variant="outlined"
+                clickable
+                sx={{
+                  mr: 1.5,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
+                  }
+                }}
+              />
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {`${pkg.status === 'completed' ? 'Completato' : 'Scaduto (senza ore residue)'} il ${format(parseISO(pkg.expiry_date), 'dd/MM/yyyy')}`}
+              </Typography>
+            </Box>
+          ))}
+
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex' }}>
+            <Button
+              component={Link}
+              to={`/packages/new?student=${encodeURIComponent(students[initialValues.student_id] || '')}`}
+              variant="contained"
+              color="primary"
+              size="small"
+              sx={{ fontSize: '0.8rem' }}
+            >
+              Crea nuovo pacchetto
+            </Button>
+          </Box>
         </Alert>
       )}
 

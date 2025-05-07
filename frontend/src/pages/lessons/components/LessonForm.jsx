@@ -307,7 +307,11 @@ function LessonForm({
                     label="Parte di un pacchetto"
                   />
                   {values.student_id && packages.length > 0 && (
-                    <FormHelperText sx={{ color: 'primary.main', ml: 2 }}>
+                    <FormHelperText sx={{
+                      color: 'primary.main',
+                      fontWeight: 'bold',
+                      fontSize: '0.9rem'  // Aumentato da 0.75rem (default) a 0.9rem
+                    }}>
                       {packages.length} pacchetto{packages.length !== 1 ? 'i' : ''} disponibile{packages.length !== 1 ? 'i' : ''}
                     </FormHelperText>
                   )}

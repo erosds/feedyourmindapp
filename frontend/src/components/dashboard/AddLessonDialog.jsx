@@ -446,7 +446,7 @@ function AddLessonDialog({
             </Alert>
           )}
           {/* Alert per pacchetti terminati recentemente */}
-          {recentlyEndedPackages.length > 0 && (
+          {recentlyEndedPackages.length > 0 && localPackages.length === 0 && (
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="body2">
                 {recentlyEndedPackages.length === 1
@@ -668,7 +668,11 @@ function AddLessonDialog({
                     </FormHelperText>
                   )}
                   {lessonForm.student_id && localPackages.length > 0 && (
-                    <FormHelperText sx={{ color: 'red' }}>
+                    <FormHelperText sx={{
+                      color: 'primary.main',
+                      fontWeight: 'bold',
+                      fontSize: '0.9rem'  // Aumentato da 0.75rem (default) a 0.9rem
+                    }}>
                       {localPackages.length} pacchetto disponibile
                     </FormHelperText>
                   )}
