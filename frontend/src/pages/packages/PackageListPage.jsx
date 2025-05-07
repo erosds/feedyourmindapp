@@ -802,7 +802,7 @@ function PackageListPage() {
                           pkg.status === 'in_progress'
                             ? 'In corso'
                             : pkg.status === 'completed'
-                              ? 'Terminato'
+                              ? 'Completato'
                               : pkg.status === 'expired'
                                 ? 'Scaduto'
                                 : 'In corso'

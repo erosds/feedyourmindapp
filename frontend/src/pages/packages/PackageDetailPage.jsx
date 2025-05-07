@@ -597,7 +597,7 @@ function PackageDetailPage() {
                   <Chip
                     label={
                       packageData.status === 'in_progress' ? 'In corso' :
-                        packageData.status === 'completed' ? 'Terminato' :
+                        packageData.status === 'completed' ? 'Completato' :
                           packageData.status === 'expired' ? 'Scaduto' :
                             'In corso'
                     }

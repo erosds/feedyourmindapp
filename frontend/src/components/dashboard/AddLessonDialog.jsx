@@ -5,6 +5,7 @@ import {
   Button,
   Box,
   CircularProgress,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -15,19 +16,23 @@ import {
   Grid,
   InputAdornment,
   InputLabel,
+  Link,
   MenuItem,
   Select,
   Switch,
-  TextField
+  TextField,
+  Typography,
 } from '@mui/material';
 import { DatePicker, TimePicker } from '@mui/x-date-pickers';
-import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { lessonService, packageService } from '../../services/api';
 import StudentAutocomplete from '../common/StudentAutocomplete';
 import PackageStudentSelector from '../common/PackageStudentSelector'; // Import the new component
 import LessonOverlapDialog from '../lessons/LessonOverlapDialog';
 import { checkLessonOverlap } from '../../utils/lessonOverlapUtils';
+// Aggiungi in cima all'import
+import { Link as RouterLink } from 'react-router-dom';
+import { format, parseISO } from 'date-fns';
 
 function AddLessonDialog({
   open,
@@ -62,6 +67,8 @@ function AddLessonDialog({
   const [overlappingLesson, setOverlappingLesson] = useState(null);
   const [studentLessons, setStudentLessons] = useState([]);
   const [packageStudents, setPackageStudents] = useState([]);
+  const [expiredPackages, setExpiredPackages] = useState([]);
+
 
   // Funzioni helper per formattare date e orari
   const formatDateForAPI = (date) => {
@@ -280,6 +287,7 @@ function AddLessonDialog({
       setLocalPackages([]);
       setLocalSelectedPackage(null);
       setStudentLessons([]);
+      setExpiredPackages([]); // Reset pacchetti scaduti
       return;
     }
     try {
@@ -294,9 +302,17 @@ function AddLessonDialog({
 
       // Load packages
       const packagesResponse = await packageService.getByStudent(studentId);
-      const activePackages = packagesResponse.data.filter(pkg => parseFloat(pkg.remaining_hours) > 0);
-      console.log("Pacchetti caricati direttamente:", activePackages.length);
+      // Separa i pacchetti attivi da quelli scaduti con ore residue
+      const activePackages = packagesResponse.data.filter(pkg => pkg.status === 'in_progress');
+      const expiredWithHoursPackages = packagesResponse.data.filter(pkg =>
+        pkg.status === 'expired' && parseFloat(pkg.remaining_hours) > 0
+      );
+
+      console.log("Pacchetti attivi:", activePackages.length);
+      console.log("Pacchetti scaduti con ore residue:", expiredWithHoursPackages.length);
+
       setLocalPackages(activePackages);
+      setExpiredPackages(expiredWithHoursPackages);
       setLocalSelectedPackage(null);
 
       // Load all lessons for this student regardless of professor
@@ -310,6 +326,7 @@ function AddLessonDialog({
       setError('Errore nel caricamento dei dati dello studente');
       setLocalPackages([]);
       setLocalSelectedPackage(null);
+      setExpiredPackages([]);
     } finally {
       setIsLoadingPackages(false);
     }
@@ -405,6 +422,37 @@ function AddLessonDialog({
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
+            </Alert>
+          )}
+          {/* Alert modificato con chip cliccabile e informazioni separate */}
+          {expiredPackages.length > 0 && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                Attenzione: lo studente ha {expiredPackages.length} pacchett{expiredPackages.length === 1 ? 'o' : 'i'} scadut{expiredPackages.length === 1 ? 'o' : 'i'} con ore residue.
+                Valuta di estenderl{expiredPackages.length === 1 ? 'o' : 'i'} cliccando sul pacchetto.
+              </Typography>
+              {expiredPackages.map((pkg, idx) => (
+                <Box component="div" key={pkg.id} sx={{ mt: 1.5, display: 'flex', alignItems: 'center' }}>
+                  <Chip
+                    component={RouterLink}
+                    to={`/packages/${pkg.id}`}
+                    label={`Pacchetto #${pkg.id}`}
+                    color="primary"
+                    variant="outlined"
+                    clickable
+                    sx={{
+                      mr: 1.5,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
+                      }
+                    }}
+                  />
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {`iniziato il ${format(parseISO(pkg.start_date), 'dd/MM/yyyy')} e scaduto il ${format(parseISO(pkg.expiry_date), 'dd/MM/yyyy')} - ${parseFloat(pkg.remaining_hours).toFixed(1)} ore rimanenti.`}
+                  </Typography>
+                </Box>
+              ))}
             </Alert>
           )}
           <Grid container spacing={3} sx={{ mt: 1 }}>

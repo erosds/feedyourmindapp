@@ -166,7 +166,7 @@ const fetchStudentPackages = async (studentsData) => {
         break;
       case 'completed':
         chipColor = 'success';
-        chipLabel = 'Terminato';
+        chipLabel = 'Completato';
         break;
       case 'expired':
         chipColor = 'error';

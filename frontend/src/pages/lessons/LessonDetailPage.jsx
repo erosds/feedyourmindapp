@@ -327,7 +327,7 @@ function LessonDetailPage() {
                     </Typography>
                   </Box>
                   <Chip
-                    label={packageData.status === 'in_progress' ? 'In corso' : packageData.status === 'expired' ? 'Scaduto' : 'Terminato'}
+                    label={packageData.status === 'in_progress' ? 'In corso' : packageData.status === 'expired' ? 'Scaduto' : 'Completato'}
                     color={packageData.status === 'in_progress' ? 'primary' : packageData.status === 'expired' ? 'error' : 'default'}
                     size="small"
                   />
