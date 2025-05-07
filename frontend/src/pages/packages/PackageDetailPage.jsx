@@ -518,18 +518,6 @@ function PackageDetailPage() {
             Modifica
           </Button>
 
-          {/* Aggiungi questo pulsante per l'estensione solo se il pacchetto è scaduto e ha ore rimanenti */}
-          {isPackageExtendable(packageData) && (
-            <Button
-              variant="outlined"
-              color="secondary"
-              onClick={handleExtendPackage}
-              sx={{ mr: 1 }}
-            >
-              Estendi scadenza +1
-            </Button>
-          )}
-
           {/* Pulsante per annullare l'estensione, visibile solo se ci sono estensioni */}
           {packageData.extension_count > 0 && (
             <Button
@@ -539,6 +527,18 @@ function PackageDetailPage() {
               sx={{ mr: 1 }}
             >
               Annulla estensione (-1)
+            </Button>
+          )}
+
+          {/* Aggiungi questo pulsante per l'estensione solo se il pacchetto è scaduto e ha ore rimanenti */}
+          {isPackageExtendable(packageData) && (
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={handleExtendPackage}
+              sx={{ mr: 1 }}
+            >
+              Estendi scadenza +1
             </Button>
           )}
 

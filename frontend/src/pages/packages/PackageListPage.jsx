@@ -1014,7 +1014,7 @@ function PackageListPage() {
                 />
               </Box>
               <Typography variant="body2" sx={{ textAlign: 'justify' }}>
-                Pacchetto con <b>data di scadenza superata</b>, ma con ore ancora disponibili oppure non ancora pagato.
+                Pacchetto con <b>data di scadenza superata</b>, ma con ore ancora disponibili e/o non ancora pagato.
               </Typography>
             </Box>
 
