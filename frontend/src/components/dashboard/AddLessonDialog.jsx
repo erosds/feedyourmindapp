@@ -68,7 +68,7 @@ function AddLessonDialog({
   const [studentLessons, setStudentLessons] = useState([]);
   const [packageStudents, setPackageStudents] = useState([]);
   const [expiredPackages, setExpiredPackages] = useState([]);
-
+  const [recentlyEndedPackages, setRecentlyEndedPackages] = useState([]);
 
   // Funzioni helper per formattare date e orari
   const formatDateForAPI = (date) => {
@@ -288,6 +288,7 @@ function AddLessonDialog({
       setLocalSelectedPackage(null);
       setStudentLessons([]);
       setExpiredPackages([]); // Reset pacchetti scaduti
+      setRecentlyEndedPackages([]); // Reset pacchetti terminati
       return;
     }
     try {
@@ -308,11 +309,30 @@ function AddLessonDialog({
         pkg.status === 'expired' && parseFloat(pkg.remaining_hours) > 0
       );
 
+      // Trova pacchetti terminati recentemente (ultimi 14 giorni)
+      const today = new Date();
+      const twoWeeksAgo = new Date(today);
+      twoWeeksAgo.setDate(today.getDate() - 14);
+
+      const recentlyEnded = packagesResponse.data.filter(pkg => {
+        // Pacchetti scaduti con 0 ore o pacchetti completati
+        const isEndedPackage = (pkg.status === 'expired' && parseFloat(pkg.remaining_hours) <= 0) ||
+          (pkg.status === 'completed');
+
+        // Verifica se è terminato negli ultimi 14 giorni
+        const expiryDate = parseISO(pkg.expiry_date);
+        const isRecent = expiryDate >= twoWeeksAgo && expiryDate <= today;
+
+        return isEndedPackage && isRecent;
+      });
+
+      console.log("Pacchetti terminati recentemente:", recentlyEnded.length);
       console.log("Pacchetti attivi:", activePackages.length);
       console.log("Pacchetti scaduti con ore residue:", expiredWithHoursPackages.length);
 
       setLocalPackages(activePackages);
       setExpiredPackages(expiredWithHoursPackages);
+      setRecentlyEndedPackages(recentlyEnded);
       setLocalSelectedPackage(null);
 
       // Load all lessons for this student regardless of professor
@@ -327,6 +347,7 @@ function AddLessonDialog({
       setLocalPackages([]);
       setLocalSelectedPackage(null);
       setExpiredPackages([]);
+      setRecentlyEndedPackages([]);
     } finally {
       setIsLoadingPackages(false);
     }
@@ -422,6 +443,54 @@ function AddLessonDialog({
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
+            </Alert>
+          )}
+          {/* Alert per pacchetti terminati recentemente */}
+          {recentlyEndedPackages.length > 0 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                {recentlyEndedPackages.length === 1
+                  ? "È stato rilevato un pacchetto terminato recentemente."
+                  : `Sono stati rilevati ${recentlyEndedPackages.length} pacchetti terminati recentemente.`}
+                {" "}
+                Se lo studente intende proseguire con un nuovo pacchetto, crealo prima gi aggiungere la lezione.
+              </Typography>
+
+              {recentlyEndedPackages.map((pkg, idx) => (
+                <Box component="div" key={pkg.id} sx={{ mt: 1.5, display: 'flex', alignItems: 'center' }}>
+                  <Chip
+                    component={RouterLink}
+                    to={`/packages/${pkg.id}`}
+                    label={`Pacchetto #${pkg.id}`}
+                    color="default"
+                    variant="outlined"
+                    clickable
+                    sx={{
+                      mr: 1.5,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
+                      }
+                    }}
+                  />
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {`${pkg.status === 'completed' ? 'Completato' : 'Scaduto (senza ore residue)'} il ${format(parseISO(pkg.expiry_date), 'dd/MM/yyyy')}`}
+                  </Typography>
+                </Box>
+              ))}
+
+              <Box sx={{ mt: 0, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  component={RouterLink}
+                  to={`/packages/new?student=${encodeURIComponent(students[lessonForm.student_id] || '')}`}
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  sx={{ fontSize: '0.8rem' }}
+                >
+                  Crea nuovo pacchetto
+                </Button>
+              </Box>
             </Alert>
           )}
           {/* Alert modificato con chip cliccabile e informazioni separate */}
@@ -595,7 +664,7 @@ function AddLessonDialog({
                 <Box ml={2} display="inline">
                   {isPackageToggleDisabled && lessonForm.student_id && localPackages.length === 0 && (
                     <FormHelperText error>
-                      Lo studente non ha pacchetti attivi
+                      Lo studente non ha pacchetti attivi.
                     </FormHelperText>
                   )}
                   {lessonForm.student_id && localPackages.length > 0 && (

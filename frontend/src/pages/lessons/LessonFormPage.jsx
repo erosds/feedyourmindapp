@@ -4,18 +4,20 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Alert,
   Box,
+  Chip,
   CircularProgress,
   Paper,
   Typography,
 } from '@mui/material';
 import { professorService, studentService, packageService, lessonService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { format } from 'date-fns';
 import LessonForm from './components/LessonForm';
 import PackageOverflowDialog from './components/PackageOverflowDialog';
 import { checkPackageOverflow } from './utils/packageUtils';
 import { checkLessonOverlap } from '../../utils/lessonOverlapUtils';
 import LessonOverlapDialog from '../../components/lessons/LessonOverlapDialog';
+import { Link } from 'react-router-dom';
+import { format, parseISO } from 'date-fns';
 
 function LessonFormPage() {
   const { id } = useParams();
@@ -39,6 +41,8 @@ function LessonFormPage() {
   const [packages, setPackages] = useState([]);
   const [lessonsInPackage, setLessonsInPackage] = useState([]);
   const [originalLesson, setOriginalLesson] = useState(null);
+  const [expiredPackages, setExpiredPackages] = useState([]);
+
 
   // Overflow dialog
   const [overflowDialogOpen, setOverflowDialogOpen] = useState(false);
@@ -95,16 +99,16 @@ function LessonFormPage() {
           // Load the specific package
           const packageResponse = await packageService.getById(fixedPackageId);
           setPackages([packageResponse.data]);
-          
+
           // Extract student IDs from the package and fetch their details
           const studentIds = packageResponse.data.student_ids || [];
           if (studentIds.length > 0) {
             // Find the students from all students that match the IDs in the package
-            const packageStudentsList = studentsResponse.data.filter(student => 
+            const packageStudentsList = studentsResponse.data.filter(student =>
               studentIds.includes(student.id)
             );
             setPackageStudents(packageStudentsList);
-            
+
             // If student_id is not set in location.state, use the first student from package
             if (!location.state?.student_id && packageStudentsList.length > 0) {
               setInitialValues(prev => ({
@@ -273,10 +277,10 @@ function LessonFormPage() {
   // Handle student change
   const handleStudentChange = async (studentId, setFieldValue) => {
     if (!studentId) return;
-  
+
     try {
       setFieldValue('student_id', studentId);
-      
+
       // Important: Preserve is_package and package_id in package detail context
       if (isPackageDetailContext) {
         // Ensure we keep is_package as true and package_id set properly
@@ -286,11 +290,20 @@ function LessonFormPage() {
         // Original behavior for non-package-detail context
         setFieldValue('package_id', null);
         setLessonsInPackage([]);
-  
+
         // Load student packages
-        await loadStudentPackages(studentId);
+        const packagesResponse = await packageService.getByStudent(studentId);
+        const activePackages = packagesResponse.data.filter(pkg => pkg.status === 'in_progress');
+
+        // Identifica i pacchetti scaduti con ore rimanenti
+        const expiredWithHoursPackages = packagesResponse.data.filter(pkg =>
+          pkg.status === 'expired' && parseFloat(pkg.remaining_hours) > 0
+        );
+
+        setPackages(activePackages);
+        setExpiredPackages(expiredWithHoursPackages);
       }
-  
+
       // Load student lessons to check for overlaps
       await loadStudentLessons(studentId);
     } catch (err) {
@@ -450,7 +463,7 @@ function LessonFormPage() {
       totalAvailable: availableHours + originalLessonHours
     };
   };
-  
+
   // Handle form submission
   const handleSubmit = async (values) => {
     try {
@@ -498,9 +511,9 @@ function LessonFormPage() {
       if (isEditMode) {
         await lessonService.update(id, formattedValues);
         // Dopo l'aggiornamento, torna al dettaglio lezione invece che alla lista
-        navigate(`/lessons/${id}`, { 
+        navigate(`/lessons/${id}`, {
           // Passiamo l'URL di ritorno originale (se presente) per mantenere il percorso completo
-          state: location.state?.returnUrl ? { returnUrl: location.state.returnUrl } : undefined 
+          state: location.state?.returnUrl ? { returnUrl: location.state.returnUrl } : undefined
         });
       } else {
         // Per una nuova lezione, crea e poi vai al dettaglio
@@ -542,6 +555,38 @@ function LessonFormPage() {
       {infoMessage && (
         <Alert severity="info" sx={{ mb: 3 }}>
           {infoMessage}
+        </Alert>
+      )}
+
+      {/* Alert per pacchetti scaduti */}
+      {expiredPackages.length > 0 && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <Typography variant="body2">
+            Attenzione: lo studente ha {expiredPackages.length} pacchett{expiredPackages.length === 1 ? 'o' : 'i'} scadut{expiredPackages.length === 1 ? 'o' : 'i'} con ore residue.
+            Valuta di estenderl{expiredPackages.length === 1 ? 'o' : 'i'} cliccando sul pacchetto.
+          </Typography>
+          {expiredPackages.map((pkg, idx) => (
+            <Box component="div" key={pkg.id} sx={{ mt: 1.5, display: 'flex', alignItems: 'center' }}>
+              <Chip
+                component={Link}
+                to={`/packages/${pkg.id}`}
+                label={`Pacchetto #${pkg.id}`}
+                color="primary"
+                variant="outlined"
+                clickable
+                sx={{
+                  mr: 1.5,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
+                  }
+                }}
+              />
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {`iniziato il ${format(parseISO(pkg.start_date), 'dd/MM/yyyy')} e scaduto il ${format(parseISO(pkg.expiry_date), 'dd/MM/yyyy')} - ${parseFloat(pkg.remaining_hours).toFixed(1)} ore rimanenti.`}
+              </Typography>
+            </Box>
+          ))}
         </Alert>
       )}
 

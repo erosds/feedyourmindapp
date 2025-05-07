@@ -6,6 +6,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Divider,
   IconButton,
   Paper,
   Table,
@@ -45,6 +46,8 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import { DatePicker } from '@mui/x-date-pickers';
 
+import InfoIcon from '@mui/icons-material/Info';
+
 
 function PackageListPage() {
   const navigate = useNavigate();
@@ -59,6 +62,7 @@ function PackageListPage() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [paymentDate, setPaymentDate] = useState(new Date());
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
   // Usa searchParams invece dello stato locale per i filtri
   const [searchParams, setSearchParams] = useSearchParams();
   // Inizializza gli stati dai parametri URL o dai valori predefiniti
@@ -81,6 +85,16 @@ function PackageListPage() {
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
   };
+
+  // Aggiungi queste funzioni nel componente
+  const handleOpenInfoDialog = () => {
+    setInfoDialogOpen(true);
+  };
+
+  const handleCloseInfoDialog = () => {
+    setInfoDialogOpen(false);
+  };
+
 
   const handleTogglePayment = (pkg, event) => {
     event.stopPropagation(); // Impedisce la navigazione ai dettagli
@@ -611,14 +625,25 @@ function PackageListPage() {
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Pacchetti</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={handleAddPackage}
-        >
-          Nuovo pacchetto
-        </Button>
+        <Box display="flex" alignItems="center">
+          <Tooltip title="Informazioni sui pacchetti">
+            <IconButton
+              color="primary"
+              onClick={handleOpenInfoDialog}
+              sx={{ mr: 1 }}
+            >
+              <InfoIcon />
+            </IconButton>
+          </Tooltip>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleAddPackage}
+          >
+            Nuovo pacchetto
+          </Button>
+        </Box>
       </Box>
 
       <Box mb={3}>
@@ -938,6 +963,99 @@ function PackageListPage() {
             color="primary"
           >
             Conferma Pagamento
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={infoDialogOpen}
+        onClose={handleCloseInfoDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Informazioni sullo stato dei pacchetti</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" paragraph sx={{ fontWeight: 'bold', textAlign: 'justify' }}>
+            I pacchetti possono trovarsi in diversi stati, indicati da colori diversi:
+          </Typography>
+
+          <Box sx={{ mb: 3, ml: 1, mr: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="In corso"
+                  color="primary"
+                  size="small"
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                Pacchetto <b>attivo</b>, entro la data di scadenza.
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="In scadenza"
+                  color="warning"
+                  size="small"
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                Pacchetto <b>attivo</b> che scadrà al termine della settimana corrente.
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="Scaduto"
+                  color="error"
+                  size="small"
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                Pacchetto con <b>data di scadenza superata</b>, ma con ore ancora disponibili oppure non ancora pagato.
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center' }}>
+              <Box>
+                <Chip
+                  label="Completato"
+                  color="default"
+                  size="small"
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                Pacchetto <b>terminato</b>: scaduto, pagato e senza ore rimanenti.
+              </Typography>
+            </Box>
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Typography variant="body1" paragraph sx={{ fontWeight: 'bold', textAlign: 'justify' }}>
+            Da ricordare:
+          </Typography>
+
+          <Typography variant="body2" paragraph sx={{ textAlign: 'justify', ml: 1, mr: 2 }}>
+            • I pacchetti <b>scaduti con ore rimanenti</b> possono essere estesi cliccando sul pulsante <Button
+              variant="outlined"
+              color="secondary"
+              size="small"
+              sx={{ fontSize: '0.75rem', py: 0, ml: 0.5, mr: 0.5, minWidth: '130px' }}
+            >
+              Estendi scadenza +1
+            </Button> in alto a destra nella pagina del pacchetto.
+          </Typography>
+
+          <Typography variant="body2" paragraph sx={{ textAlign: 'justify', ml: 1 , mr: 2 }}>
+            • L'estensione aggiunge <b>una settimana</b> alla data di scadenza e riattiva il pacchetto.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseInfoDialog} color="primary">
+            Chiudi
           </Button>
         </DialogActions>
       </Dialog>

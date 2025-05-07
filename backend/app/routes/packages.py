@@ -39,7 +39,7 @@ def calculate_expiry_date(start_date: date) -> date:
 
 def update_package_status(db: Session, package_id: int, commit: bool = True):
     """
-    Update package status based on expiry date and payment status.
+    Update package status based on expiry date, payment status and remaining hours.
     Also recalculates remaining hours.
     """
     # Get the package
@@ -56,19 +56,24 @@ def update_package_status(db: Session, package_id: int, commit: bool = True):
     # Remaining hours are total hours minus used hours
     package.remaining_hours = max(Decimal('0'), package.total_hours - hours_used)
     
-    # Update status based on expiry date and payment
+    # Update status based on expiry date, payment status and remaining hours
     today = date.today()
     
-    if package.is_paid:
-        if today <= package.expiry_date:
-            package.status = "in_progress"
-        else:
-            package.status = "completed"
+    if today <= package.expiry_date:
+        # Se non è scaduto, è in corso indipendentemente dal pagamento
+        package.status = "in_progress"
     else:
-        if today <= package.expiry_date:
-            package.status = "in_progress"
-        else:
+        # Se è scaduto, lo stato dipende dalle ore rimanenti
+        if package.remaining_hours > Decimal('0'):
+            # Se ha ore rimanenti, è considerato scaduto (expired)
+            # indipendentemente dallo stato di pagamento
             package.status = "expired"
+        else:
+            # Se non ha ore rimanenti, è completato solo se pagato
+            if package.is_paid:
+                package.status = "completed"
+            else:
+                package.status = "expired"
     
     # Commit if requested
     if commit:
@@ -168,10 +173,15 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
     payment_date = package.payment_date if package.is_paid else None
 
     # Determina lo stato
-    if package.is_paid:
-        status = "in_progress" if date.today() <= expiry_date else "completed"
+    today = date.today()
+    if today <= expiry_date:
+        status = "in_progress"
     else:
-        status = "in_progress" if date.today() <= expiry_date else "expired"
+        # Se è già scaduto alla creazione (caso raro), mantieni la logica basata sulle ore residue
+        if package.is_paid and total_hours <= 0:
+            status = "completed"
+        else:
+            status = "expired"
     
     # Crea nuovo pacchetto
     db_package = models.Package(
@@ -500,7 +510,14 @@ def cancel_package_extension(package_id: int, db: Session = Depends(get_db)):
     if today < db_package.expiry_date:
         db_package.status = "in_progress"
     else:
-        db_package.status = "completed" if db_package.is_paid else "expired"
+        # Usa la stessa logica che abbiamo definito in update_package_status
+        if db_package.remaining_hours > Decimal('0'):
+            db_package.status = "expired"
+        else:
+            if db_package.is_paid:
+                db_package.status = "completed"
+            else:
+                db_package.status = "expired"
     
     db.commit()
     db.refresh(db_package)
