@@ -560,7 +560,7 @@ function AddLessonDialog({
                   }}
                 />
                 <Typography variant="body2" sx={{ display: 'inline' }}>
-                  La lezione verrà automaticamente registrata come parte di questo pacchetto
+                  La lezione verrà automaticamente registrata come parte di questo pacchetto.
                 </Typography>
               </Box>
             </Alert>
