@@ -35,6 +35,9 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import logo from '../assets/logo.jpg';
 
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+
+
 const drawerWidth = 250;
 
 function MainLayout() {
@@ -82,6 +85,11 @@ function MainLayout() {
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
       { text: 'Professori', icon: <PeopleIcon />, path: '/professors' },
+      {
+        text: 'FAQ',
+        icon: <HelpOutlineIcon />,
+        path: '/faq'
+      },
       { text: 'Reset Password', icon: <LockResetIcon />, path: '/admin/reset-password' },
     ];
   } else {
@@ -90,6 +98,11 @@ function MainLayout() {
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
       { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
+      {
+        text: 'FAQ',
+        icon: <HelpOutlineIcon />,
+        path: '/faq'
+      },
     ];
   }
 
