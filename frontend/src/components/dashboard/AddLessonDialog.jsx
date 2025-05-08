@@ -535,24 +535,55 @@ function AddLessonDialog({
               ))}
             </Alert>
           )}
-          {/* Avviso per più pacchetti disponibili */}
-          {lessonForm.student_id && localPackages.length > 0 && (
+          {/* Messaggio specifico per il contesto "packageDetail" */}
+          {context === 'packageDetail' && fixedPackageId ? (
             <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                {localPackages.length > 1 ? (
-                  <>
-                    Sono stati trovati {localPackages.length} pacchetti attivi per questo studente.
-                    Assicurati di spuntare l’opzione sotto che indica che la lezione fa parte di un pacchetto.
-                    Solitamente andrebbero esaurite prima le ore del pacchetto più vecchio.
-                  </>
-                ) : (
-                  <>
-                    È stato trovato un pacchetto attivo per questo studente.
-                    Assicurati di spuntare l’opzione sotto che indica che la lezione fa parte di un pacchetto.
-                  </>
-                )}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Typography variant="body2" sx={{ display: 'inline' }}>
+                  Stai aggiungendo una nuova lezione direttamente al
+                </Typography>
+                <Chip
+                  component={RouterLink}
+                  to={`/packages/${fixedPackageId}`}
+                  label={`Pacchetto #${fixedPackageId}`}
+                  color="primary"
+                  variant="outlined"
+                  clickable
+                  size="small"
+                  sx={{
+                    mx: 0.5,
+                    my: 0.25,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
+                    }
+                  }}
+                />
+                <Typography variant="body2" sx={{ display: 'inline' }}>
+                  La lezione verrà automaticamente registrata come parte di questo pacchetto.
+                </Typography>
+              </Box>
             </Alert>
+          ) : (
+            /* Avviso per più pacchetti disponibili - solo nel contesto normale */
+            lessonForm.student_id && localPackages.length > 0 && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  {localPackages.length > 1 ? (
+                    <>
+                      Sono stati trovati {localPackages.length} pacchetti attivi per questo studente.
+                      Assicurati di spuntare l'opzione sotto che indica che la lezione fa parte di un pacchetto.
+                      Solitamente andrebbero esaurite prima le ore del pacchetto più vecchio.
+                    </>
+                  ) : (
+                    <>
+                      È stato trovato un pacchetto attivo per questo studente.
+                      Assicurati di spuntare l'opzione sotto che indica che la lezione fa parte di un pacchetto.
+                    </>
+                  )}
+                </Typography>
+              </Alert>
+            )
           )}
 
           <Grid container spacing={3} sx={{ mt: 1 }}>
@@ -808,18 +839,6 @@ function AddLessonDialog({
                 <FormHelperText>
                   Prezzo pagato dallo studente all'associazione
                 </FormHelperText>
-              </Grid>
-            )}
-
-            {/* Mostare un messaggio informativo nel contesto packageDetail */}
-            {context === 'packageDetail' && (
-              <Grid item xs={12}>
-                <Box sx={{ bgcolor: 'info.light', p: 2, borderRadius: 1, color: 'info.contrastText' }}>
-                  <FormHelperText sx={{ color: 'inherit', mb: 0 }}>
-                    Stai creando una lezione associata al pacchetto #{fixedPackageId}.
-                    La lezione sarà automaticamente configurata come parte del pacchetto.
-                  </FormHelperText>
-                </Box>
               </Grid>
             )}
           </Grid>
