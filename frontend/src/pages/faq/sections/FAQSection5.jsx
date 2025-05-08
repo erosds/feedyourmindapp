@@ -34,7 +34,23 @@ function FAQSection5({ searchQuery = '' }) {
             Così facendo nella stessa settimana potrai fissare lezioni sia per il pacchetto in scadenza che per il nuovo pacchetto.
           </Typography>
           <Typography paragraph>
-            Quando verranno inserite le lezioni, il sistema darà come disponibili entrambi i pacchetti e dovrai scegliere quale pacchetto associare alla lezione. Preferibilmente andrebbe prima <b>portato a completamento</b> il pacchetto che sta per terminare e quindi ha meno ore.
+            Quando verranno inserite le lezioni, il sistema darà come disponibili <b>entrambi i pacchetti</b> e dovrai scegliere quale pacchetto associare alla lezione. Preferibilmente andrebbe prima <b>portato a completamento</b> il pacchetto che sta per terminare e quindi ha meno ore.
+          </Typography>
+        </>
+      )
+    },
+    {
+      question: 'Voglio aggiungere le mie lezioni per la settimana prossima, ma un pacchetto scade questa settimana. Come faccio?',
+      answer: (
+        <>
+          <Typography paragraph>
+            All'aggiunta di una lezione futura associata ad un pacchetto che scade prima della data della lezione, il sistema ti avviserà che <b>non puoi inserire lezioni dopo la scadenza del pacchetto</b>.
+          </Typography>
+          <Typography paragraph>
+            Se il pacchetto ha però ancora ore da esaurire, bisogna <b>estenderne la durata</b>, in modo da poter inserire poi la lezione.
+          </Typography>          
+          <Typography paragraph>
+            Se invece il pacchetto è terminato (non ha più ore disponibili), <b>informati</b> se lo studente intende rinnovare il pacchetto e per quante ore. In caso rinnovi, puoi <b>creare</b> il pacchetto tu stesso.
           </Typography>
         </>
       )
@@ -62,23 +78,6 @@ function FAQSection5({ searchQuery = '' }) {
         </>
       )
     },
-    {
-      question: 'Voglio aggiungere le mie lezioni per la settimana prossima, ma un pacchetto scade questa settimana. Come faccio?',
-      answer: (
-        <>
-          <Typography paragraph>
-            All'aggiunta di una lezione futura associata ad un pacchetto che scade prima della data della lezione, il sistema ti avviserà che <b>non puoi inserire lezioni dopo la scadenza del pacchetto</b>.
-          </Typography>
-          <Typography paragraph>
-            Se il pacchetto ha però ancora ore da esaurire, bisogna <b>estenderne la durata</b>, in modo da poter inserire poi la lezione.
-          </Typography>          
-          <Typography paragraph>
-            Se invece il pacchetto è terminato (non ha più ore disponibili), <b>informati</b> se lo studente intende rinnovare il pacchetto e per quante ore. In caso rinnovi, puoi <b>creare</b> il pacchetto tu stesso.
-          </Typography>
-        </>
-      )
-    },
-  
   ];
 
   // If there's a search query, filter the items

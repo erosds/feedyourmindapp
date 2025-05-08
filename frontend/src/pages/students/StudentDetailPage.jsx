@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  Avatar,
   Box,
   Button,
   ButtonGroup,
@@ -10,7 +9,6 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Divider,
   FormControl,
   Grid,
   IconButton,
@@ -25,7 +23,6 @@ import {
   TableHead,
   TablePagination,
   TableRow,
-  TableSortLabel,
   Tooltip,
   Typography
 } from '@mui/material';
@@ -36,7 +33,6 @@ import {
   Person as PersonIcon,
   School as SchoolIcon,
   MenuBook as MenuBookIcon,
-  AddCircleOutline as AddPackageIcon,
   Add as AddLessonIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
