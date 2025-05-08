@@ -20,12 +20,34 @@ function FAQSection5({ searchQuery = '' }) {
     {
       question: 'Cosa succede se una lezione ha più ore di quelle rimanenti su un pacchetto?',
       answer: (
-        <Typography paragraph>
-          Il sistema chiederà cosa fare con le ore eccedenti e basterà seguire le istruzioni: potrai scegliere di
-          creare una lezione singola per le ore eccedenti oppure far partire un nuovo pacchetto. In entrambi i casi,
-          il sistema gestirà automaticamente la divisione delle ore tra il pacchetto esistente e la nuova soluzione
-          scelta.
-        </Typography>
+        <>
+          <Typography paragraph>
+            Informati se lo studente intende continuare con un nuovo pacchetto.
+          </Typography>
+          <Typography paragraph>
+            Se sì, puoi crearlo e associare parte delle ore della tua lezione al vacchio pacchetto e il resto al nuovo pacchetto.
+          </Typography>
+          <Typography paragraph>
+            Se lo studente non intende rinnovare il pacchetto, associa la parte delle ore della tua lezione al vacchio pacchetto
+            in modo da completarlo e le ore rimanenti come lezione singola.
+          </Typography>
+        </>
+      )
+    },
+    {
+      question: 'Che succede quando nella stessa settimana vanno fissate lezioni sia di un vecchio che di un nuovo pacchetto?',
+      answer: (
+        <>
+          <Typography paragraph>
+            Nei casi in cui un pacchetto ha <b>poche ore rimanenti</b> e quindi va fatto partire anche il nuovo nella stessa settimana, è possibile far partire il nuovo pacchetto <b>in sovrapposizione</b>.
+          </Typography>
+          <Typography paragraph>
+            Così facendo nella stessa settimana potrai fissare lezioni sia per il pacchetto in scadenza che per il nuovo pacchetto.
+          </Typography>
+          <Typography paragraph>
+            Quando verranno inserite le lezioni, il sistema darà come disponibili entrambi i pacchetti e dovrai scegliere quale pacchetto associare alla lezione. Preferibilmente andrebbe prima portato a completamento il pacchetto che sta per terminare.
+          </Typography>
+        </>
       )
     },
     {
@@ -77,7 +99,7 @@ function FAQSection5({ searchQuery = '' }) {
         </>
       )
     },
-    
+
     {
       question: 'Cosa faccio se devo spostare una lezione da un pacchetto all\'altro?',
       answer: (

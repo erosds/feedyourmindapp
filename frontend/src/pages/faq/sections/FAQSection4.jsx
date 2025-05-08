@@ -109,34 +109,10 @@ function FAQSection4({ searchQuery = '' }) {
       answer: (
         <Typography paragraph>
           Il sistema rileva automaticamente eventuali sovrapposizioni per lo stesso studente e ti avviserà nel
-          caso in cui tenti di creare una lezione che si sovrappone a un'altra. Non è possibile avere due
+          caso in cui tenti di creare una lezione che si sovrappone a un'altra con un altro professore. Non è possibile avere due
           lezioni contemporanee per lo stesso studente. Dovrai modificare l'orario di una delle lezioni
           se desideri programmarle nella stessa giornata.
         </Typography>
-      )
-    },
-    {
-      question: 'Come posso filtrare le lezioni?',
-      answer: (
-        <>
-          <Typography paragraph>
-            Nella <Link component={RouterLink} to="/lessons">pagina delle lezioni</Link>, puoi utilizzare i filtri disponibili per:
-          </Typography>
-          <ul>
-            <li>
-              <strong>Periodo</strong>: oggi, questa settimana, settimana scorsa, settimana prossima, questo mese
-            </li>
-            <li>
-              <strong>Stato del pagamento</strong>: pagate, non pagate, da pacchetto
-            </li>
-            <li>
-              <strong>Ricerca per nome</strong> dello studente o del professore
-            </li>
-          </ul>
-          <Typography>
-            Questi filtri possono essere combinati per trovare esattamente le lezioni che ti interessano.
-          </Typography>
-        </>
       )
     },
     {
@@ -167,29 +143,9 @@ function FAQSection4({ searchQuery = '' }) {
         </>
       )
     },
+    
     {
-      question: 'Come posso modificare una lezione esistente?',
-      answer: (
-        <Typography paragraph>
-          Per modificare una lezione, vai alla pagina di dettaglio della lezione (cliccando sulla lezione
-          dalla dashboard o dalla lista lezioni) e clicca sul pulsante "Modifica" in alto a destra.
-          Potrai modificare tutti i dettagli come data, orario, durata, professore, studente e
-          se la lezione fa parte di un pacchetto o è singola.
-        </Typography>
-      )
-    },
-    {
-      question: 'Come visualizzo l\'elenco completo delle mie lezioni?',
-      answer: (
-        <Typography paragraph>
-          Vai alla sezione <Link component={RouterLink} to="/lessons">Lezioni</Link> per visualizzare tutte le tue lezioni.
-          Per impostazione predefinita, se sei un professore standard, vedrai solo le tue lezioni. Se sei un amministratore,
-          puoi scegliere di visualizzare le lezioni di tutti i professori o solo le tue usando il filtro "Solo le mie lezioni".
-        </Typography>
-      )
-    },
-    {
-      question: 'Come posso aggiungere una lezione online?',
+      question: 'Posso aggiungere una lezione anche se è stata svolta online?',
       answer: (
         <Typography paragraph>
           Quando crei o modifichi una lezione, troverai un'opzione "Lezione online" che puoi attivare
@@ -203,7 +159,7 @@ function FAQSection4({ searchQuery = '' }) {
       question: 'Come posso vedere le lezioni di un giorno specifico?',
       answer: (
         <Typography paragraph>
-          Dalla dashboard, puoi cliccare su un giorno nel calendario per visualizzare le lezioni programmate
+          Dalla tua dashboard, puoi cliccare su un giorno nel calendario per visualizzare le lezioni programmate
           per quel giorno. Si aprirà una finestra di dialogo che mostra tutte le lezioni del giorno selezionato,
           con orari e dettagli. Da questa finestra, puoi anche aggiungere una nuova lezione per quel giorno
           specifico.
