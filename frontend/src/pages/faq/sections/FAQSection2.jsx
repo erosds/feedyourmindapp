@@ -29,7 +29,7 @@ function FAQSection2({ searchQuery = '' }) {
       answer: (
         <Typography paragraph>
           In caso di omonimi, il sistema richiederà di inserire anche la data di nascita per distinguere due studenti.
-          Controlla quindi se lo studente che volevi aggiungere non fosse lo stesso già aggiunto, dopodichè se si tratta davvero di studenti omonimi
+          Controlla quindi se lo studente che volevi aggiungere non fosse lo stesso già presente, dopodichè se si tratta davvero di studenti omonimi
           puoi procedere ad aggiungere il secondo studente. Se non conosci la data di nascita, puoi inserire qualcosa nel nome o cognome per differenziarli.
         </Typography>
       )
@@ -40,8 +40,8 @@ function FAQSection2({ searchQuery = '' }) {
         <>
           <Typography paragraph>
             Vai alla pagina dello studente cliccando sul suo nome nella <Link component={RouterLink} to="/students">lista degli studenti</Link>.
-            Nella parte inferiore della pagina troverai una tabella con tutte le sue lezioni,
-            che puoi filtrare per tipo (singole/pacchetto).
+            C'è sia un calendario settimanale che mostra tutte le lezioni di quello studente settimana per settimana sia una tabella con tutte le sue lezioni,
+            che puoi filtrare per tipo (singole/pacchetto) e cliccare per vedere il dettaglio di ogni lezione.
           </Typography>
           <Typography>
             Inoltre, la scheda dettaglio dello studente include un calendario mensile che visualizza

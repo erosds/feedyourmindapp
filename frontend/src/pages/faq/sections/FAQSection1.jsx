@@ -70,16 +70,6 @@ function FAQSection1({ searchQuery = '' }) {
       )
     },
     {
-      question: 'Come accedo all\'applicazione?',
-      answer: (
-        <>
-          <Typography paragraph>
-            Probabilmente se sei qui lo sai già, ma comunque: utilizza il tuo nomecognome come username. La password di default è 1234, cambiala appena puoi.
-          </Typography>
-        </>
-      )
-    },
-    {
       question: 'Come posso cambiare la mia password?',
       answer: (
         <>

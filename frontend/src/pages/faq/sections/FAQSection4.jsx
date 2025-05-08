@@ -15,7 +15,7 @@ function FAQSection4({ searchQuery = '' }) {
           </Typography>
           <ul>
             <li>
-              Dalla <Link component={RouterLink} to="/dashboard">dashboard</Link>, cliccando su un giorno nel calendario
+              Dalla <Link component={RouterLink} to="/dashboard">dashboard personale</Link>, cliccando su un giorno nel calendario
             </li>
             <li>
               Dalla pagina <Link component={RouterLink} to="/lessons">Lezioni</Link>, usando il pulsante "Nuova Lezione"
@@ -28,7 +28,7 @@ function FAQSection4({ searchQuery = '' }) {
             </li>
           </ul>
           <Typography>
-            Importante: le lezioni che fanno parte di un pacchetto, vanno associate al loro pacchetto!
+            Importante: le lezioni che fanno parte di un pacchetto, vanno <b>associate al loro pacchetto</b>!
           </Typography>
         </>
       )
@@ -38,9 +38,8 @@ function FAQSection4({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Quando crei una nuova lezione, seleziona lo studente e poi attiva l'opzione "Lezione da
-            pacchetto". Seleziona quindi il pacchetto desiderato dal menu a tendina che apparirà. Il sistema
-            mostrerà automaticamente le ore disponibili nel pacchetto.
+            Quando crei una nuova lezione, dopo aver selezionato lo studente, se questo ha pacchetti verrà mostrato un avviso. 
+            Spunta quindi l'opzione "Parte di un Pacchetto" e scegli il pacchetto desiderato dal menu a tendina che apparirà.
           </Typography>
           <Typography paragraph>
             Se non vedi pacchetti disponibili, chiedi se hanno un pacchetto, e nel caso, crealo facendoti dare
@@ -75,10 +74,6 @@ function FAQSection4({ searchQuery = '' }) {
               Torna a creare la lezione, ora sarai in grado di selezionare il pacchetto appena creato
             </li>
           </ol>
-          <Typography>
-            Se è urgente inserire la lezione, puoi anche crearla come lezione singola e successivamente
-            modificarla per associarla al pacchetto una volta che questo sarà stato creato.
-          </Typography>
         </>
       )
     },

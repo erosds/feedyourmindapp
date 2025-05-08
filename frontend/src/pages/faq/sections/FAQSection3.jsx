@@ -1,6 +1,7 @@
 // src/pages/faq/sections/FAQSection3.jsx
 import React from 'react';
-import { Typography, Link } from '@mui/material';
+import { Typography, Link, Box, Chip, Button } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { Link as RouterLink } from 'react-router-dom';
 import FAQItem from '../components/FAQItem';
 
@@ -27,8 +28,7 @@ function FAQSection3({ searchQuery = '' }) {
       answer: (
         <Typography paragraph>
           In automatico il sistema permette di inserire un massimo di 3 studenti associati allo stesso
-          pacchetto. Una volta inserito il primo, si attiverà la casella per inserire un (eventuale) secondo
-          studente. Stessa cosa per il terzo. Questo è utile quando più studenti condividono lo stesso pacchetto
+          pacchetto. Questo è utile quando più studenti condividono lo stesso pacchetto
           di ore, ad esempio fratelli/sorelle.
         </Typography>
       )
@@ -38,24 +38,62 @@ function FAQSection3({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Lo stato si determina in automatico:
+            I pacchetti possono trovarsi in diversi stati, indicati da colori diversi:
           </Typography>
-          <ul>
-            <li>
-              <strong>In corso</strong>: il pacchetto è attivo e non ha ancora raggiunto la data di scadenza
-              (diventa giallo se scade la settimana successiva)
-            </li>
-            <li>
-              <strong>Terminato</strong>: il pacchetto è stato pagato e ha raggiunto la data di scadenza
-            </li>
-            <li>
-              <strong>Scaduto</strong>: il pacchetto non è stato pagato ed ha superato la data di scadenza
-            </li>
-          </ul>
-          <Typography>
-            Attenzione: sia un pacchetto terminato che uno scaduto potrebbero avere ancora ore disponibili (visualizzate in grassetto nella lista pacchetti).
-            Puoi visualizzare lo stato di tutti i pacchetti nella <Link component={RouterLink} to="/packages">lista pacchetti</Link>.
-          </Typography>
+
+          <Box sx={{ mb: 3, ml: 1, mr: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="In corso"
+                  color="primary"
+                  size="small"
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                Pacchetto <b>attivo</b>, quindi siamo entro la data di scadenza.
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="In scadenza"
+                  color="warning"
+                  size="small"
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                Pacchetto <b>attivo</b> che scadrà al termine della settimana corrente.
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="Scaduto"
+                  color="error"
+                  size="small"
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                Pacchetto con <b>data di scadenza superata</b>, ma con ore ancora disponibili e/o non ancora pagato.
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center' }}>
+              <Box>
+                <Chip
+                  label="Completato"
+                  color="default"
+                  size="small"
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                Pacchetto <b>terminato</b>: scaduto, pagato e senza ore rimanenti.
+              </Typography>
+            </Box>
+          </Box>
         </>
       )
     },
@@ -65,8 +103,7 @@ function FAQSection3({ searchQuery = '' }) {
         <>
           <Typography paragraph>
             Le ore rimanenti sono visualizzate sia nella lista dei pacchetti che nella pagina di dettaglio del
-            singolo pacchetto. Troverai anche una barra di avanzamento che mostra visivamente la
-            percentuale di completamento.
+            singolo pacchetto. Troverai anche dei cerchietti di avanzamento che mostrano visivamente il completamento settimana per settimana.
           </Typography>
           <Typography>
             Per vedere il dettaglio completo, vai alla <Link component={RouterLink} to="/packages">lista pacchetti</Link> e
@@ -97,12 +134,19 @@ function FAQSection3({ searchQuery = '' }) {
         <>
           <Typography paragraph>
             Se un pacchetto è scaduto ma ha ancora ore disponibili, puoi estenderlo di una settimana dalla
-            pagina di dettaglio del pacchetto cliccando sul pulsante "Estendi scadenza +1".
+            pagina di dettaglio del pacchetto cliccando sul pulsante <Button
+              variant="outlined"
+              color="secondary"
+              size="small"
+              sx={{ fontSize: '0.75rem', py: 0, ml: 0.5, mr: 0.5, minWidth: '130px' }}
+            >
+              Estendi scadenza +1
+            </Button> in alto a destra.
           </Typography>
           <Typography>
             Questa funzionalità è particolarmente utile quando uno studente ha saltato alcune lezioni
             e ha ancora ore disponibili nel pacchetto che altrimenti andrebbero perse. Attenzione: la funzionalità di estensione
-            diventa utilizzabile solo se il pacchetto è scaduto ma ha ore rimanenti.
+            diventa utilizzabile solo se il pacchetto sta per scadere ma ha ore rimanenti.
           </Typography>
         </>
       )
@@ -118,12 +162,26 @@ function FAQSection3({ searchQuery = '' }) {
           <ol>
             <li>
               <strong>Estendere la scadenza</strong>: Dalla pagina di dettaglio del pacchetto, clicca su
-              "Estendi scadenza +1" per prolungare la validità di una settimana. Puoi ripetere questa operazione
+              <Button
+                variant="outlined"
+                color="secondary"
+                size="small"
+                sx={{ fontSize: '0.75rem', py: 0, ml: 0.5, mr: 0.5, minWidth: '130px' }}
+              >
+                Estendi scadenza +1
+              </Button> per prolungare la validità di una settimana. Puoi ripetere questa operazione
               più volte se necessario.
             </li>
             <li>
               <strong>Creare un nuovo pacchetto</strong>: Se sono passate molte settimane o preferisci creare un
-              nuovo pacchetto, vai alla sezione Pacchetti e clicca su "Nuovo Pacchetto". Il nuovo pacchetto avrà
+              nuovo pacchetto, vai alla sezione Pacchetti e clicca su <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '130px' }}
+              >
+                Nuovo pacchetto
+              </Button> in alto a destra. Il nuovo pacchetto avrà
               una nuova data di inizio e scadenza.
             </li>
           </ol>
@@ -145,7 +203,7 @@ function FAQSection3({ searchQuery = '' }) {
       )
     },
     {
-      question: 'Voglio aggiungere le mie lezioni per la settimana prossima, ma un pacchetto è scaduto questa settimana. Come faccio?',
+      question: 'Voglio aggiungere le mie lezioni per la settimana prossima, ma un pacchetto scade questa settimana. Come faccio?',
       answer: (
         <>
           <Typography paragraph>
@@ -157,6 +215,22 @@ function FAQSection3({ searchQuery = '' }) {
           </Typography>
           <Typography paragraph>
             Se invece il pacchetto è terminato (non ha più ore disponibili), informati se lo studente intende rinnovare il pacchetto e per quante ore. In caso rinnovi, puoi creare il pacchetto tu stesso.
+          </Typography>
+        </>
+      )
+    },
+    {
+      question: 'Che succede quando nella stessa settimana vanno fissate lezioni sia di un vecchio che di un nuovo pacchetto?',
+      answer: (
+        <>
+          <Typography paragraph>
+            Nei casi in cui un pacchetto ha <b>poche ore rimanenti</b> e quindi va fatto partire anche il nuovo nella stessa settimana, è possibile far partire il nuovo pacchetto <b>in sovrapposizione</b>.
+          </Typography>
+          <Typography paragraph>
+            Così facendo nella stessa settimana potrai fissare lezioni sia per il pacchetto in scadenza che per il nuovo pacchetto.
+          </Typography>
+          <Typography paragraph>
+            Quando verranno inserite le lezioni, il sistema darà come disponibili entrambi i pacchetti e dovrai scegliere quale pacchetto associare alla lezione. Preferibilmente andrebbe portato a completamento il pacchetto che sta per terminare.
           </Typography>
         </>
       )
