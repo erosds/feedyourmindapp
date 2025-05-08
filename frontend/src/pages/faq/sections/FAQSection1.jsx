@@ -11,14 +11,14 @@ function FAQSection1({ searchQuery = '' }) {
       question: 'A cosa mi serve questa app?',
       answer: (
         <Typography paragraph>
-          Questa app è stata creata per aiutare tutti noi a gestire lezioni, pacchetti e pagamenti in maniera automatica.
+          Questa app è stata creata per aiutare tutti noi a gestire <b>lezioni</b>, <b>pacchetti</b> e <b>pagamenti</b> in maniera automatica.
           Tra le altre cose permette di:
           <ul>
-            <li>Calcolare in automatico il proprio compenso settimanale</li>
-            <li>Gestire le lezioni e associarle agli eventuali pacchetti di ogni studente</li>
-            <li>Tenere traccia delle ore rimanenti sui pacchetti</li>
-            <li>Tenere traccia delle scadenze e dei pagamenti</li>
-            <li>Gestire il planning giornaliero in base alle lezioni di tutti</li>
+            <li>Calcolare in automatico il proprio <b>compenso settimanale</b></li>
+            <li>Gestire le <b>lezioni</b> e associarle agli eventuali <b>pacchetti</b> di ogni studente</li>
+            <li>Tenere traccia delle <b>ore rimanenti</b> sui pacchetti</li>
+            <li>Tenere traccia delle <b>scadenze</b> e dei <b>pagamenti</b></li>
+            <li>Gestire il <b>planning giornaliero</b> in base alle lezioni di tutti</li>
           </ul>
           Tenerla aggiornata è fondamentale: con un minimo di contributo da parte di tutti, possiamo semplificare di molto la gestione dell'associazione.
         </Typography>
@@ -51,22 +51,12 @@ function FAQSection1({ searchQuery = '' }) {
             lista di quelli disponibili.
           </Typography>
           <Typography>
-            In più la prima voce di questo menu è <Link component={RouterLink} to="/dashboard">Dashboard Personale</Link>. Questa dashboard mostra
+            In più c'è <Link component={RouterLink} to="/dashboard">Dashboard Personale</Link>. Questa dashboard mostra
             automaticamente un calendario settimanale con tutte le tue lezioni. Puoi navigare tra le settimane
             usando i pulsanti "Precedente" e "Successiva", o tornare alla settimana corrente con il pulsante
             centrale. In più viene visualizzato un riepilogo del proprio compenso.
           </Typography>
         </>
-      )
-    },
-    {
-      question: 'Come faccio a vedere il mio compenso settimanale?',
-      answer: (
-        <Typography paragraph>
-          Nella tua dashboard personale, troverai un riepilogo delle ore di lezione svolte nel periodo selezionato.
-          Di default viene visualizzata la settimana in corso. Sulla destra del calendario, puoi vedere il tuo compenso
-          settimanale, che si aggiorna automaticamente in base alle lezioni programmate.
-        </Typography>
       )
     },
     {

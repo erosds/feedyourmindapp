@@ -37,7 +37,7 @@ import {
   School as SchoolIcon,
   MenuBook as MenuBookIcon,
   AddCircleOutline as AddPackageIcon,
-  AddTask as AddLessonIcon,
+  Add as AddLessonIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format, addMonths, subMonths, parseISO, startOfWeek, endOfWeek, addWeeks, subWeeks, isWithinInterval } from 'date-fns';
@@ -531,15 +531,6 @@ function StudentDetailPage() {
             sx={{ mr: 1 }}
           >
             Nuova Lezione
-          </Button>
-          <Button
-            variant="outlined"
-            color="primary"
-            startIcon={<AddPackageIcon />}
-            onClick={handleAddPackage}
-            sx={{ mr: 1 }}
-          >
-            Nuovo Pacchetto
           </Button>
           <Button
             variant="outlined"

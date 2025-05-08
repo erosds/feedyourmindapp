@@ -1,8 +1,12 @@
 // src/pages/faq/sections/FAQSection2.jsx
 import React from 'react';
-import { Typography, Link } from '@mui/material';
+import { Typography, Link, Button } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import FAQItem from '../components/FAQItem';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+
 
 function FAQSection2({ searchQuery = '' }) {
   const items = [
@@ -11,11 +15,18 @@ function FAQSection2({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Prima di inserire le tue lezioni e gli eventuali pacchetti, devi prima aggiungere uno studente (se non è stato già fatto).
+            Prima di inserire le tue lezioni e gli eventuali pacchetti, devi prima aggiungere uno <b>studente</b> (se non è stato già fatto).
           </Typography>
           <Typography paragraph>
-            Per farlo, vai alla sezione <Link component={RouterLink} to="/students">Studenti</Link> e clicca sul pulsante "Nuovo Studente".
-            Compila il modulo con le informazioni richieste e clicca su "Crea". I campi obbligatori sono nome e cognome (se non lo sai, fattelo dire!).
+            Per farlo, vai alla sezione <Link component={RouterLink} to="/students">Studenti</Link> e clicca sul pulsante <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '130px' }}
+              >
+                Nuovo Studente
+              </Button>.
+            Compila il modulo con le informazioni richieste e clicca su "Crea". I campi obbligatori sono <b>nome</b> e <b>cognome</b> (se non li sai, fatteli dire!).
             Aggiungi lo studente anche se è uno studente occasionale o da lezione una-tantum.
           </Typography>
           <Typography>
@@ -28,24 +39,24 @@ function FAQSection2({ searchQuery = '' }) {
       question: 'Cosa faccio se ci sono due studenti con lo stesso nome e cognome?',
       answer: (
         <Typography paragraph>
-          In caso di omonimi, il sistema richiederà di inserire anche la data di nascita per distinguere due studenti.
-          Controlla quindi se lo studente che volevi aggiungere non fosse lo stesso già presente, dopodichè se si tratta davvero di studenti omonimi
-          puoi procedere ad aggiungere il secondo studente. Se non conosci la data di nascita, puoi inserire qualcosa nel nome o cognome per differenziarli.
+          In caso di omonimi, il sistema richiederà di inserire anche la <b>data di nascita</b> per distinguere due studenti.
+          Controlla quindi se lo studente che volevi aggiungere non fosse in realtà lo stesso già presente, dopodichè se si tratta davvero di studenti omonimi
+          puoi procedere ad aggiungere il nuovo studente. Se non conosci la data di nascita, puoi inserire qualcosa nel nome o cognome per differenziarli.
         </Typography>
       )
     },
     {
-      question: 'Come posso vedere tutte le lezioni di uno studente?',
+      question: 'Posso vedere tutte le lezioni e i pacchetti di uno studente?',
       answer: (
         <>
           <Typography paragraph>
-            Vai alla pagina dello studente cliccando sul suo nome nella <Link component={RouterLink} to="/students">lista degli studenti</Link>.
-            C'è sia un calendario settimanale che mostra tutte le lezioni di quello studente settimana per settimana sia una tabella con tutte le sue lezioni,
-            che puoi filtrare per tipo (singole/pacchetto) e cliccare per vedere il dettaglio di ogni lezione.
+            Certo, per farlo ti basta visualizzare la <b>pagina di dettaglio</b> dello studente cliccando sul suo nome nella <Link component={RouterLink} to="/students">lista degli studenti</Link>.
+            C'è una parte relativa alle <b>statistiche totali</b> in alto.
           </Typography>
           <Typography>
-            Inoltre, la scheda dettaglio dello studente include un calendario mensile che visualizza
-            le lezioni programmate, statistiche riassuntive sulle ore totali, e gli ultimi pacchetti acquistati.
+            Inoltre, questa pagina include un <b>calendario mensile</b> che per mostra tutte
+            le lezioni programmate, un <b>calendario settimanale</b> più dettagliato e una <b>tabella</b> con tutte le lezioni
+            che puoi filtrare per tipo (singole/pacchetto) e cliccare per vedere in dettaglio.
           </Typography>
         </>
       )
@@ -53,11 +64,22 @@ function FAQSection2({ searchQuery = '' }) {
     {
       question: 'È possibile eliminare uno studente?',
       answer: (
+        <>
         <Typography paragraph>
-          Sì, puoi eliminare uno studente dalla sua pagina di dettaglio cliccando sul pulsante "Elimina".
-          Attenzione: non sarà possibile eliminare uno studente che ha lezioni o pacchetti associati attivi.
+          Sì, puoi eliminare uno studente dalla sua pagina di dettaglio cliccando sul pulsante <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '100px' }}
+              >
+                Elimina
+              </Button> in alto a destra.
+        </Typography>
+        <Typography paragraph>
+          <b>Attenzione</b>: non sarà possibile eliminare uno studente che ha lezioni o pacchetti associati attivi.
           Dovrai prima eliminare tutte le lezioni e i pacchetti associati allo studente.
         </Typography>
+        </>
       )
     },
     {
@@ -65,32 +87,18 @@ function FAQSection2({ searchQuery = '' }) {
       answer: (
         <Typography paragraph>
           Vai alla pagina dettaglio dello studente cliccando sul suo nome nella lista degli studenti,
-          quindi clicca sul pulsante "Modifica" in alto a destra. Potrai aggiornare i suoi dati personali
+          quindi clicca sul pulsante <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<EditIcon />}
+                sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '100px' }}
+              >
+                Modifica
+              </Button> in alto a destra. Potrai aggiornare i suoi dati personali
           come nome, cognome, email, telefono e data di nascita.
         </Typography>
       )
     },
-    {
-      question: 'Come posso cercare rapidamente uno studente?',
-      answer: (
-        <Typography paragraph>
-          Nella pagina <Link component={RouterLink} to="/students">lista studenti</Link>, usa la barra di
-          ricerca in alto per cercare uno studente per nome o cognome. I risultati vengono filtrati in tempo
-          reale mentre digiti.
-        </Typography>
-      )
-    },
-    {
-      question: 'Come verifico quali studenti hanno pacchetti attivi?',
-      answer: (
-        <Typography paragraph>
-          Nella <Link component={RouterLink} to="/students">lista degli studenti</Link>,
-          la colonna "Ultimo Pacchetto" mostra lo stato del pacchetto più recente di ogni studente
-          (In corso, Scaduto, Terminato). Puoi usare questa informazione per verificare rapidamente
-          quali studenti hanno pacchetti attivi.
-        </Typography>
-      )
-    }
   ];
 
   // If there's a search query, filter the items

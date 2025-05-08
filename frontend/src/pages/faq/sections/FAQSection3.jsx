@@ -12,24 +12,24 @@ function FAQSection3({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Vai alla sezione <Link component={RouterLink} to="/packages">Pacchetti</Link> e clicca su "Nuovo Pacchetto",
-            oppure dalla pagina di un singolo studente clicca su "Nuovo Pacchetto". Compila il modulo con le informazioni necessarie:
-            studente/i, data di inizio, ore totali. Di default un nuovo pacchetto viene inserito come non
-            pagato. Se invece vuoi inserire che è stato pagato, va inserita anche la data di pagamento.
-          </Typography>
-          <Typography>
-            Puoi aggiungere rapidamente un nuovo pacchetto anche dal collegamento diretto alla <Link component={RouterLink} to="/packages/new">pagina di creazione pacchetto</Link>.
+            Vai alla sezione <Link component={RouterLink} to="/packages">Pacchetti</Link> e clicca su <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '130px' }}
+              >
+                Nuovo Pacchetto
+              </Button> in alto a destra. Compila il modulo con le informazioni necessarie: <b>studente/i</b>, <b>data di inizio</b>, <b>ore totali</b>. Di default un nuovo pacchetto viene inserito come non
+            pagato. Se invece vuoi inserire che è stato pagato, va inserita anche la <b>data di pagamento</b>.
           </Typography>
         </>
       )
     },
     {
-      question: 'Cosa succede se il pacchetto è condiviso?',
+      question: 'Posso creare pacchetti condivisi tra più studenti?',
       answer: (
         <Typography paragraph>
-          In automatico il sistema permette di inserire un massimo di 3 studenti associati allo stesso
-          pacchetto. Questo è utile quando più studenti condividono lo stesso pacchetto
-          di ore, ad esempio fratelli/sorelle.
+          Sì, il sistema permette di inserire più studenti associati allo stesso pacchetto per un massimo di 3 studenti. Questo è utile quando più studenti condividono lo stesso pacchetto, ad esempio fratelli/sorelle.
         </Typography>
       )
     },
@@ -102,8 +102,7 @@ function FAQSection3({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Le ore rimanenti sono visualizzate sia nella lista dei pacchetti che nella pagina di dettaglio del
-            singolo pacchetto. Troverai anche dei cerchietti di avanzamento che mostrano visivamente il completamento settimana per settimana.
+            Le ore rimanenti, insieme a tutte le altre informazioni, sono visualizzate sia nella <b>lista dei pacchetti</b> che nella pagina di <b>dettaglio pacchetto</b>. Troverai anche dei cerchietti di avanzamento che mostrano visivamente il completamento settimana per settimana.
           </Typography>
           <Typography>
             Per vedere il dettaglio completo, vai alla <Link component={RouterLink} to="/packages">lista pacchetti</Link> e
@@ -129,11 +128,11 @@ function FAQSection3({ searchQuery = '' }) {
       )
     },
     {
-      question: 'Come posso estendere la scadenza di un pacchetto?',
+      question: 'Posso estendere la scadenza di un pacchetto?',
       answer: (
         <>
           <Typography paragraph>
-            Se un pacchetto è scaduto ma ha ancora ore disponibili, puoi estenderlo di una settimana dalla
+            Se un pacchetto è <b>scaduto</b> ma ha ancora <b>ore disponibili</b>, puoi estenderlo dalla
             pagina di dettaglio del pacchetto cliccando sul pulsante <Button
               variant="outlined"
               color="secondary"
@@ -145,96 +144,27 @@ function FAQSection3({ searchQuery = '' }) {
           </Typography>
           <Typography>
             Questa funzionalità è particolarmente utile quando uno studente ha saltato alcune lezioni
-            e ha ancora ore disponibili nel pacchetto che altrimenti andrebbero perse. Attenzione: la funzionalità di estensione
+            e ha ancora ore disponibili nel pacchetto che altrimenti andrebbero perse. 
+            </Typography>
+          <Typography paragraph>
+            <b>Attenzione</b>: la funzionalità di estensione
             diventa utilizzabile solo se il pacchetto sta per scadere ma ha ore rimanenti.
           </Typography>
         </>
       )
     },
-
     {
-      question: 'Cosa faccio se il vecchio pacchetto è scaduto?',
-      answer: (
-        <>
-          <Typography paragraph>
-            Se un pacchetto è scaduto ma ha ancora ore disponibili, hai due opzioni:
-          </Typography>
-          <ol>
-            <li>
-              <strong>Estendere la scadenza</strong>: Dalla pagina di dettaglio del pacchetto, clicca su
-              <Button
-                variant="outlined"
-                color="secondary"
-                size="small"
-                sx={{ fontSize: '0.75rem', py: 0, ml: 0.5, mr: 0.5, minWidth: '130px' }}
-              >
-                Estendi scadenza +1
-              </Button> per prolungare la validità di una settimana. Puoi ripetere questa operazione
-              più volte se necessario.
-            </li>
-            <li>
-              <strong>Creare un nuovo pacchetto</strong>: Se sono passate molte settimane o preferisci creare un
-              nuovo pacchetto, vai alla sezione Pacchetti e clicca su <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AddIcon />}
-                sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '130px' }}
-              >
-                Nuovo pacchetto
-              </Button> in alto a destra. Il nuovo pacchetto avrà
-              una nuova data di inizio e scadenza.
-            </li>
-          </ol>
-          <Typography>
-            Se il pacchetto scaduto non ha ore rimanenti, semplicemente crea un nuovo pacchetto.
-          </Typography>
-        </>
-      )
-    },
-    {
-      question: 'Come posso vedere tutte le lezioni di un pacchetto?',
+      question: 'Come posso vedere tutte le lezioni associate ad un pacchetto?',
       answer: (
         <Typography paragraph>
-          Vai alla pagina dettaglio del pacchetto cliccando sul suo ID nella lista dei pacchetti.
-          Nella parte inferiore della pagina troverai una tabella con tutte le lezioni associate a quel pacchetto,
-          con informazioni su studente, professore, data, durata e tariffa. Inoltre, è disponibile un calendario
+          Vai alla <b>pagina dettaglio</b> del pacchetto cliccandoci sopra una volta individuato nella lista dei pacchetti.
+          Nella parte inferiore della pagina troverai una <b>tabella</b> con tutte le lezioni associate a quel pacchetto,
+          con informazioni su studente, professore, data, durata e tariffa. Inoltre, è disponibile un <b>calendario</b>
           mensile che mostra visivamente la distribuzione delle lezioni.
         </Typography>
       )
     },
-    {
-      question: 'Voglio aggiungere le mie lezioni per la settimana prossima, ma un pacchetto scade questa settimana. Come faccio?',
-      answer: (
-        <>
-          <Typography paragraph>
-            All'aggiunta di una lezione futura, potresti non trovare il pacchetto corretto per
-            associarlo. Questo può succedere se il pacchetto è scaduto o se non ha più ore disponibili.
-          </Typography>
-          <Typography paragraph>
-            Se un pacchetto è scaduto ma ha ancora ore disponibili, estendi la durata del vecchio pacchetto: dopo sarà possibile aggiungere la lezione a questo.
-          </Typography>
-          <Typography paragraph>
-            Se invece il pacchetto è terminato (non ha più ore disponibili), informati se lo studente intende rinnovare il pacchetto e per quante ore. In caso rinnovi, puoi creare il pacchetto tu stesso.
-          </Typography>
-        </>
-      )
-    },
-    {
-      question: 'Che succede quando nella stessa settimana vanno fissate lezioni sia di un vecchio che di un nuovo pacchetto?',
-      answer: (
-        <>
-          <Typography paragraph>
-            Nei casi in cui un pacchetto ha <b>poche ore rimanenti</b> e quindi va fatto partire anche il nuovo nella stessa settimana, è possibile far partire il nuovo pacchetto <b>in sovrapposizione</b>.
-          </Typography>
-          <Typography paragraph>
-            Così facendo nella stessa settimana potrai fissare lezioni sia per il pacchetto in scadenza che per il nuovo pacchetto.
-          </Typography>
-          <Typography paragraph>
-            Quando verranno inserite le lezioni, il sistema darà come disponibili entrambi i pacchetti e dovrai scegliere quale pacchetto associare alla lezione. Preferibilmente andrebbe prima portato a completamento il pacchetto che sta per terminare.
-          </Typography>
-        </>
-      )
-    },
+    
   ];
 
   // If there's a search query, filter the items

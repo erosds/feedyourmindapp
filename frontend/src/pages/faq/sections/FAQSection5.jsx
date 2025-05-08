@@ -7,58 +7,36 @@ import FAQItem from '../components/FAQItem';
 function FAQSection5({ searchQuery = '' }) {
   const items = [
     {
-      question: 'Cosa succede se devo annullare l\'estensione di un pacchetto?',
-      answer: (
-        <Typography paragraph>
-          Se hai esteso un pacchetto ma hai necessità di annullare l'estensione, puoi farlo dalla pagina di
-          dettaglio del pacchetto cliccando su "Annulla estensione (-1)". Nota che questa operazione non è
-          possibile se ci sono lezioni programmate nella settimana che verrebbe rimossa. Dovrai prima eliminare
-          o spostare tali lezioni.
-        </Typography>
-      )
-    },
-    {
-      question: 'Cosa succede se una lezione ha più ore di quelle rimanenti su un pacchetto?',
+      question: 'Cosa succede se svolgo una lezione che dura più ore di quelle rimanenti su un pacchetto?',
       answer: (
         <>
           <Typography paragraph>
-            Informati se lo studente intende continuare con un nuovo pacchetto.
+            <b>Informati</b> se lo studente intende continuare con un nuovo pacchetto.
           </Typography>
           <Typography paragraph>
-            Se sì, puoi crearlo e associare parte delle ore della tua lezione al vacchio pacchetto e il resto al nuovo pacchetto.
+            Se sì, puoi <b>crearlo</b> e associare parte delle ore della tua lezione al vacchio pacchetto e il resto al nuovo pacchetto.
           </Typography>
           <Typography paragraph>
-            Se lo studente non intende rinnovare il pacchetto, associa la parte delle ore della tua lezione al vacchio pacchetto
+            Se lo studente invece non intende rinnovare il pacchetto, associa la parte delle ore della tua lezione al vacchio pacchetto
             in modo da completarlo e le ore rimanenti come lezione singola.
           </Typography>
         </>
       )
     },
     {
-      question: 'Che succede quando nella stessa settimana vanno fissate lezioni sia di un vecchio che di un nuovo pacchetto?',
+      question: 'Un nuovo pacchetto può partire nonostante ci siano ore da completare su quello precedente?',
       answer: (
         <>
           <Typography paragraph>
-            Nei casi in cui un pacchetto ha <b>poche ore rimanenti</b> e quindi va fatto partire anche il nuovo nella stessa settimana, è possibile far partire il nuovo pacchetto <b>in sovrapposizione</b>.
+            Nei casi in cui un pacchetto ha <b>poche ore rimanenti</b> e quindi va fatto partire anche il nuovo nella stessa settimana, <b>è possibile far partire il nuovo pacchetto in sovrapposizione</b>.
           </Typography>
           <Typography paragraph>
             Così facendo nella stessa settimana potrai fissare lezioni sia per il pacchetto in scadenza che per il nuovo pacchetto.
           </Typography>
           <Typography paragraph>
-            Quando verranno inserite le lezioni, il sistema darà come disponibili entrambi i pacchetti e dovrai scegliere quale pacchetto associare alla lezione. Preferibilmente andrebbe prima portato a completamento il pacchetto che sta per terminare.
+            Quando verranno inserite le lezioni, il sistema darà come disponibili entrambi i pacchetti e dovrai scegliere quale pacchetto associare alla lezione. Preferibilmente andrebbe prima <b>portato a completamento</b> il pacchetto che sta per terminare e quindi ha meno ore.
           </Typography>
         </>
-      )
-    },
-    {
-      question: 'Cosa succede se elimino un pacchetto che ha lezioni associate?',
-      answer: (
-        <Typography paragraph>
-          Eliminando un pacchetto, verranno eliminate anche tutte le lezioni associate. Il sistema mostrerà
-          un avviso con l'elenco delle lezioni che verranno eliminate, chiedendo conferma prima di
-          procedere. Se desideri conservare le lezioni, dovresti modificarle per dissociarle dal pacchetto
-          prima di eliminare quest'ultimo.
-        </Typography>
       )
     },
     {
@@ -73,7 +51,7 @@ function FAQSection5({ searchQuery = '' }) {
               Impostare il pacchetto come "non pagato" finché non viene saldato completamente
             </li>
             <li>
-              Inserire nelle note del pacchetto che si è ricevuto un acconto il giorno X
+              Inserire nelle <b>note del pacchetto</b> che si è ricevuto un acconto il giorno X
             </li>
           </ol>
           <Typography>
@@ -85,68 +63,22 @@ function FAQSection5({ searchQuery = '' }) {
       )
     },
     {
-      question: 'Come posso aggiornare l\'importo di un pacchetto dopo averlo creato?',
+      question: 'Voglio aggiungere le mie lezioni per la settimana prossima, ma un pacchetto scade questa settimana. Come faccio?',
       answer: (
         <>
           <Typography paragraph>
-            Gli amministratori possono modificare l'importo di un pacchetto dalla pagina di dettaglio
-            cliccando su "Modifica prezzo". Questo può essere utile quando il pacchetto è stato inizialmente
-            creato senza specificare l'importo o se è necessario modificarlo.
+            All'aggiunta di una lezione futura associata ad un pacchetto che scade prima della data della lezione, il sistema ti avviserà che <b>non puoi inserire lezioni dopo la scadenza del pacchetto</b>.
           </Typography>
-          <Typography>
-            Se non sei un amministratore, dovrai contattare un amministratore per effettuare questa modifica.
+          <Typography paragraph>
+            Se il pacchetto ha però ancora ore da esaurire, bisogna <b>estenderne la durata</b>, in modo da poter inserire poi la lezione.
+          </Typography>          
+          <Typography paragraph>
+            Se invece il pacchetto è terminato (non ha più ore disponibili), <b>informati</b> se lo studente intende rinnovare il pacchetto e per quante ore. In caso rinnovi, puoi <b>creare</b> il pacchetto tu stesso.
           </Typography>
         </>
       )
     },
-
-    {
-      question: 'Cosa faccio se devo spostare una lezione da un pacchetto all\'altro?',
-      answer: (
-        <Typography paragraph>
-          Per spostare una lezione da un pacchetto all'altro, vai alla pagina di modifica della lezione
-          e seleziona il nuovo pacchetto dal menu a tendina "Pacchetto". Assicurati che il nuovo pacchetto
-          abbia ore sufficienti per coprire la durata della lezione. Il sistema aggiornerà automaticamente
-          i conteggi delle ore per entrambi i pacchetti coinvolti.
-        </Typography>
-      )
-    },
-    {
-      question: 'Come registro una lezione annullata o non svolta?',
-      answer: (
-        <>
-          <Typography paragraph>
-            Esistono due approcci principali per gestire le lezioni annullate:
-          </Typography>
-          <ol>
-            <li>
-              <strong>Eliminazione</strong>: Se la lezione è stata completamente annullata e non verrà recuperata,
-              puoi semplicemente eliminarla dalla pagina di dettaglio della lezione.
-            </li>
-            <li>
-              <strong>Annotazione</strong>: Se preferisci mantenere traccia delle lezioni annullate, puoi mantenere
-              la lezione nel sistema ma aggiungere nel campo note (disponibile nella pagina di modifica) un'annotazione
-              che indichi che la lezione è stata annullata e i motivi.
-            </li>
-          </ol>
-          <Typography>
-            Ricorda che l'eliminazione di una lezione associata a un pacchetto "restituirà" le ore al pacchetto,
-            che saranno nuovamente disponibili per future lezioni.
-          </Typography>
-        </>
-      )
-    },
-    {
-      question: 'Come posso vedere rapidamente quali pacchetti stanno per scadere?',
-      answer: (
-        <Typography paragraph>
-          Nella lista dei pacchetti, i pacchetti che stanno per scadere (entro la settimana successiva) sono
-          evidenziati con un colore di avviso (giallo). Inoltre, puoi utilizzare il filtro "Stato" nella pagina dei
-          pacchetti e selezionare "In scadenza" per visualizzare solo i pacchetti che stanno per scadere.
-          Gli amministratori vedono anche un conteggio dei pacchetti in scadenza nella dashboard amministrativa.
-        </Typography>
-      )
-    }
+  
   ];
 
   // If there's a search query, filter the items

@@ -1,8 +1,10 @@
 // src/pages/faq/sections/FAQSection4.jsx
 import React from 'react';
-import { Typography, Link } from '@mui/material';
+import { Typography, Link, Button } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import FAQItem from '../components/FAQItem';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
 
 function FAQSection4({ searchQuery = '' }) {
   const items = [
@@ -15,13 +17,27 @@ function FAQSection4({ searchQuery = '' }) {
           </Typography>
           <ul>
             <li>
-              Dalla <Link component={RouterLink} to="/dashboard">dashboard personale</Link>, cliccando su un giorno nel calendario
+              Dalla tua <Link component={RouterLink} to="/dashboard">dashboard personale</Link>, cliccando su un giorno nel calendario
             </li>
             <li>
-              Dalla pagina <Link component={RouterLink} to="/lessons">Lezioni</Link>, usando il pulsante "Nuova Lezione"
+              Dalla pagina <Link component={RouterLink} to="/lessons">Lezioni</Link>, usando il pulsante <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '130px' }}
+              >
+                Nuova Lezione
+              </Button>
             </li>
             <li>
-              Dalla scheda di uno studente, cliccando su "Nuova Lezione"
+              Dalla scheda di uno studente, cliccando su <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '130px' }}
+              >
+                Nuova Lezione
+              </Button>
             </li>
             <li>
               Dalla pagina di un pacchetto precedentemente aperto, usando il calendario per selezionare un giorno
@@ -38,16 +54,11 @@ function FAQSection4({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Quando crei una nuova lezione, dopo aver selezionato lo studente, se questo ha pacchetti verrà mostrato un avviso. 
-            Spunta quindi l'opzione "Parte di un Pacchetto" e scegli il pacchetto desiderato dal menu a tendina che apparirà.
-          </Typography>
-          <Typography paragraph>
-            Se non vedi pacchetti disponibili, chiedi se hanno un pacchetto, e nel caso, crealo facendoti dare
-            le informazioni da inserire (data di partenza e numero di ore).
+            Quando crei una nuova lezione, se lo studente ha pacchetti con ore rimanenti verrà mostrato un avviso. 
+            Spunta quindi l'opzione in basso <b>"Parte di un pacchetto"</b> e scegli il pacchetto desiderato dal menu a tendina che apparirà.
           </Typography>
           <Typography>
-            Puoi anche aggiungere una lezione direttamente dalla pagina di dettaglio del pacchetto
-            cliccando su un giorno nel calendario, che creerà automaticamente una lezione associata
+            Puoi anche aggiungere una lezione di un pacchetto direttamente dalla pagina di dettaglio del pacchetto <b>cliccando su un giorno nel calendario</b>, che creerà automaticamente una lezione associata
             a quel pacchetto.
           </Typography>
         </>
@@ -58,17 +69,14 @@ function FAQSection4({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Se stai creando una lezione e lo studente dovrebbe avere un pacchetto ma questo
-            non appare tra le opzioni disponibili, significa che il pacchetto non è ancora stato
-            registrato nel sistema. Segui questi passaggi:
+            Molto semplice: crealo! Segui questi passaggi:
           </Typography>
           <ol>
             <li>
-              Interrompi la creazione della lezione (clicca "Annulla")
+              Se stavi aggiungendo la lezione, interrompi la creazione cliccando su annulla
             </li>
             <li>
-              Vai alla sezione <Link component={RouterLink} to="/packages">Pacchetti</Link> e crea un nuovo pacchetto
-              per lo studente, inserendo la data di inizio e il numero di ore
+              Vai alla sezione <Link component={RouterLink} to="/packages">Pacchetti</Link> e <b>crea un nuovo pacchetto</b> per lo studente: basta inserire la <b>data di inizio</b> e il <b>numero di ore</b>
             </li>
             <li>
               Torna a creare la lezione, ora sarai in grado di selezionare il pacchetto appena creato
@@ -78,62 +86,41 @@ function FAQSection4({ searchQuery = '' }) {
       )
     },
     {
-      question: 'Cosa succede se la durata della lezione supera le ore rimanenti nel pacchetto?',
+      question: 'Come gestisco le lezioni che si sovrappongono?',
       answer: (
         <>
-          <Typography paragraph>
-            Se stai aggiungendo una lezione dalla sezione Lezioni, e la durata della lezione supera le ore disponibili nel pacchetto, il sistema mostrerà una finestra
-            di dialogo con due opzioni:
-          </Typography>
-          <ol>
-            <li>
-              <strong>Utilizzare le ore rimanenti del pacchetto e creare una lezione singola</strong> per le ore eccedenti:
-              questa opzione crea automaticamente una lezione singola per le ore che superano quelle disponibili
-              nel pacchetto.
-            </li>
-            <li>
-              <strong>Creare un nuovo pacchetto</strong> per le ore eccedenti: questa opzione ti guiderà nella
-              creazione di un nuovo pacchetto per lo studente, che includerà le ore eccedenti.
-            </li>
-          </ol>
-          <Typography>
-            Scegli l'opzione più adatta in base alle preferenze dello studente e alla tua organizzazione.
-            Attenzione: se stai aggiungendo la lezione dalla dashboard, il sistema semplicemente non ti permetterà di crearla.
-            Per farlo dovrai andare nella sezione Lezioni.
-          </Typography>
+        <Typography paragraph>
+          Il sistema rileva automaticamente eventuali sovrapposizioni per lo stesso studente e ti avviserà nel
+          caso in cui tenti di creare una lezione che si sovrappone a un'altra con un altro professore. 
+        </Typography>
+        <Typography paragraph>
+          <b>Importante:</b> se hai studenti condivisi, <b>concorda gli orari delle lezioni con gli altri insegnanti</b>. Fallo <b>prima</b> di inserirle,
+          in modo da essere più coordinati e favorire i bisogni sia degli studenti che dei professori.
+        </Typography>
         </>
       )
     },
     {
-      question: 'Come gestisco le lezioni che si sovrappongono?',
-      answer: (
-        <Typography paragraph>
-          Il sistema rileva automaticamente eventuali sovrapposizioni per lo stesso studente e ti avviserà nel
-          caso in cui tenti di creare una lezione che si sovrappone a un'altra con un altro professore. Non è possibile avere due
-          lezioni contemporanee per lo stesso studente. Dovrai modificare l'orario di una delle lezioni
-          se desideri programmarle nella stessa giornata.
-        </Typography>
-      )
-    },
-    {
-      question: 'Come marco una lezione singola come pagata?',
+      question: 'Posso marcare una lezione singola come pagata?',
       answer: (
         <>
           <Typography paragraph>
-            Esistono diversi modi per segnare una lezione come pagata:
+            <b>Sì</b>, ed è consigliabile farlo se sai che lo studente in questione ha già pagato la sua lezione. Esistono diversi modi per farlo:
           </Typography>
           <ol>
             <li>
-              Dalla lista lezioni, clicca sul badge "Non pagata" accanto alla lezione per aprire
-              un menu che ti consente di impostare la data di pagamento
+              Dalla lista lezioni, clicca sul badge nella colonna <b>"Pagamento"</b>: il badge cambierà da "Non pagata" a "Pagata" e ti chiederà di inserire la data di pagamento
             </li>
             <li>
-              Dalla pagina di dettaglio della lezione, clicca sul badge "Non pagata" per contrassegnare
-              la lezione come pagata
-            </li>
-            <li>
-              Quando modifichi una lezione, puoi cambiare lo stato del pagamento usando l'apposito
-              interruttore "Lezione pagata"
+              Dalla pagina di dettaglio della lezione, clicca su <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<EditIcon />}
+                sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '100px' }}
+              >
+                Modifica
+              </Button> in alto a destra, e cambia lo stato del pagamento usando l'apposito
+              interruttore <b>"Lezione pagata"</b>
             </li>
           </ol>
           <Typography>
@@ -148,7 +135,7 @@ function FAQSection4({ searchQuery = '' }) {
       question: 'Posso aggiungere una lezione anche se è stata svolta online?',
       answer: (
         <Typography paragraph>
-          Quando crei o modifichi una lezione, troverai un'opzione "Lezione online" che puoi attivare
+          Certo: quando crei o modifichi una lezione, troverai un'opzione <b>"Lezione online"</b> che puoi attivare
           per indicare che la lezione si svolgerà online anziché in presenza. Le lezioni online verranno
           visualizzate con un'icona speciale nella dashboard e nelle liste, consentendoti di distinguerle
           facilmente dalle lezioni in presenza.
@@ -156,13 +143,11 @@ function FAQSection4({ searchQuery = '' }) {
       )
     },
     {
-      question: 'Come posso vedere le lezioni di un giorno specifico?',
+      question: 'Posso vedere le lezioni di un giorno specifico tutte in ordine?',
       answer: (
         <Typography paragraph>
-          Dalla tua dashboard, puoi cliccare su un giorno nel calendario per visualizzare le lezioni programmate
-          per quel giorno. Si aprirà una finestra di dialogo che mostra tutte le lezioni del giorno selezionato,
-          con orari e dettagli. Da questa finestra, puoi anche aggiungere una nuova lezione per quel giorno
-          specifico.
+          Dalla tua dashboard, puoi cliccare sulla lente di ingrandimento di un giorno nel calendario per visualizzare le lezioni programmate
+          per quel giorno. Si aprirà una finestra di dialogo che mostra <b>una timeline</b> con tutte le lezioni, più una lista con orari e dettagli. 
         </Typography>
       )
     }

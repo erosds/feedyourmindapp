@@ -1,0 +1,10 @@
+{
+	"Wrap with <b>": {
+  "prefix": "boldwrap",
+  "body": [
+    "<b>$TM_SELECTED_TEXT</b>"
+  ],
+  "description": "Wrap selection with <b> tag"
+}
+
+}
