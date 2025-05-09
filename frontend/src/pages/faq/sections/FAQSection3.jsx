@@ -19,8 +19,13 @@ function FAQSection3({ searchQuery = '' }) {
                 sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '130px' }}
               >
                 Nuovo Pacchetto
-              </Button> in alto a destra. Compila il modulo con le informazioni necessarie: <b>studente/i</b>, <b>data di inizio</b>, <b>ore totali</b>. Di default un nuovo pacchetto viene inserito come non
-            pagato. Se invece vuoi inserire che è stato pagato, va inserita anche la <b>data di pagamento</b>.
+              </Button> in alto a destra. Basta inserire poche informazioni necessarie: <b>studente/i</b>, <b>data di inizio</b>, <b>ore totali</b>. Se non conosci queste informazioni, chiedile ad un admin oppure allo studente stesso.
+          </Typography>
+          <Typography paragraph>    
+              Se vedi che non c'è nessun pacchetto per lo studente di cui vuoi inserire una lezione, <b>non esitare a crearlo</b>! Creare i pacchetti non è compito degli admin, ma <b>tuo</b>.
+          </Typography>
+          <Typography paragraph>    
+              Di default un nuovo pacchetto viene inserito come non pagato. Se invece vuoi inserire che è stato pagato, va inserita anche la <b>data di pagamento</b>. Ma non preoccuparti di questo, se non lo sai lascia il pacchetto come non pagato.
           </Typography>
         </>
       )
@@ -29,7 +34,7 @@ function FAQSection3({ searchQuery = '' }) {
       question: 'Posso creare pacchetti condivisi tra più studenti?',
       answer: (
         <Typography paragraph>
-          Sì, il sistema permette di inserire più studenti associati allo stesso pacchetto per un massimo di 3 studenti. Questo è utile quando più studenti condividono lo stesso pacchetto, ad esempio fratelli/sorelle.
+          Sì, il sistema permette di inserire più studenti associati allo stesso pacchetto per un massimo di <b>3 studenti</b>. Questo è utile quando più studenti condividono lo stesso pacchetto, ad esempio fratelli/sorelle.
         </Typography>
       )
     },
@@ -116,7 +121,7 @@ function FAQSection3({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            La scadenza di un pacchetto è automaticamente calcolata come 4 settimane (28 giorni) dopo la
+            La scadenza di un pacchetto è automaticamente calcolata come <b>4 settimane (28 giorni)</b> dopo la
             data di inizio. Il sistema calcola il lunedì della settimana corrente e aggiunge 4 settimane.
             Questo significa che il pacchetto scade sempre di domenica, alla fine della quarta settimana.
           </Typography>

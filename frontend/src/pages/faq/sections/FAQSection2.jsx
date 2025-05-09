@@ -29,9 +29,6 @@ function FAQSection2({ searchQuery = '' }) {
             Compila il modulo con le informazioni richieste e clicca su "Crea". I campi obbligatori sono <b>nome</b> e <b>cognome</b> (se non li sai, fatteli dire!).
             Aggiungi lo studente anche se è uno studente occasionale o da lezione una-tantum.
           </Typography>
-          <Typography>
-            Puoi aggiungere rapidamente un nuovo studente anche da <Link component={RouterLink} to="/students/new">qui</Link>.
-          </Typography>
         </>
       )
     },
@@ -46,12 +43,12 @@ function FAQSection2({ searchQuery = '' }) {
       )
     },
     {
-      question: 'Posso vedere tutte le lezioni e i pacchetti di uno studente?',
+      question: 'Dove posso vedere tutte le lezioni e i pacchetti di uno studente?',
       answer: (
         <>
           <Typography paragraph>
-            Certo, per farlo ti basta visualizzare la <b>pagina di dettaglio</b> dello studente cliccando sul suo nome nella <Link component={RouterLink} to="/students">lista degli studenti</Link>.
-            C'è una parte relativa alle <b>statistiche totali</b> in alto.
+            Puoi visualizzare la <b>pagina di dettaglio</b> dello studente cliccando sul suo nome una volta cercato nella <Link component={RouterLink} to="/students">lista degli studenti</Link>.
+            Nella pagina dettaglio c'è una parte relativa alle <b>statistiche totali</b> in alto.
           </Typography>
           <Typography>
             Inoltre, questa pagina include un <b>calendario mensile</b> che per mostra tutte
@@ -80,23 +77,6 @@ function FAQSection2({ searchQuery = '' }) {
           Dovrai prima eliminare tutte le lezioni e i pacchetti associati allo studente.
         </Typography>
         </>
-      )
-    },
-    {
-      question: 'Come posso modificare i dati di uno studente?',
-      answer: (
-        <Typography paragraph>
-          Vai alla pagina dettaglio dello studente cliccando sul suo nome nella lista degli studenti,
-          quindi clicca sul pulsante <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={<EditIcon />}
-                sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '100px' }}
-              >
-                Modifica
-              </Button> in alto a destra. Potrai aggiornare i suoi dati personali
-          come nome, cognome, email, telefono e data di nascita.
-        </Typography>
       )
     },
   ];

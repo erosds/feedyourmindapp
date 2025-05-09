@@ -47,8 +47,8 @@ function FAQSection1({ searchQuery = '' }) {
             </li>
           </ul>
           <Typography paragraph>
-            Sono organizzati nel menu a sinistra con voci che ne offrono una lista: cliccando su lezioni, pacchetti, studenti comparirà la
-            lista di quelli disponibili.
+            Sono organizzati nel menu a sinistra con voci che ne offrono una <b>lista</b>: cliccando su lezioni, pacchetti, studenti comparirà la
+            lista di quelli disponibili. Dalla lista, cliccando su un elemento, si aprirà una <b>scheda dettagli</b> di quell'elemento.
           </Typography>
           <Typography>
             In più c'è <Link component={RouterLink} to="/dashboard">Dashboard Personale</Link>. Questa dashboard mostra
@@ -64,7 +64,7 @@ function FAQSection1({ searchQuery = '' }) {
       answer: (
         <>
           <Typography paragraph>
-            Puoi cambiare la tua password dalla pagina di login cliccando su "Cambia password", oppure
+            Puoi cambiare la tua password dalla pagina di login cliccando su <b>"Cambia password"</b>, oppure
             contattare l'amministratore se hai completamente dimenticato le tue credenziali.
           </Typography>
           <Typography>
@@ -73,16 +73,6 @@ function FAQSection1({ searchQuery = '' }) {
         </>
       )
     },
-    {
-      question: 'Se dimentico la password cosa succede?',
-      answer: (
-        <Typography>
-          Se hai dimenticato la password, contatta l'amministratore del sistema. Solo l'amministratore
-          può reimpostare una password dimenticata.
-        </Typography>
-      )
-    },
-    
   ];
 
   // If there's a search query, filter the items
