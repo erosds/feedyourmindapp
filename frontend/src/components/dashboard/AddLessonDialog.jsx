@@ -395,54 +395,93 @@ function AddLessonDialog({
 
 
 
-  // Modifica questo useEffect in AddLessonDialog.jsx
-  useEffect(() => {
-    if (open) {
-      setError('');
+// Modifica all'useEffect per resettare correttamente gli stati quando il dialogo si apre
 
-      // Se stiamo usando il dialogo dal dettaglio pacchetto, imposta alcuni valori di default
-      if (context === 'packageDetail' && fixedPackageId) {
-        // Forza sempre l'utilizzo del pacchetto corrente
-        setLessonForm(prev => ({
-          ...prev,
-          is_package: true,
-          package_id: fixedPackageId
-        }));
+useEffect(() => {
+  if (open) {
+    // Reset stati quando si apre il dialogo
+    setError('');
+    setLocalPackages([]);
+    setExpiredPackages([]);
+    setRecentlyEndedPackages([]);
+    setLocalSelectedPackage(null);
+    setStudentLessons([]);
 
-        // Trova il pacchetto corrente nella lista
-        const currentPackage = studentPackages.find(pkg => pkg.id === fixedPackageId);
-        if (currentPackage) {
-          setLocalSelectedPackage(currentPackage);
+    // Se stiamo usando il dialogo dal dettaglio pacchetto, imposta alcuni valori di default
+    if (context === 'packageDetail' && fixedPackageId) {
+      // Forza sempre l'utilizzo del pacchetto corrente
+      setLessonForm(prev => ({
+        ...prev,
+        is_package: true,
+        package_id: fixedPackageId
+      }));
 
-          // Estrai gli studenti dal pacchetto corrente - esegui solo una volta
-          if (packageStudents.length === 0 && students && Array.isArray(students)) {
-            // Filtriamo gli studenti che sono associati a questo pacchetto
-            const pkgStudents = students.filter(student =>
-              currentPackage.student_ids &&
-              currentPackage.student_ids.includes(student.id)
-            );
-            setPackageStudents(pkgStudents);
-          }
-        }
-      } else {
-        const activePackages = Array.isArray(studentPackages)
-          ? studentPackages.filter(pkg => pkg && pkg.status === 'in_progress')
-          : [];
-        setLocalPackages(activePackages);
-        if (selectedPackage) {
-          setLocalSelectedPackage(selectedPackage);
-        } else {
-          setLocalSelectedPackage(null);
+      // Trova il pacchetto corrente nella lista
+      const currentPackage = studentPackages.find(pkg => pkg.id === fixedPackageId);
+      if (currentPackage) {
+        setLocalSelectedPackage(currentPackage);
+
+        // Estrai gli studenti dal pacchetto corrente - esegui solo una volta
+        if (packageStudents.length === 0 && students && Array.isArray(students)) {
+          // Filtriamo gli studenti che sono associati a questo pacchetto
+          const pkgStudents = students.filter(student =>
+            currentPackage.student_ids &&
+            currentPackage.student_ids.includes(student.id)
+          );
+          setPackageStudents(pkgStudents);
         }
       }
+    } else {
+      // Per il contesto normale, carica i pacchetti solo se lo studente è già selezionato
+      if (lessonForm.student_id) {
+        // Carica i pacchetti attivi dello studente
+        const fetchPackages = async () => {
+          try {
+            setIsLoadingPackages(true);
+            const packagesResponse = await packageService.getByStudent(lessonForm.student_id);
+            
+            // Separa i pacchetti in categorie
+            const activePackages = packagesResponse.data.filter(pkg => pkg.status === 'in_progress');
+            const expiredWithHoursPackages = packagesResponse.data.filter(pkg => 
+              pkg.status === 'expired' && parseFloat(pkg.remaining_hours) > 0
+            );
+            
+            // Trova pacchetti terminati recentemente
+            const today = new Date();
+            const twoWeeksAgo = new Date(today);
+            twoWeeksAgo.setDate(today.getDate() - 14);
 
-      // Carica le lezioni dello studente solo se non è già stato fatto
-      if (lessonForm.student_id && studentLessons.length === 0) {
-        loadStudentLessons(lessonForm.student_id);
+            const recentlyEnded = packagesResponse.data.filter(pkg => {
+              const isEndedPackage = (pkg.status === 'expired' && parseFloat(pkg.remaining_hours) <= 0) ||
+                (pkg.status === 'completed');
+              const expiryDate = parseISO(pkg.expiry_date);
+              const isRecent = expiryDate >= twoWeeksAgo && expiryDate <= today;
+              return isEndedPackage && isRecent;
+            });
+            
+            setLocalPackages(activePackages);
+            setExpiredPackages(expiredWithHoursPackages);
+            setRecentlyEndedPackages(recentlyEnded);
+            
+            if (selectedPackage) {
+              setLocalSelectedPackage(selectedPackage);
+            }
+            
+            // Carica le lezioni dello studente
+            await loadStudentLessons(lessonForm.student_id);
+          } catch (err) {
+            console.error('Error loading student packages:', err);
+            setError('Errore nel caricamento dei pacchetti dello studente');
+          } finally {
+            setIsLoadingPackages(false);
+          }
+        };
+        
+        fetchPackages();
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, context, fixedPackageId, selectedPackage, lessonForm.student_id, context, fixedPackageId, students]); // Rimuovi le dipendenze che causano re-render continui
+  }
+}, [open, context, fixedPackageId, lessonForm.student_id, students, selectedPackage, studentPackages]);
 
   return (
     <>
