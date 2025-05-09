@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  Avatar,
   Box,
   Button,
   ButtonGroup,
@@ -10,7 +9,6 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Divider,
   FormControl,
   Grid,
   IconButton,
@@ -25,7 +23,6 @@ import {
   TableHead,
   TablePagination,
   TableRow,
-  TableSortLabel,
   Tooltip,
   Typography
 } from '@mui/material';
@@ -36,8 +33,7 @@ import {
   Person as PersonIcon,
   School as SchoolIcon,
   MenuBook as MenuBookIcon,
-  AddCircleOutline as AddPackageIcon,
-  AddTask as AddLessonIcon,
+  Add as AddLessonIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format, addMonths, subMonths, parseISO, startOfWeek, endOfWeek, addWeeks, subWeeks, isWithinInterval } from 'date-fns';
@@ -531,15 +527,6 @@ function StudentDetailPage() {
             sx={{ mr: 1 }}
           >
             Nuova Lezione
-          </Button>
-          <Button
-            variant="outlined"
-            color="primary"
-            startIcon={<AddPackageIcon />}
-            onClick={handleAddPackage}
-            sx={{ mr: 1 }}
-          >
-            Nuovo Pacchetto
           </Button>
           <Button
             variant="outlined"
