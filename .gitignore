@@ -8,3 +8,4 @@ __pycache__/
 *.pyc
 frontend/build/
 __init__.py
+.vscode/
