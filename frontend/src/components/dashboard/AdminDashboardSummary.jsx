@@ -26,10 +26,10 @@ import {
 } from '@mui/icons-material';
 import {
   parseISO,
+  format
 } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import PaymentRemindersCard from './PaymentRemindersCard'; // Import the PaymentRemindersCard component
-
+import PaymentRemindersCard from './PaymentRemindersCard';
 
 function AdminDashboardSummary({
   professorWeeklyData = [],
@@ -38,66 +38,103 @@ function AdminDashboardSummary({
   setPeriodFilter,
   periodLessons = [],
   periodPackages = [],
-  lessonsPriceIncome = 0,
-  packagesPriceIncome = 0,
-  professorsPayments = 0,
   currentTab = 0,
   setCurrentTab,
   // Props for total packages and lessons
   allPackages = [],
   allLessons = [],
-  onNotesUpdate
+  onNotesUpdate,
+  // Date range for the selected period
+  periodStartDate,
+  periodEndDate
 }) {
   const navigate = useNavigate();
 
   // Function to navigate to packages page with proper filter
   const navigateToPackages = (filter) => {
     if (filter === 'expiring') {
-      // Naviga alla pagina pacchetti con filtro per pacchetti in scadenza
-      // Usa searchParams invece di state
       navigate('/packages?status=expiring');
     } else if (filter === 'unpaid') {
-      // Naviga alla pagina pacchetti con filtro per pacchetti non pagati
       navigate('/packages?payment=unpaid');
     } else {
-      // Navigazione di default senza filtri
       navigate('/packages');
     }
   };
 
-
-  // Funzione corretta per navigare alla pagina lezioni con i filtri appropriati
+  // Function to navigate to lessons page with filters
   const navigateToLessons = (filter) => {
     if (filter === 'unpaid') {
-      // Navigate to lessons page with filter for unpaid lessons
       navigate('/lessons?payment=unpaid');
     } else {
-      // Default navigation without filters
       navigate('/lessons');
     }
   };
 
+  // Filter and process payments for the selected period with the PaymentCalendar logic
+  const paymentsData = useMemo(() => {
+    // Format start and end dates for comparisons
+    const startDateStr = periodStartDate ? format(periodStartDate, 'yyyy-MM-dd') : null;
+    const endDateStr = periodEndDate ? format(periodEndDate, 'yyyy-MM-dd') : null;
+
+    if (!startDateStr || !endDateStr) return { lessons: [], packages: [], totals: { lessons: 0, packages: 0 }};
+
+    // Filter paid lessons (single lessons only, not package lessons)
+    const paidLessons = allLessons.filter(lesson => 
+      lesson.is_paid && 
+      lesson.payment_date && 
+      !lesson.is_package &&
+      lesson.payment_date >= startDateStr &&
+      lesson.payment_date <= endDateStr
+    );
+
+    // Filter paid packages
+    const paidPackages = allPackages.filter(pkg => 
+      pkg.is_paid && 
+      pkg.payment_date &&
+      pkg.payment_date >= startDateStr &&
+      pkg.payment_date <= endDateStr
+    );
+
+    // Calculate totals
+    const lessonsPriceIncome = paidLessons.reduce((sum, lesson) => sum + parseFloat(lesson.price || 0), 0);
+    const packagesPriceIncome = paidPackages.reduce((sum, pkg) => sum + parseFloat(pkg.package_cost || 0), 0);
+
+    // Calculate hours (for lessons)
+    const lessonHours = paidLessons.reduce((sum, lesson) => sum + parseFloat(lesson.duration || 0), 0);
+
+    return {
+      lessons: paidLessons,
+      packages: paidPackages,
+      totals: {
+        lessons: lessonsPriceIncome,
+        packages: packagesPriceIncome,
+        total: lessonsPriceIncome + packagesPriceIncome
+      },
+      hours: {
+        lessons: lessonHours
+      }
+    };
+  }, [allLessons, allPackages, periodStartDate, periodEndDate]);
 
   // Calculate expiring packages
   const expiringPackages = useMemo(() => {
-    // Ottieni il lunedì della settimana corrente
+    // Get the Monday of the current week
     const today = new Date();
-    const dayOfWeek = today.getDay() || 7; // 0 per domenica, trasformato in 7
+    const dayOfWeek = today.getDay() || 7; // 0 for Sunday, transformed to 7
     const mondayThisWeek = new Date(today);
-    mondayThisWeek.setDate(today.getDate() - dayOfWeek + 1); // Lunedì della settimana corrente
-    mondayThisWeek.setHours(0, 0, 0, 0); // Inizio della giornata
+    mondayThisWeek.setDate(today.getDate() - dayOfWeek + 1);
+    mondayThisWeek.setHours(0, 0, 0, 0);
 
-    // Ottieni il lunedì della settimana prossima (7 giorni dopo)
+    // Get the Monday of next week (7 days later)
     const mondayNextWeek = new Date(mondayThisWeek);
     mondayNextWeek.setDate(mondayThisWeek.getDate() + 7);
 
-    // Filtra i pacchetti in scadenza
+    // Filter packages expiring this week
     return allPackages.filter(pkg => {
       const expiryDate = parseISO(pkg.expiry_date);
 
-      // Pacchetti la cui scadenza è compresa tra il lunedì di questa settimana e il lunedì della prossima (inclusi)
       return (
-        pkg.status === 'in_progress' && // Solo pacchetti in corso
+        pkg.status === 'in_progress' && // Only active packages
         expiryDate >= mondayThisWeek &&
         expiryDate <= mondayNextWeek
       );
@@ -106,27 +143,22 @@ function AdminDashboardSummary({
 
   // Calculate expired unpaid packages
   const expiredPackages = useMemo(() => {
-    return allPackages.filter(pkg =>
-      !pkg.is_paid
-    );
+    return allPackages.filter(pkg => !pkg.is_paid);
   }, [allPackages]);
 
   // Calculate unpaid lessons
   const unpaidLessons = useMemo(() => {
-    return allLessons.filter(lesson =>
-      !lesson.is_package && !lesson.is_paid
-    );
+    return allLessons.filter(lesson => !lesson.is_package && !lesson.is_paid);
   }, [allLessons]);
 
   // Calculate total lesson hours
   const totalLessonHours = useMemo(() => {
-    return periodLessons.reduce((total, lesson) =>
-      total + parseFloat(lesson.duration), 0
-    );
+    return periodLessons.reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
   }, [periodLessons]);
 
-  const totalIncome = lessonsPriceIncome + packagesPriceIncome;
-  const totalExpenses = professorsPayments;
+  // Period data for display
+  const totalIncome = paymentsData.totals.total;
+  const totalExpenses = professorWeeklyData.reduce((sum, prof) => sum + prof.totalPayment, 0);
   const netProfit = totalIncome - totalExpenses;
 
   const activeProfessorsCount = professorWeeklyData.length;
@@ -140,7 +172,7 @@ function AdminDashboardSummary({
     setCurrentTab(newValue);
   };
 
-  // Modified ClickableStatBlock component to make the entire block clickable
+  // Clickable stat block component
   const ClickableStatBlock = ({
     icon,
     label,
@@ -187,7 +219,7 @@ function AdminDashboardSummary({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* Prima Card: Statistiche basate sul periodo selezionato */}
+      {/* First Card: Period-based Statistics */}
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
@@ -271,7 +303,7 @@ function AdminDashboardSummary({
           ) : (
             <Box>
               <Grid container spacing={2}>
-                {/* Colonna lezioni singole */}
+                {/* Single Lessons column */}
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="primary" gutterBottom>
                     Lezioni Singole
@@ -279,16 +311,17 @@ function AdminDashboardSummary({
                   <List dense>
                     <ListItem>
                       {(() => {
+                        const paidSingleLessons = paymentsData.lessons;
                         const singleLessons = periodLessons.filter(lesson => !lesson.is_package);
-                        const paidLessons = singleLessons.filter(lesson => lesson.is_paid).length;
-                        const totalLessons = singleLessons.length;
+                        const paidLessonsCount = paidSingleLessons.length;
+                        const totalLessonsCount = singleLessons.length;
 
                         return (
                           <ListItemText
                             primary="Numero lezioni"
                             secondary={
                               <Typography variant="body2">
-                                {totalLessons} <Typography component="span" variant="caption" color="text.secondary">(di cui pagate: {paidLessons})</Typography>
+                                {totalLessonsCount} <Typography component="span" variant="caption" color="text.secondary">(di cui pagate: {paidLessonsCount})</Typography>
                               </Typography>
                             }
                           />
@@ -297,11 +330,9 @@ function AdminDashboardSummary({
                     </ListItem>
                     <ListItem>
                       {(() => {
-                        const singleLessons = periodLessons.filter(lesson => !lesson.is_package);
-                        const paidLessonsHours = singleLessons
-                          .filter(lesson => lesson.is_paid)
-                          .reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
-                        const totalHours = singleLessons
+                        const paidLessonsHours = paymentsData.hours.lessons;
+                        const totalHours = periodLessons
+                          .filter(lesson => !lesson.is_package)
                           .reduce((total, lesson) => total + parseFloat(lesson.duration), 0);
 
                         return (
@@ -318,18 +349,18 @@ function AdminDashboardSummary({
                     </ListItem>
                     <ListItem>
                       {(() => {
-                        // Ottieni tutte le lezioni singole nel periodo
+                        // Get all single lessons in the period
                         const singleLessons = periodLessons.filter(lesson => !lesson.is_package);
 
-                        // Entrate effettive (solo lezioni pagate con prezzo > 0)
-                        const actualIncome = lessonsPriceIncome;
+                        // Actual income (only paid lessons with price > 0)
+                        const actualIncome = paymentsData.totals.lessons;
 
-                        // Entrate teoriche (somma di tutti i prezzi delle lezioni, anche se non pagate)
+                        // Theoretical income (sum of all lesson prices, even if not paid)
                         const theoreticalIncome = singleLessons.reduce((total, lesson) =>
                           total + parseFloat(lesson.price || 0), 0);
 
-                        // Verifica se ci sono lezioni con prezzo a zero
-                        const zeroPrice = singleLessons.some(lesson =>
+                        // Check if there are lessons with zero price
+                        const zeroPrice = paymentsData.lessons.some(lesson =>
                           (!lesson.price || parseFloat(lesson.price) === 0) && lesson.is_paid);
 
                         return (
@@ -359,7 +390,7 @@ function AdminDashboardSummary({
                   </List>
                 </Grid>
 
-                {/* Colonna lezioni da pacchetti */}
+                {/* Package Lessons column */}
                 <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" color="primary" gutterBottom>
                     Lezioni da Pacchetti
@@ -367,19 +398,25 @@ function AdminDashboardSummary({
                   <List dense>
                     <ListItem>
                       {(() => {
-                        // Ottieni tutti i pacchetti nel periodo
+                        // Get unique package IDs used in this period
                         const packageLessons = periodLessons.filter(lesson => lesson.is_package);
-
-                        // Calcola il numero di pacchetti unici
                         const uniquePackageIds = [...new Set(packageLessons.map(lesson => lesson.package_id))];
                         const totalPackages = uniquePackageIds.length;
+
+                        // Count paid packages in the period
+                        const paidPackagesCount = paymentsData.packages.length;
 
                         return (
                           <ListItemText
                             primary="Numero pacchetti"
                             secondary={
                               <Typography variant="body2">
-                                {totalPackages} {totalPackages === 1 ? 'pacchetto' : 'pacchetti'}
+                                {totalPackages} {totalPackages === 1 ? 'pacchetto' : 'pacchetti'} in uso
+                                <Typography component="span" variant="caption" color="text.secondary">
+                                  {paidPackagesCount > 0 ? 
+                                    ` (${paidPackagesCount} pagat${paidPackagesCount === 1 ? 'o' : 'i'} nel periodo)` : 
+                                    ''}
+                                </Typography>
                               </Typography>
                             }
                           />
@@ -410,9 +447,9 @@ function AdminDashboardSummary({
                         secondary={
                           <Box>
                             <Typography variant="body2" component="span">
-                              €{packagesPriceIncome.toFixed(2)}
+                              €{paymentsData.totals.packages.toFixed(2)}
                             </Typography>
-                            {periodPackages && periodPackages.some(pkg => (!pkg.package_cost || parseFloat(pkg.package_cost) === 0) && pkg.is_paid) && (
+                            {paymentsData.packages.some(pkg => (!pkg.package_cost || parseFloat(pkg.package_cost) === 0) && pkg.is_paid) && (
                               <Typography
                                 variant="caption"
                                 component="div"
@@ -434,7 +471,7 @@ function AdminDashboardSummary({
         </CardContent>
       </Card>
 
-      {/* Seconda Card: Informazioni Aggiuntive (fisse, calcolate al giorno attuale) */}
+      {/* Second Card: Additional Information (fixed, calculated for the current day) */}
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>
@@ -442,7 +479,7 @@ function AdminDashboardSummary({
           </Typography>
 
           <Grid container spacing={2}>
-            {/* Next row - clickable blocks */}
+            {/* Clickable stat blocks */}
             <ClickableStatBlock
               icon={<TimerIcon />}
               label="Pacchetti in scadenza"
@@ -467,19 +504,13 @@ function AdminDashboardSummary({
               color="error.main"
             />
           </Grid>
-
-
         </CardContent>
       </Card>
 
+      {/* Payment Reminders Card */}
       <PaymentRemindersCard
         professors={professors}
-        onNotesUpdate={() => {
-          // Call the prop function to handle notes update
-          if (onNotesUpdate) {
-            onNotesUpdate();
-          }
-        }}
+        onNotesUpdate={onNotesUpdate}
       />
     </Box>
   );
