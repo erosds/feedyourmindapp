@@ -6,6 +6,7 @@ import {
   Button,
   ButtonGroup,
   Card,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -17,6 +18,7 @@ import {
   ListItem,
   ListItemText,
   Paper,
+  Stack,
   Typography,
   useTheme
 } from '@mui/material';
@@ -32,7 +34,7 @@ import {
   parseISO
 } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { lessonService, packageService } from '../../services/api';
+import { lessonService, packageService, studentService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 function PaymentCalendarPage() {
@@ -48,6 +50,7 @@ function PaymentCalendarPage() {
   const [dayPayments, setDayPayments] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [students, setStudents] = useState({});
 
   // Verify admin access
   useEffect(() => {
@@ -55,6 +58,28 @@ function PaymentCalendarPage() {
       navigate('/dashboard');
     }
   }, [isAdmin, navigate]);
+
+  // Fetch all students first to use for name display
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const response = await studentService.getAll();
+        const studentsMap = {};
+        
+        if (response && response.data) {
+          response.data.forEach(student => {
+            studentsMap[student.id] = `${student.first_name} ${student.last_name}`;
+          });
+        }
+        
+        setStudents(studentsMap);
+      } catch (err) {
+        console.error('Error fetching students:', err);
+      }
+    };
+
+    fetchStudents();
+  }, []);
 
   // Load all payments for the current month
   useEffect(() => {
@@ -111,17 +136,9 @@ function PaymentCalendarPage() {
           }))
         ];
 
-        // Fetch student data for each payment
-        const studentsResponse = await fetch('/api/students');
-        const studentsData = await studentsResponse.json();
-        const students = studentsData.data || [];
-        
         // Add student names to payments
         const paymentsWithStudentNames = combinedPayments.map(payment => {
-          const student = students.find(s => s.id === payment.student_id);
-          const studentName = student 
-            ? `${student.first_name} ${student.last_name}` 
-            : `Studente #${payment.student_id}`;
+          const studentName = students[payment.student_id] || `Studente #${payment.student_id}`;
           
           return {
             ...payment,
@@ -138,8 +155,10 @@ function PaymentCalendarPage() {
       }
     };
 
-    fetchPayments();
-  }, [currentMonth]);
+    if (Object.keys(students).length > 0) {
+      fetchPayments();
+    }
+  }, [currentMonth, students]);
 
   // Change month handlers
   const handlePreviousMonth = () => {
@@ -211,6 +230,51 @@ function PaymentCalendarPage() {
     return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   };
 
+  // Calculate monthly stats
+  const calculateMonthStats = () => {
+    const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
+    
+    const packagePayments = payments.filter(payment => payment.type === 'package');
+    const packageCount = packagePayments.length;
+    const packageTotal = packagePayments.reduce((sum, payment) => sum + payment.amount, 0);
+    
+    const lessonPayments = payments.filter(payment => payment.type === 'lesson');
+    const lessonHours = lessonPayments.reduce((sum, payment) => sum + payment.hours, 0);
+    const lessonTotal = lessonPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    
+    return {
+      totalAmount,
+      packageCount,
+      packageTotal,
+      lessonHours,
+      lessonTotal
+    };
+  };
+
+  // Get student display names for a specific day
+  const getStudentNamesForDay = (day) => {
+    const dayPayments = getPaymentsForDay(day);
+    return dayPayments.map(payment => {
+      // Extract first name and first letter of last name
+      const fullName = payment.studentName || '';
+      const nameParts = fullName.split(' ');
+      let displayName = '';
+      
+      if (nameParts.length > 0) {
+        displayName = nameParts[0]; // First name
+        if (nameParts.length > 1) {
+          displayName += ' ' + nameParts[1].charAt(0) + '.'; // First letter of last name
+        }
+      }
+      
+      return {
+        id: payment.id,
+        name: displayName,
+        type: payment.type
+      };
+    });
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
@@ -226,6 +290,9 @@ function PaymentCalendarPage() {
       </Box>
     );
   }
+
+  // Calculate monthly statistics
+  const monthStats = calculateMonthStats();
 
   return (
     <Box>
@@ -278,40 +345,8 @@ function PaymentCalendarPage() {
         </Box>
       </Card>
 
-      {/* Monthly summary */}
-      <Box mb={3}>
-        <Paper sx={{ p: 2 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
-              <Typography variant="body2" color="text.secondary">
-                Totale pagamenti del mese
-              </Typography>
-              <Typography variant="h5" color="primary">
-                €{payments.reduce((sum, payment) => sum + payment.amount, 0).toFixed(2)}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Typography variant="body2" color="text.secondary">
-                Numero di pagamenti
-              </Typography>
-              <Typography variant="h5">
-                {payments.length}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Typography variant="body2" color="text.secondary">
-                Ore totali
-              </Typography>
-              <Typography variant="h5">
-                {payments.reduce((sum, payment) => sum + payment.hours, 0).toFixed(1)}
-              </Typography>
-            </Grid>
-          </Grid>
-        </Paper>
-      </Box>
-
       {/* Calendar */}
-      <Paper sx={{ p: 2 }}>
+      <Paper sx={{ p: 2, mb: 3 }}>
         {/* Calendar header with weekdays */}
         <Grid container spacing={1} sx={{ mb: 1 }}>
           {weekdays.map((day, index) => (
@@ -338,7 +373,7 @@ function PaymentCalendarPage() {
           {Array.from({ length: getFirstDayOffset() }).map((_, index) => (
             <Grid item xs={12 / 7} key={`empty-${index}`}>
               <Box sx={{ 
-                height: 100, 
+                height: 120, 
                 border: '1px solid', 
                 borderColor: 'divider',
                 borderRadius: 1
@@ -352,17 +387,19 @@ function PaymentCalendarPage() {
             const hasPayments = dayPayments.length > 0;
             const dayTotal = getTotalForDay(day);
             const isCurrentDay = isToday(day);
+            const studentChips = getStudentNamesForDay(day);
 
             return (
               <Grid item xs={12 / 7} key={`day-${index}`}>
                 <Box
                   sx={{
-                    height: 100,
+                    height: 120,
                     border: '1px solid',
                     borderColor: isCurrentDay ? 'primary.main' : 'divider',
                     borderRadius: 1,
                     position: 'relative',
                     p: 1,
+                    pb: 0.5,
                     cursor: hasPayments ? 'pointer' : 'default',
                     '&:hover': hasPayments ? {
                       backgroundColor: 'action.hover',
@@ -370,37 +407,156 @@ function PaymentCalendarPage() {
                       transition: 'transform 0.2s'
                     } : {},
                     boxShadow: isCurrentDay ? 1 : 0,
-                    backgroundColor: hasPayments ? 'rgba(0, 230, 118, 0.1)' : 'inherit'
+                    backgroundColor: 'inherit',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
                   }}
                   onClick={hasPayments ? () => handleDayClick(day) : undefined}
                 >
-                  {/* Day number */}
+                  {/* Day number in corner */}
                   <Typography
                     variant="subtitle2"
                     sx={{
                       fontWeight: isCurrentDay ? 'bold' : 'normal',
                       textAlign: 'right',
-                      color: isCurrentDay ? 'primary.main' : 'text.primary'
+                      color: isCurrentDay ? 'primary.main' : 'text.primary',
+                      position: 'absolute',
+                      top: 2,
+                      right: 4,
+                      fontSize: '0.75rem'
                     }}
                   >
                     {format(day, 'd')}
                   </Typography>
 
-                  {/* Payment indicator */}
+                  {/* Payment indicator with student chips */}
                   {hasPayments && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="body2" color="success.main" fontWeight="bold">
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        height: '100%',
+                        width: '100%'
+                      }}
+                    >
+                      {/* Amount in bold at the top */}
+                      <Typography 
+                        variant="body1" 
+                        color="success.main" 
+                        fontWeight="bold"
+                        sx={{
+                          mt: 0.5,
+                          mb: 0.5,
+                          fontSize: '1rem',
+                          lineHeight: 1
+                        }}
+                      >
                         €{dayTotal.toFixed(2)}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      
+                      {/* Number of payments below */}
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary"
+                        sx={{
+                          fontSize: '0.7rem',
+                          mb: 1,
+                          lineHeight: 1
+                        }}
+                      >
                         {dayPayments.length} pagament{dayPayments.length === 1 ? 'o' : 'i'}
                       </Typography>
+                      
+                      {/* Student chips filling the rest of the square */}
+                      <Box 
+                        sx={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: '2px',
+                          mt: 0,
+                          overflow: 'hidden',
+                          flexGrow: 1
+                        }}
+                      >
+                        {studentChips.map((student) => (
+                          <Chip
+                            key={student.id}
+                            label={student.name}
+                            size="small"
+                            color={student.type === 'package' ? 'secondary' : 'primary'}
+                            sx={{ 
+                              height: 15, 
+                              margin: '1px',
+                              '& .MuiChip-label': { 
+                                px: 0.5, 
+                                fontSize: '0.65rem',
+                                fontWeight: 'medium',
+                                whiteSpace: 'nowrap'
+                              }
+                            }}
+                          />
+                        ))}
+                      </Box>
                     </Box>
                   )}
                 </Box>
               </Grid>
             );
           })}
+        </Grid>
+      </Paper>
+
+      {/* Monthly summary - moved below the calendar */}
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Riepilogo del mese di {format(currentMonth, 'MMMM yyyy', { locale: it })}
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={2.5}>
+            <Typography variant="body2" color="text.secondary">
+              Totale pagamenti
+            </Typography>
+            <Typography variant="h5" color="success.main">
+              €{monthStats.totalAmount.toFixed(2)}
+            </Typography>
+          </Grid>
+          
+          <Grid item xs={12} sm={2.5}>
+            <Typography variant="body2" color="text.secondary">
+              Pacchetti pagati
+            </Typography>
+            <Typography variant="h5">
+              {monthStats.packageCount} pacchett{monthStats.packageCount === 1 ? 'o' : 'i'}
+            </Typography>
+          </Grid>
+          
+          <Grid item xs={12} sm={2.5}>
+            <Typography variant="body2" color="text.secondary">
+              Totale da pacchetti
+            </Typography>
+            <Typography variant="h5" color="secondary.main">
+              €{monthStats.packageTotal.toFixed(2)}
+            </Typography>
+          </Grid>
+          
+          <Grid item xs={12} sm={2.5}>
+            <Typography variant="body2" color="text.secondary">
+              Ore lezioni singole pagate
+            </Typography>
+            <Typography variant="h5">
+              {monthStats.lessonHours.toFixed(1)} ore
+            </Typography>
+          </Grid>
+          
+          <Grid item xs={12} sm={2}>
+            <Typography variant="body2" color="text.secondary">
+              Totale da lezioni singole
+            </Typography>
+            <Typography variant="h5" color="primary.main">
+              €{monthStats.lessonTotal.toFixed(2)}
+            </Typography>
+          </Grid>
         </Grid>
       </Paper>
 
@@ -419,7 +575,7 @@ function PaymentCalendarPage() {
             <Typography variant="body2" color="text.secondary">
               Totale giornaliero
             </Typography>
-            <Typography variant="h5" color="success.main" gutterBottom>
+            <Typography variant="h5" gutterBottom>
               €{dayPayments.reduce((sum, payment) => sum + payment.amount, 0).toFixed(2)}
             </Typography>
           </Box>
@@ -450,23 +606,11 @@ function PaymentCalendarPage() {
                     </Typography>
                   }
                   secondary={
-                    <>
-                      <Typography variant="body2" color="text.secondary" component="span">
-                        {payment.type === 'lesson' 
-                          ? `Lezione singola di ${payment.hours} ore` 
-                          : `Pacchetto di ${payment.hours} ore`}
-                      </Typography>
-                      <Typography 
-                        variant="caption" 
-                        sx={{ 
-                          display: 'block', 
-                          color: payment.type === 'lesson' ? 'info.main' : 'secondary.main',
-                          mt: 0.5
-                        }}
-                      >
-                        {payment.type === 'lesson' ? 'Lezione' : 'Pacchetto'} #{payment.typeId}
-                      </Typography>
-                    </>
+                    <Typography variant="body2" color="text.secondary" component="span">
+                      {payment.type === 'lesson' 
+                        ? `Lezione singola di ${payment.hours} ore` 
+                        : `Pacchetto di ${payment.hours} ore`}
+                    </Typography>
                   }
                 />
               </ListItem>

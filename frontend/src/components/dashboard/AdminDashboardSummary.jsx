@@ -29,7 +29,7 @@ import {
 } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import PaymentRemindersCard from './PaymentRemindersCard'; // Import the PaymentRemindersCard component
- 
+
 
 function AdminDashboardSummary({
   professorWeeklyData = [],
@@ -49,7 +49,7 @@ function AdminDashboardSummary({
   onNotesUpdate
 }) {
   const navigate = useNavigate();
- 
+
   // Function to navigate to packages page with proper filter
   const navigateToPackages = (filter) => {
     if (filter === 'expiring') {
@@ -367,15 +367,19 @@ function AdminDashboardSummary({
                   <List dense>
                     <ListItem>
                       {(() => {
+                        // Ottieni tutti i pacchetti nel periodo
                         const packageLessons = periodLessons.filter(lesson => lesson.is_package);
-                        const totalLessons = packageLessons.length;
+
+                        // Calcola il numero di pacchetti unici
+                        const uniquePackageIds = [...new Set(packageLessons.map(lesson => lesson.package_id))];
+                        const totalPackages = uniquePackageIds.length;
 
                         return (
                           <ListItemText
-                            primary="Numero lezioni"
+                            primary="Numero pacchetti"
                             secondary={
                               <Typography variant="body2">
-                                {totalLessons}
+                                {totalPackages} {totalPackages === 1 ? 'pacchetto' : 'pacchetti'}
                               </Typography>
                             }
                           />
@@ -408,7 +412,7 @@ function AdminDashboardSummary({
                             <Typography variant="body2" component="span">
                               €{packagesPriceIncome.toFixed(2)}
                             </Typography>
-                            {periodPackages.some(pkg => (!pkg.package_cost || parseFloat(pkg.package_cost) === 0) && pkg.is_paid) && (
+                            {periodPackages && periodPackages.some(pkg => (!pkg.package_cost || parseFloat(pkg.package_cost) === 0) && pkg.is_paid) && (
                               <Typography
                                 variant="caption"
                                 component="div"
