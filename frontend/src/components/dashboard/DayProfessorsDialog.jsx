@@ -1,4 +1,3 @@
-// src/components/dashboard/DayProfessorsDialog.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { studentService } from '../../services/api';
@@ -17,7 +16,13 @@ import {
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 
-function DayProfessorsDialog({ open, onClose, selectedDay, professorSchedules, handleProfessorClick }) {
+function DayProfessorsDialog({ 
+  open, 
+  onClose, 
+  selectedDay, 
+  professorSchedules, 
+  handleProfessorClick 
+}) {
   const navigate = useNavigate();
   const [enrichedSchedules, setEnrichedSchedules] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -133,11 +138,23 @@ function DayProfessorsDialog({ open, onClose, selectedDay, professorSchedules, h
           }))
         }));
 
-        setEnrichedSchedules(enriched);
+        // Ordina i professori alfabeticamente per nome e poi per cognome
+        const sortedEnriched = [...enriched].sort((a, b) => {
+          // Prima confronta per nome
+          const firstNameComparison = a.first_name.localeCompare(b.first_name);
+          // Se i nomi sono uguali, confronta per cognome
+          return firstNameComparison !== 0 ? firstNameComparison : a.last_name.localeCompare(b.last_name);
+        });
+
+        setEnrichedSchedules(sortedEnriched);
       } catch (error) {
         console.error("Error enriching lessons with student names:", error);
-        // In case of error, use original data
-        setEnrichedSchedules(professorSchedules);
+        // In case of error, use original data but still sort alphabetically
+        const sortedSchedules = [...professorSchedules].sort((a, b) => {
+          const firstNameComparison = a.first_name.localeCompare(b.first_name);
+          return firstNameComparison !== 0 ? firstNameComparison : a.last_name.localeCompare(b.last_name);
+        });
+        setEnrichedSchedules(sortedSchedules);
       } finally {
         setLoading(false);
       }
@@ -149,7 +166,11 @@ function DayProfessorsDialog({ open, onClose, selectedDay, professorSchedules, h
   if (!selectedDay || !professorSchedules) return null;
 
   // Use enriched data if available, otherwise original data
-  const schedules = enrichedSchedules || professorSchedules;
+  // (ma ordina comunque il risultato in entrambi i casi)
+  const schedules = enrichedSchedules || [...professorSchedules].sort((a, b) => {
+    const firstNameComparison = a.first_name.localeCompare(b.first_name);
+    return firstNameComparison !== 0 ? firstNameComparison : a.last_name.localeCompare(b.last_name);
+  });
 
   return (
     <Dialog

@@ -60,7 +60,17 @@ function AdminDashboardCalendar({
           flexWrap: 'wrap'  // Sempre wrap per adattarsi alla larghezza dello schermo
         }}
       >        {daysOfWeek.map(day => {
+        // Ottieni i professori per questo giorno
         const dayProfessors = getProfessorsForDay(day);
+        
+        // Ordina i professori alfabeticamente per nome e poi per cognome
+        const sortedProfessors = [...dayProfessors].sort((a, b) => {
+          // Prima confronta per nome
+          const firstNameComparison = a.first_name.localeCompare(b.first_name);
+          // Se i nomi sono uguali, confronta per cognome
+          return firstNameComparison !== 0 ? firstNameComparison : a.last_name.localeCompare(b.last_name);
+        });
+        
         const isCurrentDay = isToday(day);
         return (
           <Grid
@@ -106,7 +116,7 @@ function AdminDashboardCalendar({
                 {format(day, "EE d", { locale: it })}
               </Typography>
 
-              {dayProfessors.length === 0 ? (
+              {sortedProfessors.length === 0 ? (
                 <Box textAlign="center" mb={6} mt={2} sx={{ flexGrow: 1 }}>
                   <Typography variant="body2" color={isCurrentDay ? 'primary.contrastText' : 'text.secondary'}>
                     Nessun professore in sede
@@ -114,7 +124,7 @@ function AdminDashboardCalendar({
                 </Box>
               ) : (
                 <List dense disablePadding sx={{ flexGrow: 1, mb: 5 }}>
-                  {dayProfessors.map(professor => (
+                  {sortedProfessors.map(professor => (
                     <ListItem
                       key={professor.id}
                       button

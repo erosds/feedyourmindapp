@@ -50,6 +50,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import PrivateRoute from './components/auth/PrivateRoute';
 import AdminRoute from './components/auth/AdminRoute';
 import RootRedirect from './components/auth/RootRedirect';
+import PaymentCalendarPage from './pages/payments/PaymentCalendarPage';
 
 import FAQPage from './pages/faq/FAQPage';
 
@@ -88,6 +89,12 @@ function App() {
                 <Route 
                   path="/admin-dashboard" 
                   element={<AdminRoute><AdminDashboardPage /></AdminRoute>} 
+                />
+
+                {/* Payment Calendar Route */}
+                <Route 
+                  path="/payments/calendar" 
+                  element={<AdminRoute><PaymentCalendarPage /></AdminRoute>} 
                 />
 
                 {/* Professor Routes */}
