@@ -517,7 +517,6 @@ function PaymentCalendarPage() {
                 sx={{
                   textAlign: 'center',
                   fontWeight: 'bold',
-                  p: 1,
                   backgroundColor: 'primary.light',
                   color: 'primary.contrastText',
                   borderRadius: 1
