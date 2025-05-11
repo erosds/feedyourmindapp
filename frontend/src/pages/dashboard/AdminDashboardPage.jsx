@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
+  ButtonGroup,
   CircularProgress,
   Grid,
   Paper,
@@ -37,21 +38,21 @@ import DayProfessorsDialog from '../../components/dashboard/DayProfessorsDialog'
 function AdminDashboardPage() {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
-  
+
   // Basic state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [packages, setPackages] = useState([]);
   const [professors, setProfessors] = useState([]);
-  
+
   // Week and period selection state
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [periodFilter, setPeriodFilter] = useState('week');
   const [currentTab, setCurrentTab] = useState(0);
   const [periodStartDate, setPeriodStartDate] = useState(null);
   const [periodEndDate, setPeriodEndDate] = useState(null);
-  
+
   // Dialog state
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
@@ -212,23 +213,23 @@ function AdminDashboardPage() {
       // Calculate time range
       const firstLesson = sortedLessons[0];
       const lastLesson = sortedLessons[sortedLessons.length - 1];
-      
-      const startTime = firstLesson?.start_time 
-        ? firstLesson.start_time.substring(0, 5) 
+
+      const startTime = firstLesson?.start_time
+        ? firstLesson.start_time.substring(0, 5)
         : "00:00";
-      
+
       let endTime = "00:00";
       if (lastLesson && lastLesson.start_time) {
         // Parse the time components
         const [hours, minutes] = lastLesson.start_time.split(':').map(Number);
         const durationHours = parseFloat(lastLesson.duration);
         const durationMinutes = Math.round(durationHours * 60);
-        
+
         // Create date objects for calculation
         const startDate = new Date();
         startDate.setHours(hours, minutes, 0);
         const endDate = addMinutes(startDate, durationMinutes);
-        
+
         // Format the end time
         endTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
       }
@@ -260,9 +261,9 @@ function AdminDashboardPage() {
     return lessons.filter(lesson => {
       try {
         const lessonDate = parseISO(lesson.lesson_date);
-        return isWithinInterval(lessonDate, { 
-          start: periodStartDate, 
-          end: periodEndDate 
+        return isWithinInterval(lessonDate, {
+          start: periodStartDate,
+          end: periodEndDate
         });
       } catch (err) {
         return false;
@@ -372,33 +373,30 @@ function AdminDashboardPage() {
               mb: { xs: 2, sm: 0 }
             }}
           >
-            {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - 
+            {format(currentWeekStart, "d MMMM yyyy", { locale: it })} -
             {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), " d MMMM yyyy", { locale: it })}
           </Typography>
-          
-          <Box>
-            <Button 
-              variant="outlined" 
+
+          <ButtonGroup size="small" sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}>
+            <Button
               onClick={() => handleChangeWeek('prev')}
-              sx={{ mr: 1, color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+              sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
             >
               Precedente
             </Button>
-            <Button 
-              variant="outlined" 
+            <Button
               onClick={() => handleChangeWeek('reset')}
-              sx={{ mr: 1, color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+              sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
             >
               Corrente
             </Button>
-            <Button 
-              variant="outlined" 
+            <Button
               onClick={() => handleChangeWeek('next')}
               sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
             >
               Successiva
             </Button>
-          </Box>
+          </ButtonGroup>
         </Box>
       </Paper>
 
