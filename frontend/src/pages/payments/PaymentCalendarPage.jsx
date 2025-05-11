@@ -1,5 +1,5 @@
 // src/pages/payments/PaymentCalendarPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -37,6 +37,117 @@ import { it } from 'date-fns/locale';
 import { lessonService, packageService, studentService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
+// Componente per il contenitore di chip con autoscroll
+const ScrollableChipsContainer = ({ children }) => {
+  const containerRef = useRef(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const [needsScroll, setNeedsScroll] = useState(false);
+
+  // Verifica se il contenuto necessita di scroll
+  useEffect(() => {
+    if (containerRef.current) {
+      setNeedsScroll(
+        containerRef.current.scrollHeight > containerRef.current.clientHeight
+      );
+    }
+  }, [children]);
+
+  // Gestisce l'effetto di scroll automatico
+  useEffect(() => {
+    if (!isHovering || !needsScroll || !containerRef.current) return;
+
+    let animationId;
+    let scrollTop = 0;
+    let pauseTimer = null;
+    let isPaused = true; // Inizia in pausa all'inizio
+    const scrollSpeed = 0.2; // Velocità di scroll (pixel per frame)
+    const pauseDuration = 1200; // Pausa di 1 secondo sia all'inizio che alla fine
+    const maxScrollTop = containerRef.current.scrollHeight - containerRef.current.clientHeight;
+
+    // Funzione ricorsiva per l'animazione
+    const scrollAnimation = () => {
+      if (!containerRef.current) return;
+
+      if (isPaused) {
+        // Quando è in pausa, attendi e poi continua
+        return;
+      }
+
+      // Aggiorna la posizione di scroll
+      scrollTop += scrollSpeed;
+
+      // Quando raggiunge il fondo, metti in pausa
+      if (scrollTop >= maxScrollTop) {
+        isPaused = true;
+        scrollTop = maxScrollTop; // Assicurati di essere esattamente in fondo
+
+        // Dopo la pausa, torna in cima e riprendi
+        pauseTimer = setTimeout(() => {
+          scrollTop = 0;
+          containerRef.current.scrollTop = 0;
+
+          // Rimani fermo per un momento anche all'inizio
+          pauseTimer = setTimeout(() => {
+            isPaused = false;
+            animationId = requestAnimationFrame(scrollAnimation);
+          }, pauseDuration);
+
+        }, pauseDuration);
+
+        return;
+      }
+
+      // Applica lo scroll
+      containerRef.current.scrollTop = scrollTop;
+
+      // Continua l'animazione
+      animationId = requestAnimationFrame(scrollAnimation);
+    };
+
+    // Inizia con una pausa all'inizio
+    pauseTimer = setTimeout(() => {
+      isPaused = false;
+      animationId = requestAnimationFrame(scrollAnimation);
+    }, pauseDuration);
+
+    // Pulizia quando l'hover finisce
+    return () => {
+      if (pauseTimer) clearTimeout(pauseTimer);
+      cancelAnimationFrame(animationId);
+
+      // Torna in cima quando il mouse esce
+      if (containerRef.current) {
+        containerRef.current.scrollTop = 0;
+      }
+    };
+  }, [isHovering, needsScroll]);
+
+  return (
+    <Box
+      ref={containerRef}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+      sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '2px',
+        mt: 0,
+        maxHeight: '100px',
+        overflow: 'hidden',
+        overflowY: 'auto',
+        flexGrow: 1,
+        scrollbarWidth: 'none', // Firefox
+        '&::-webkit-scrollbar': { // Chrome/Safari/Edge
+          display: 'none'
+        },
+        msOverflowStyle: 'none' // IE
+      }}
+    >
+      {children}
+    </Box>
+  );
+};
+
 function PaymentCalendarPage() {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -65,13 +176,13 @@ function PaymentCalendarPage() {
       try {
         const response = await studentService.getAll();
         const studentsMap = {};
-        
+
         if (response && response.data) {
           response.data.forEach(student => {
             studentsMap[student.id] = `${student.first_name} ${student.last_name}`;
           });
         }
-        
+
         setStudents(studentsMap);
       } catch (err) {
         console.error('Error fetching students:', err);
@@ -97,9 +208,9 @@ function PaymentCalendarPage() {
 
         // Load paid lessons
         const lessonsResponse = await lessonService.getAll();
-        const paidLessons = lessonsResponse.data.filter(lesson => 
-          lesson.is_paid && 
-          lesson.payment_date && 
+        const paidLessons = lessonsResponse.data.filter(lesson =>
+          lesson.is_paid &&
+          lesson.payment_date &&
           !lesson.is_package &&
           lesson.payment_date >= startDateStr &&
           lesson.payment_date <= endDateStr
@@ -107,8 +218,8 @@ function PaymentCalendarPage() {
 
         // Load paid packages
         const packagesResponse = await packageService.getAll();
-        const paidPackages = packagesResponse.data.filter(pkg => 
-          pkg.is_paid && 
+        const paidPackages = packagesResponse.data.filter(pkg =>
+          pkg.is_paid &&
           pkg.payment_date &&
           pkg.payment_date >= startDateStr &&
           pkg.payment_date <= endDateStr
@@ -139,7 +250,7 @@ function PaymentCalendarPage() {
         // Add student names to payments
         const paymentsWithStudentNames = combinedPayments.map(payment => {
           const studentName = students[payment.student_id] || `Studente #${payment.student_id}`;
-          
+
           return {
             ...payment,
             studentName
@@ -175,10 +286,10 @@ function PaymentCalendarPage() {
 
   // Handle day click
   const handleDayClick = (day) => {
-    const dayPayments = payments.filter(payment => 
+    const dayPayments = payments.filter(payment =>
       isSameDay(parseISO(payment.date), day)
     );
-    
+
     setSelectedDay(day);
     setDayPayments(dayPayments);
     setDialogOpen(true);
@@ -210,7 +321,7 @@ function PaymentCalendarPage() {
 
   // Get payments for a specific day
   const getPaymentsForDay = (day) => {
-    return payments.filter(payment => 
+    return payments.filter(payment =>
       isSameDay(parseISO(payment.date), day)
     );
   };
@@ -233,15 +344,15 @@ function PaymentCalendarPage() {
   // Calculate monthly stats
   const calculateMonthStats = () => {
     const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
-    
+
     const packagePayments = payments.filter(payment => payment.type === 'package');
     const packageCount = packagePayments.length;
     const packageTotal = packagePayments.reduce((sum, payment) => sum + payment.amount, 0);
-    
+
     const lessonPayments = payments.filter(payment => payment.type === 'lesson');
     const lessonHours = lessonPayments.reduce((sum, payment) => sum + payment.hours, 0);
     const lessonTotal = lessonPayments.reduce((sum, payment) => sum + payment.amount, 0);
-    
+
     return {
       totalAmount,
       packageCount,
@@ -252,6 +363,7 @@ function PaymentCalendarPage() {
   };
 
   // Get student display names for a specific day
+  // Modifica la funzione getStudentNamesForDay per ordinare alfabeticamente i nomi
   const getStudentNamesForDay = (day) => {
     const dayPayments = getPaymentsForDay(day);
     return dayPayments.map(payment => {
@@ -259,20 +371,20 @@ function PaymentCalendarPage() {
       const fullName = payment.studentName || '';
       const nameParts = fullName.split(' ');
       let displayName = '';
-      
+
       if (nameParts.length > 0) {
         displayName = nameParts[0]; // First name
         if (nameParts.length > 1) {
           displayName += ' ' + nameParts[1].charAt(0) + '.'; // First letter of last name
         }
       }
-      
+
       return {
         id: payment.id,
         name: displayName,
         type: payment.type
       };
-    });
+    }).sort((a, b) => a.name.localeCompare(b.name)); // Ordina alfabeticamente per nome
   };
 
   if (loading) {
@@ -301,7 +413,7 @@ function PaymentCalendarPage() {
       </Typography>
 
       {/* Month navigation */}
-      <Card sx={{ mb: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+      <Card sx={{ mb: 1, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
         <Box
           sx={{
             display: 'flex',
@@ -323,20 +435,20 @@ function PaymentCalendarPage() {
             {format(currentMonth, 'MMMM yyyy', { locale: it })}
           </Typography>
           <ButtonGroup size="small">
-            <Button 
-              onClick={handlePreviousMonth} 
+            <Button
+              onClick={handlePreviousMonth}
               sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
             >
               Mese Precedente
             </Button>
-            <Button 
-              onClick={handleResetToCurrentMonth} 
+            <Button
+              onClick={handleResetToCurrentMonth}
               sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
             >
               Mese Corrente
             </Button>
-            <Button 
-              onClick={handleNextMonth} 
+            <Button
+              onClick={handleNextMonth}
               sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
             >
               Mese Successivo
@@ -344,6 +456,56 @@ function PaymentCalendarPage() {
           </ButtonGroup>
         </Box>
       </Card>
+
+      {/* Monthly summary - moved below the calendar */}
+      <Paper sx={{ p: 2 , mb: 1}}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={2.5}>
+            <Typography variant="body2" color="text.secondary">
+              Totale
+            </Typography>
+            <Typography variant="h5" color="success.main">
+              €{monthStats.totalAmount.toFixed(2)}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={2.5}>
+            <Typography variant="body2" color="text.secondary">
+              Pacchetti pagati
+            </Typography>
+            <Typography variant="h5">
+              {monthStats.packageCount} pacchett{monthStats.packageCount === 1 ? 'o' : 'i'}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={2.5}>
+            <Typography variant="body2" color="text.secondary">
+              Totale da pacchetti
+            </Typography>
+            <Typography variant="h5" color="secondary.main">
+              €{monthStats.packageTotal.toFixed(2)}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={2.5}>
+            <Typography variant="body2" color="text.secondary">
+              Ore lezioni singole pagate
+            </Typography>
+            <Typography variant="h5">
+              {monthStats.lessonHours.toFixed(1)} ore
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={2}>
+            <Typography variant="body2" color="text.secondary">
+              Totale da lezioni singole
+            </Typography>
+            <Typography variant="h5" color="primary.main">
+              €{monthStats.lessonTotal.toFixed(2)}
+            </Typography>
+          </Grid>
+        </Grid>
+      </Paper>
 
       {/* Calendar */}
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -372,9 +534,9 @@ function PaymentCalendarPage() {
           {/* Empty cells for days before the start of the month */}
           {Array.from({ length: getFirstDayOffset() }).map((_, index) => (
             <Grid item xs={12 / 7} key={`empty-${index}`}>
-              <Box sx={{ 
-                height: 120, 
-                border: '1px solid', 
+              <Box sx={{
+                height: 120,
+                border: '1px solid',
                 borderColor: 'divider',
                 borderRadius: 1
               }}></Box>
@@ -432,18 +594,18 @@ function PaymentCalendarPage() {
 
                   {/* Payment indicator with student chips */}
                   {hasPayments && (
-                    <Box 
-                      sx={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
                         height: '100%',
                         width: '100%'
                       }}
                     >
                       {/* Amount in bold at the top */}
-                      <Typography 
-                        variant="body1" 
-                        color="success.main" 
+                      <Typography
+                        variant="body1"
+                        color="success.main"
                         fontWeight="bold"
                         sx={{
                           mt: 0.5,
@@ -454,10 +616,10 @@ function PaymentCalendarPage() {
                       >
                         €{dayTotal.toFixed(2)}
                       </Typography>
-                      
+
                       {/* Number of payments below */}
-                      <Typography 
-                        variant="caption" 
+                      <Typography
+                        variant="caption"
                         color="text.secondary"
                         sx={{
                           fontSize: '0.7rem',
@@ -467,29 +629,20 @@ function PaymentCalendarPage() {
                       >
                         {dayPayments.length} pagament{dayPayments.length === 1 ? 'o' : 'i'}
                       </Typography>
-                      
-                      {/* Student chips filling the rest of the square */}
-                      <Box 
-                        sx={{ 
-                          display: 'flex', 
-                          flexWrap: 'wrap', 
-                          gap: '2px',
-                          mt: 0,
-                          overflow: 'hidden',
-                          flexGrow: 1
-                        }}
-                      >
+
+                      {/* Student chips with auto-scroll component */}
+                      <ScrollableChipsContainer>
                         {studentChips.map((student) => (
                           <Chip
                             key={student.id}
                             label={student.name}
                             size="small"
                             color={student.type === 'package' ? 'secondary' : 'primary'}
-                            sx={{ 
-                              height: 15, 
+                            sx={{
+                              height: 15,
                               margin: '1px',
-                              '& .MuiChip-label': { 
-                                px: 0.5, 
+                              '& .MuiChip-label': {
+                                px: 0.5,
                                 fontSize: '0.65rem',
                                 fontWeight: 'medium',
                                 whiteSpace: 'nowrap'
@@ -497,66 +650,13 @@ function PaymentCalendarPage() {
                             }}
                           />
                         ))}
-                      </Box>
+                      </ScrollableChipsContainer>
                     </Box>
                   )}
                 </Box>
               </Grid>
             );
           })}
-        </Grid>
-      </Paper>
-
-      {/* Monthly summary - moved below the calendar */}
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          Riepilogo del mese di {format(currentMonth, 'MMMM yyyy', { locale: it })}
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={2.5}>
-            <Typography variant="body2" color="text.secondary">
-              Totale pagamenti
-            </Typography>
-            <Typography variant="h5" color="success.main">
-              €{monthStats.totalAmount.toFixed(2)}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={2.5}>
-            <Typography variant="body2" color="text.secondary">
-              Pacchetti pagati
-            </Typography>
-            <Typography variant="h5">
-              {monthStats.packageCount} pacchett{monthStats.packageCount === 1 ? 'o' : 'i'}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={2.5}>
-            <Typography variant="body2" color="text.secondary">
-              Totale da pacchetti
-            </Typography>
-            <Typography variant="h5" color="secondary.main">
-              €{monthStats.packageTotal.toFixed(2)}
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={2.5}>
-            <Typography variant="body2" color="text.secondary">
-              Ore lezioni singole pagate
-            </Typography>
-            <Typography variant="h5">
-              {monthStats.lessonHours.toFixed(1)} ore
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={2}>
-            <Typography variant="body2" color="text.secondary">
-              Totale da lezioni singole
-            </Typography>
-            <Typography variant="h5" color="primary.main">
-              €{monthStats.lessonTotal.toFixed(2)}
-            </Typography>
-          </Grid>
         </Grid>
       </Paper>
 
@@ -571,7 +671,7 @@ function PaymentCalendarPage() {
           Pagamenti del {selectedDay && format(selectedDay, 'EEEE d MMMM yyyy', { locale: it })}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 1 }}>
             <Typography variant="body2" color="text.secondary">
               Totale giornaliero
             </Typography>
@@ -579,42 +679,52 @@ function PaymentCalendarPage() {
               €{dayPayments.reduce((sum, payment) => sum + payment.amount, 0).toFixed(2)}
             </Typography>
           </Box>
-          
-          <Divider sx={{ mb: 2 }} />
-          
-          <List>
-            {dayPayments.map((payment) => (
-              <ListItem
-                key={payment.id}
-                alignItems="flex-start"
-                button
-                onClick={() => handlePaymentClick(payment)}
-                sx={{
-                  mb: 1,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  '&:hover': {
-                    backgroundColor: 'action.hover'
-                  }
-                }}
-              >
-                <ListItemText
-                  primary={
-                    <Typography variant="subtitle1">
-                      {payment.studentName} - €{payment.amount.toFixed(2)}
-                    </Typography>
-                  }
-                  secondary={
-                    <Typography variant="body2" color="text.secondary" component="span">
-                      {payment.type === 'lesson' 
-                        ? `Lezione singola di ${payment.hours} ore` 
-                        : `Pacchetto di ${payment.hours} ore`}
-                    </Typography>
-                  }
-                />
-              </ListItem>
-            ))}
+
+          <Divider sx={{ mb: 1 }} />
+
+          <List dense>
+            {dayPayments
+              .sort((a, b) => a.studentName.localeCompare(b.studentName)) // Ordina alfabeticamente per nome studente
+              .map((payment) => (
+                <ListItem
+                  key={payment.id}
+                  alignItems="flex-start"
+                  button
+                  onClick={() => handlePaymentClick(payment)}
+                  sx={{
+                    mb: 1,
+                    py: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    '&:hover': {
+                      backgroundColor: 'action.hover'
+                    }
+                  }}
+                >
+                  <ListItemText
+                    primary={
+                      <Typography variant="body2" sx={{ mb: -0.5 }}>
+                        <b>{payment.studentName}</b> ha pagato <b>€{payment.amount.toFixed(2)}</b>
+                      </Typography>
+                    }
+                    secondary={
+                      <Typography variant="caption" component="span" sx={{ display: 'inline' }}>
+                        <Typography
+                          variant="caption"
+                          component="span"
+                          color={payment.type === 'lesson' ? 'primary' : 'secondary'}
+                          sx={{ fontWeight: 500 }}
+                        >
+                          {payment.type === 'lesson' ? 'Lezione singola' : 'Pacchetto'}
+                        </Typography>{' '}
+                        di {payment.hours} ore
+                      </Typography>
+                    }
+                    sx={{ my: 0 }}
+                  />
+                </ListItem>
+              ))}
           </List>
         </DialogContent>
         <DialogActions>

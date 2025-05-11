@@ -35,9 +35,9 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import logo from '../assets/logo.jpg';
 
+import GridViewIcon from '@mui/icons-material/GridView';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import PaymentIcon from '@mui/icons-material/Payment';
-
+import DateRangeIcon from '@mui/icons-material/DateRange';
 
 const drawerWidth = 250;
 
@@ -80,8 +80,8 @@ function MainLayout() {
 
   if (isAdmin()) {
     menuItems = [
-      { text: 'Dashboard Admin', icon: <AdminDashboardIcon />, path: '/admin-dashboard' },
-      { text: 'Calendario Pagamenti', icon: <PaymentIcon />, path: '/payments/calendar' }, // Aggiungi questa riga
+      { text: 'Dashboard Admin', icon: <GridViewIcon />, path: '/admin-dashboard' },
+      { text: 'Calendario Pagamenti', icon: <DateRangeIcon />, path: '/payments/calendar' }, // Aggiungi questa riga
       { text: 'Dashboard Personale', icon: <DashboardIcon />, path: '/dashboard' },
       { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
