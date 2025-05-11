@@ -317,7 +317,7 @@ function PaymentCalendarPage() {
   });
 
   // Get weekday names
-  const weekdays = ["Lu", "Ma", "Me", "Gi", "Ve", "Sa", "Do"];
+  const weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
   // Get payments for a specific day
   const getPaymentsForDay = (day) => {
@@ -409,7 +409,7 @@ function PaymentCalendarPage() {
   return (
     <Box>
       <Typography variant="h4" gutterBottom mb={3}>
-        Calendario Pagamenti
+        Agenda Pagamenti
       </Typography>
 
       {/* Month navigation */}
@@ -457,14 +457,14 @@ function PaymentCalendarPage() {
         </Box>
       </Card>
 
-      {/* Monthly summary - moved below the calendar */}
+      {/* Monthly summary - moved abow the calendar */}
       <Paper sx={{ p: 2 , mb: 1}}>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={2.5}>
             <Typography variant="body2" color="text.secondary">
               Totale
             </Typography>
-            <Typography variant="h5" color="success.main">
+            <Typography variant="h5" fontWeight="bold">
               €{monthStats.totalAmount.toFixed(2)}
             </Typography>
           </Grid>
@@ -586,7 +586,7 @@ function PaymentCalendarPage() {
                       position: 'absolute',
                       top: 2,
                       right: 4,
-                      fontSize: '0.75rem'
+                      fontSize: '0.8rem'
                     }}
                   >
                     {format(day, 'd')}
@@ -605,7 +605,7 @@ function PaymentCalendarPage() {
                       {/* Amount in bold at the top */}
                       <Typography
                         variant="body1"
-                        color="success.main"
+                        color="text.main"
                         fontWeight="bold"
                         sx={{
                           mt: 0.5,

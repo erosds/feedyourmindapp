@@ -691,59 +691,26 @@ function PackageDetailPage() {
                         Prezzo Pacchetto
                       </Typography>
                     </Box>
+                    <Box display="flex" alignItems="center">
+                      <Typography
+                        variant="h6"
+                        fontWeight="medium"
+                        mt={-1}
+                        color={!packageData.is_paid || parseFloat(packageData.package_cost) === 0 ? "error.main" : "inherit"}
+                      >
+                        €{parseFloat(packageData.package_cost).toFixed(2)}
+                      </Typography>
 
-                    {isEditingPrice ? (
-                      <Box display="flex" alignItems="center">
-                        <TextField
-                          size="small"
-                          type="number"
-                          value={priceValue}
-                          onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}
-                          InputProps={{
-                            startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                            inputProps: { min: 0, step: 0.5 }
-                          }}
-                          sx={{ width: '120px', mr: 1 }}
-                        />
-                        <Button size="small" variant="contained" onClick={handleSavePrice}>
-                          Salva
-                        </Button>
-                        <Button size="small" onClick={() => setIsEditingPrice(false)} sx={{ ml: 1 }}>
-                          Annulla
-                        </Button>
-                      </Box>
-                    ) : (
-                      <Box display="flex" alignItems="center">
-                        <Typography
-                          variant="h6"
-                          fontWeight="medium"
-                          mt={-1}
-                          color={!packageData.is_paid || parseFloat(packageData.package_cost) === 0 ? "error.main" : "inherit"}
-                        >
-                          €{parseFloat(packageData.package_cost).toFixed(2)}
+                      {(parseFloat(packageData.package_cost) === 0) && (
+                        <Typography variant="caption" color="error" sx={{ ml: 1, alignSelf: "flex-end", mb: 0.5 }}>
+                          (da impostare)
                         </Typography>
-
-                        {(parseFloat(packageData.package_cost) === 0) && (
-                          <Typography variant="caption" color="error" sx={{ ml: 1, alignSelf: "flex-end", mb: 0.5 }}>
-                            (da impostare)
-                          </Typography>
-                        )}
-
-                        {packageData.is_paid && (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<EditIcon />}
-                            onClick={handleEditPrice}
-                            sx={{ ml: 2 }}
-                          >
-                            Modifica
-                          </Button>
-                        )}
-                      </Box>
-                    )}
+                      )}
+                      
+                    </Box>
                   </Grid>
                 )}
+
 
                 <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
