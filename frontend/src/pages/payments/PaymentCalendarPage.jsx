@@ -162,6 +162,10 @@ function PaymentCalendarPage() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [students, setStudents] = useState({});
+  // Aggiungi un nuovo stato per le lezioni non pagate
+  const [unpaidLessons, setUnpaidLessons] = useState([]);
+  const [dayUnpaidLessons, setDayUnpaidLessons] = useState([]);
+  const [viewMode, setViewMode] = useState('payments'); // 'payments' o 'unpaid'
 
   // Verify admin access
   useEffect(() => {
@@ -206,8 +210,10 @@ function PaymentCalendarPage() {
         const startDateStr = format(monthStart, 'yyyy-MM-dd');
         const endDateStr = format(monthEnd, 'yyyy-MM-dd');
 
-        // Load paid lessons
+        // Load all lessons
         const lessonsResponse = await lessonService.getAll();
+
+        // Filter for paid lessons
         const paidLessons = lessonsResponse.data.filter(lesson =>
           lesson.is_paid &&
           lesson.payment_date &&
@@ -250,13 +256,33 @@ function PaymentCalendarPage() {
         // Add student names to payments
         const paymentsWithStudentNames = combinedPayments.map(payment => {
           const studentName = students[payment.student_id] || `Studente #${payment.student_id}`;
-
           return {
             ...payment,
             studentName
           };
         });
 
+        // Filter for unpaid lessons
+        const unpaidLessonsData = lessonsResponse.data.filter(lesson =>
+          !lesson.is_paid &&
+          !lesson.is_package &&
+          lesson.lesson_date >= startDateStr &&
+          lesson.lesson_date <= endDateStr
+        );
+
+        // Format unpaid lessons
+        const formattedUnpaidLessons = unpaidLessonsData.map(lesson => ({
+          id: `unpaid-${lesson.id}`,
+          type: 'unpaid',
+          typeId: lesson.id,
+          date: lesson.lesson_date, // Nota: usa lesson_date invece di payment_date
+          student_id: lesson.student_id,
+          amount: parseFloat(lesson.price || 0),
+          hours: parseFloat(lesson.duration || 0),
+          studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
+        }));
+
+        setUnpaidLessons(formattedUnpaidLessons);
         setPayments(paymentsWithStudentNames);
       } catch (err) {
         console.error('Error fetching payments:', err);
@@ -290,8 +316,13 @@ function PaymentCalendarPage() {
       isSameDay(parseISO(payment.date), day)
     );
 
+    // Aggiunge anche le lezioni non pagate
+    const unpaidLessonsForDay = getUnpaidLessonsForDay(day);
+
     setSelectedDay(day);
     setDayPayments(dayPayments);
+    setDayUnpaidLessons(unpaidLessonsForDay);
+    setViewMode('payments'); // Resetta alla visualizzazione pagamenti
     setDialogOpen(true);
   };
 
@@ -302,7 +333,7 @@ function PaymentCalendarPage() {
 
   // Navigate to payment details
   const handlePaymentClick = (payment) => {
-    if (payment.type === 'lesson') {
+    if (payment.type === 'lesson' || payment.type === 'unpaid') {
       navigate(`/lessons/${payment.typeId}`);
     } else if (payment.type === 'package') {
       navigate(`/packages/${payment.typeId}`);
@@ -324,6 +355,18 @@ function PaymentCalendarPage() {
     return payments.filter(payment =>
       isSameDay(parseISO(payment.date), day)
     );
+  };
+
+  // Modificare la funzione per ottenere le lezioni non pagate per un giorno
+  const getUnpaidLessonsForDay = (day) => {
+    return unpaidLessons.filter(lesson =>
+      isSameDay(parseISO(lesson.date), day)
+    );
+  };
+
+  // Conteggio lezioni non pagate per un giorno
+  const getUnpaidCountForDay = (day) => {
+    return getUnpaidLessonsForDay(day).length;
   };
 
   // Calculate total payments for a day
@@ -458,7 +501,7 @@ function PaymentCalendarPage() {
       </Card>
 
       {/* Monthly summary - moved abow the calendar */}
-      <Paper sx={{ p: 2 , mb: 1}}>
+      <Paper sx={{ p: 2, mb: 1 }}>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={2.5}>
             <Typography variant="body2" color="text.secondary">
@@ -627,6 +670,9 @@ function PaymentCalendarPage() {
                         }}
                       >
                         {dayPayments.length} pagament{dayPayments.length === 1 ? 'o' : 'i'}
+                        {getUnpaidCountForDay(day) > 0 && (
+                          <> - {getUnpaidCountForDay(day)} lezion{getUnpaidCountForDay(day) === 1 ? 'e' : 'i'} non pagat{getUnpaidCountForDay(day) === 1 ? 'a' : 'e'}</>
+                        )}
                       </Typography>
 
                       {/* Student chips with auto-scroll component */}
@@ -638,10 +684,10 @@ function PaymentCalendarPage() {
                             size="small"
                             color={student.type === 'package' ? 'secondary' : 'primary'}
                             sx={{
-                              height: 15,
+                              height: 16,
                               margin: '1px',
                               '& .MuiChip-label': {
-                                px: 0.5,
+                                px: 0.6,
                                 fontSize: '0.65rem',
                                 fontWeight: 'medium',
                                 whiteSpace: 'nowrap'
@@ -666,65 +712,163 @@ function PaymentCalendarPage() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
-          Pagamenti del {selectedDay && format(selectedDay, 'EEEE d MMMM yyyy', { locale: it })}
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">
+            {selectedDay && format(selectedDay, 'EEEE d MMMM yyyy', { locale: it })}
+          </Typography>
+          <ButtonGroup size="small">
+            <Button
+              variant={viewMode === 'payments' ? 'contained' : 'outlined'}
+              onClick={() => setViewMode('payments')}
+            >
+              Pagamenti
+            </Button>
+            <Button
+              variant={viewMode === 'unpaid' ? 'contained' : 'outlined'}
+              onClick={() => setViewMode('unpaid')}
+            >
+              Non pagate
+            </Button>
+          </ButtonGroup>
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ mb: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              Totale giornaliero
-            </Typography>
-            <Typography variant="h5" gutterBottom>
-              €{dayPayments.reduce((sum, payment) => sum + payment.amount, 0).toFixed(2)}
-            </Typography>
-          </Box>
+          {viewMode === 'payments' ? (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Totale giornaliero
+                  </Typography>
+                  <Typography variant="h5" gutterBottom>
+                    €{dayPayments.reduce((sum, payment) => sum + payment.amount, 0).toFixed(2)}
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Numero pagamenti
+                  </Typography>
+                  <Typography variant="h5" gutterBottom>
+                    {dayPayments.length}
+                  </Typography>
+                </Box>
+              </Box>
 
-          <Divider sx={{ mb: 1 }} />
+              <Divider sx={{ mb: 1 }} />
 
-          <List dense>
-            {dayPayments
-              .sort((a, b) => a.studentName.localeCompare(b.studentName)) // Ordina alfabeticamente per nome studente
-              .map((payment) => (
-                <ListItem
-                  key={payment.id}
-                  alignItems="flex-start"
-                  button
-                  onClick={() => handlePaymentClick(payment)}
-                  sx={{
-                    mb: 1,
-                    py: 1,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    '&:hover': {
-                      backgroundColor: 'action.hover'
-                    }
-                  }}
-                >
-                  <ListItemText
-                    primary={
-                      <Typography variant="body2" sx={{ mb: -0.5 }}>
-                        <b>{payment.studentName}</b> ha pagato <b>€{payment.amount.toFixed(2)}</b>
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="caption" component="span" sx={{ display: 'inline' }}>
-                        <Typography
-                          variant="caption"
-                          component="span"
-                          color={payment.type === 'lesson' ? 'primary' : 'secondary'}
-                          sx={{ fontWeight: 500 }}
-                        >
-                          {payment.type === 'lesson' ? 'Lezione singola' : 'Pacchetto'}
-                        </Typography>{' '}
-                        di {payment.hours} ore
-                      </Typography>
-                    }
-                    sx={{ my: 0 }}
-                  />
-                </ListItem>
-              ))}
-          </List>
+              <List dense>
+                {dayPayments
+                  .sort((a, b) => a.studentName.localeCompare(b.studentName))
+                  .map((payment) => (
+                    <ListItem
+                      key={payment.id}
+                      alignItems="flex-start"
+                      button
+                      onClick={() => handlePaymentClick(payment)}
+                      sx={{
+                        mb: 1,
+                        py: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        '&:hover': {
+                          backgroundColor: 'action.hover'
+                        }
+                      }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Typography variant="body2" sx={{ mb: -0.5 }}>
+                            <b>{payment.studentName}</b> ha pagato <b>€{payment.amount.toFixed(2)}</b>
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography variant="caption" component="span" sx={{ display: 'inline' }}>
+                            <Typography
+                              variant="caption"
+                              component="span"
+                              color={payment.type === 'lesson' ? 'primary' : 'secondary'}
+                              sx={{ fontWeight: 500 }}
+                            >
+                              {payment.type === 'lesson' ? 'Lezione singola' : 'Pacchetto'}
+                            </Typography>{' '}
+                            di {payment.hours} ore
+                          </Typography>
+                        }
+                        sx={{ my: 0 }}
+                      />
+                    </ListItem>
+                  ))}
+              </List>
+            </>
+          ) : (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Totale da saldare
+                  </Typography>
+                  <Typography variant="h5" color="error.main" gutterBottom>
+                    €{dayUnpaidLessons.reduce((sum, lesson) => sum + lesson.amount, 0).toFixed(2)}
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Lezioni non pagate
+                  </Typography>
+                  <Typography variant="h5" gutterBottom>
+                    {dayUnpaidLessons.length}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Divider sx={{ mb: 1 }} />
+
+              <List dense>
+                {dayUnpaidLessons
+                  .sort((a, b) => a.studentName.localeCompare(b.studentName))
+                  .map((lesson) => (
+                    <ListItem
+                      key={lesson.id}
+                      alignItems="flex-start"
+                      button
+                      onClick={() => handlePaymentClick(lesson)}
+                      sx={{
+                        mb: 1,
+                        py: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        '&:hover': {
+                          backgroundColor: 'action.hover'
+                        }
+                      }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Typography variant="body2" sx={{ mb: -0.5 }}>
+                            <b>{lesson.studentName}</b> deve pagare <b>€{lesson.amount.toFixed(2)}</b>
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography variant="caption" component="span" sx={{ display: 'inline' }}>
+                            <Typography
+                              variant="caption"
+                              component="span"
+                              color="primary"
+                              sx={{ fontWeight: 500 }}
+                            >
+                              Lezione singola
+                            </Typography>{' '}
+                            di {lesson.hours} ore
+                          </Typography>
+                        }
+                        sx={{ my: 0 }}
+                      />
+                    </ListItem>
+                  ))}
+              </List>
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} color="primary">
