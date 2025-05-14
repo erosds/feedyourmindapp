@@ -169,6 +169,7 @@ function PaymentCalendarPage() {
   const [expiredPackages, setExpiredPackages] = useState([]);
   const [dayExpiredPackages, setDayExpiredPackages] = useState([]);
 
+
   // Verify admin access
   useEffect(() => {
     if (!isAdmin()) {
@@ -361,13 +362,9 @@ function PaymentCalendarPage() {
     setDayUnpaidLessons(unpaidLessonsForDay);
     setDayExpiredPackages(expiredPackagesForDay);
 
-    // Se ci sono lezioni non pagate o pacchetti scaduti ma nessun pagamento,
-    // imposta la modalità di visualizzazione a "unpaid"
-    if ((unpaidLessonsForDay.length > 0 || expiredPackagesForDay.length > 0) && dayPayments.length === 0) {
-      setViewMode('unpaid');
-    } else {
-      setViewMode('payments');
-    }
+    // Mantieni la modalità di visualizzazione coerente con quella selezionata nel calendario
+    // Questo assicura che il dialogo si apra nella stessa modalità del calendario
+    setViewMode(viewMode);  // Non cambiare la modalità, usa quella già attiva
 
     setDialogOpen(true);
   };
@@ -454,24 +451,36 @@ function PaymentCalendarPage() {
   // Get student display names for a specific day
   // Modifica la funzione getStudentNamesForDay per ordinare alfabeticamente i nomi
   const getStudentNamesForDay = (day) => {
-    const dayPayments = getPaymentsForDay(day);
-    const dayExpired = getExpiredPackagesForDay(day);
-
-    // Combina pagamenti e pacchetti scaduti
-    const allItems = [
-      ...dayPayments.map(payment => ({
+    // Se siamo in modalità pagamenti, mostra solo i pagamenti
+    if (viewMode === 'payments') {
+      const dayPayments = getPaymentsForDay(day);
+      return dayPayments.map(payment => ({
         id: payment.id,
         name: formatStudentName(payment.studentName),
         type: payment.type
-      })),
-      ...dayExpired.map(pkg => ({
-        id: pkg.id,
-        name: formatStudentName(pkg.studentName),
-        type: 'expired-package'
-      }))
-    ];
+      })).sort((a, b) => a.name.localeCompare(b.name));
+    }
+    // Se siamo in modalità "da pagare", mostra lezioni non pagate e pacchetti scaduti
+    else {
+      const dayUnpaid = getUnpaidLessonsForDay(day);
+      const dayExpired = getExpiredPackagesForDay(day);
 
-    return allItems.sort((a, b) => a.name.localeCompare(b.name));
+      // Combina lezioni non pagate e pacchetti scaduti
+      const allItems = [
+        ...dayUnpaid.map(unpaid => ({
+          id: unpaid.id,
+          name: formatStudentName(unpaid.studentName),
+          type: 'unpaid'
+        })),
+        ...dayExpired.map(pkg => ({
+          id: pkg.id,
+          name: formatStudentName(pkg.studentName),
+          type: 'expired-package'
+        }))
+      ];
+
+      return allItems.sort((a, b) => a.name.localeCompare(b.name));
+    }
   };
 
   const formatStudentName = (fullName) => {
@@ -561,51 +570,140 @@ function PaymentCalendarPage() {
       {/* Monthly summary - moved abow the calendar */}
       <Paper sx={{ p: 2, mb: 1 }}>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={2.5}>
-            <Typography variant="body2" color="text.secondary">
-              Totale
-            </Typography>
-            <Typography variant="h5" fontWeight="bold">
-              €{monthStats.totalAmount.toFixed(2)}
-            </Typography>
-          </Grid>
+          {viewMode === 'payments' ? (
+            /* Statistiche per i pagamenti effettuati */
+            <>
+              <Grid item xs={12} sm={2}>
+                <Typography variant="body2" color="text.secondary">
+                  Totale incassato
+                </Typography>
+                <Typography variant="h5" fontWeight="bold" color="success.main">
+                  €{monthStats.totalAmount.toFixed(2)}
+                </Typography>
+              </Grid>
 
-          <Grid item xs={12} sm={2.5}>
-            <Typography variant="body2" color="text.secondary">
-              Pacchetti pagati
-            </Typography>
-            <Typography variant="h5">
-              {monthStats.packageCount} pacchett{monthStats.packageCount === 1 ? 'o' : 'i'}
-            </Typography>
-          </Grid>
+              <Grid item xs={12} sm={2}>
+                <Typography variant="body2" color="text.secondary">
+                  Pacchetti pagati
+                </Typography>
+                <Typography variant="h5">
+                  {monthStats.packageCount} pacchett{monthStats.packageCount === 1 ? 'o' : 'i'}
+                </Typography>
+              </Grid>
 
-          <Grid item xs={12} sm={2.5}>
-            <Typography variant="body2" color="text.secondary">
-              Totale da pacchetti
-            </Typography>
-            <Typography variant="h5" color="darkviolet" fontWeight="bold">
-              €{monthStats.packageTotal.toFixed(2)}
-            </Typography>
-          </Grid>
+              <Grid item xs={12} sm={2}>
+                <Typography variant="body2" color="text.secondary">
+                  Totale da pacchetti
+                </Typography>
+                <Typography variant="h5" color="darkviolet" fontWeight="bold">
+                  €{monthStats.packageTotal.toFixed(2)}
+                </Typography>
+              </Grid>
 
-          <Grid item xs={12} sm={2.5}>
-            <Typography variant="body2" color="text.secondary">
-              Ore lezioni singole pagate
-            </Typography>
-            <Typography variant="h5">
-              {monthStats.lessonHours.toFixed(1)} ore
-            </Typography>
-          </Grid>
+              <Grid item xs={12} sm={2}>
+                <Typography variant="body2" color="text.secondary">
+                  Lezioni singole pagate
+                </Typography>
+                <Typography variant="h5">
+                  {monthStats.lessonHours.toFixed(1)} ore
+                </Typography>
+              </Grid>
 
-          <Grid item xs={12} sm={2}>
-            <Typography variant="body2" color="text.secondary">
-              Totale da lezioni singole
-            </Typography>
-            <Typography variant="h5" color="primary" fontWeight="bold">
-              €{monthStats.lessonTotal.toFixed(2)}
-            </Typography>
+              <Grid item xs={12} sm={2}>
+                <Typography variant="body2" color="text.secondary">
+                  Totale da lezioni singole
+                </Typography>
+                <Typography variant="h5" color="primary" fontWeight="bold">
+                  €{monthStats.lessonTotal.toFixed(2)}
+                </Typography>
+              </Grid>
+            </>
+          ) : (
+            /* Statistiche per i pagamenti da ricevere */
+            <>
+              {/* Calcoli per statistiche "da pagare" */}
+              {(() => {
+                // Calcola totale da lezioni non pagate
+                const unpaidTotal = unpaidLessons.reduce((sum, lesson) => sum + lesson.amount, 0);
+                const unpaidHours = unpaidLessons.reduce((sum, lesson) => sum + lesson.hours, 0);
+
+                // Calcola totale da pacchetti scaduti
+                const expiredPackagesCount = expiredPackages.length;
+                const expiredPackagesTotal = expiredPackages.reduce((sum, pkg) => sum + pkg.amount, 0);
+
+                // Totale complessivo da ricevere
+                const totalToBePaid = unpaidTotal + expiredPackagesTotal;
+
+                return (
+                  <>
+                    <Grid item xs={12} sm={2}>
+                      <Typography variant="body2" color="text.secondary">
+                        Totale da ricevere
+                      </Typography>
+                      <Typography variant="h5" fontWeight="bold" color="error.main">
+                        €{totalToBePaid.toFixed(2)}
+                      </Typography>
+                    </Grid>
+
+                    <Grid item xs={12} sm={2}>
+                      <Typography variant="body2" color="text.secondary">
+                        Pacchetti da saldare
+                      </Typography>
+                      <Typography variant="h5">
+                        {expiredPackagesCount} pacchett{expiredPackagesCount === 1 ? 'o' : 'i'}
+                      </Typography>
+                    </Grid>
+
+                    <Grid item xs={12} sm={2}>
+                      <Typography variant="body2" color="text.secondary">
+                        Totale da pacchetti
+                      </Typography>
+                      <Typography variant="h5" color="warning.main" fontWeight="bold">
+                        €{expiredPackagesTotal.toFixed(2)}
+                      </Typography>
+                    </Grid>
+
+                    <Grid item xs={12} sm={2}>
+                      <Typography variant="body2" color="text.secondary">
+                        Lezioni singole non pagate
+                      </Typography>
+                      <Typography variant="h5">
+                        {unpaidHours.toFixed(1)} ore
+                      </Typography>
+                    </Grid>
+
+                    <Grid item xs={12} sm={2}>
+                      <Typography variant="body2" color="text.secondary">
+                        Totale da lezioni singole
+                      </Typography>
+                      <Typography variant="h5" color="error.main" fontWeight="bold">
+                        €{unpaidTotal.toFixed(2)}
+                      </Typography>
+                    </Grid>
+                  </>
+                );
+              })()}
+            </>
+          )}
+          {/* Colonna del bottone di switch - posizionarlo in alto a destra */}
+          <Grid item xs={12} sm={2} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: { xs: 2, sm: 0 } }}>
+            <ButtonGroup size="small">
+              <Button
+                variant={viewMode === 'payments' ? 'contained' : 'outlined'}
+                onClick={() => setViewMode('payments')}
+              >
+                Pagato
+              </Button>
+              <Button
+                variant={viewMode === 'unpaid' ? 'contained' : 'outlined'}
+                onClick={() => setViewMode('unpaid')}
+              >
+                Non pagato
+              </Button>
+            </ButtonGroup>
           </Grid>
         </Grid>
+
       </Paper>
 
       {/* Calendar */}
@@ -709,22 +807,54 @@ function PaymentCalendarPage() {
                         width: '100%'
                       }}
                     >
-                      {/* Amount in bold at the top - mostra solo se ci sono pagamenti */}
-                      {hasPayments && (
-                        <Typography
-                          variant="body1"
-                          color="text.main"
-                          fontWeight="bold"
-                          sx={{
-                            mt: 0.5,
-                            mb: 0.5,
-                            fontSize: '1rem',
-                            lineHeight: 1
-                          }}
-                        >
-                          €{dayTotal.toFixed(2)}
-                        </Typography>
-                      )}
+                      {/* Amount in bold at the top - cambia in base alla modalità */}
+                      {(() => {
+                        if (viewMode === 'payments' && hasPayments) {
+                          // Se in modalità "pagato" e ci sono pagamenti, mostra il totale pagato
+                          return (
+                            <Typography
+                              variant="body1"
+                              color="success.main"
+                              fontWeight="bold"
+                              sx={{
+                                mt: 0.5,
+                                mb: 0.5,
+                                fontSize: '1rem',
+                                lineHeight: 1
+                              }}
+                            >
+                              €{dayTotal.toFixed(2)}
+                            </Typography>
+                          );
+                        } else if (viewMode === 'unpaid') {
+                          // Se in modalità "da pagare", calcola e mostra il totale da pagare
+                          const unpaidAmount = getUnpaidLessonsForDay(day).reduce((sum, lesson) => sum + lesson.amount, 0);
+                          const expiredAmount = getExpiredPackagesForDay(day).reduce((sum, pkg) => sum + pkg.amount, 0);
+                          const totalToBePaid = unpaidAmount + expiredAmount;
+
+                          // Mostra solo se c'è un importo da pagare
+                          if (totalToBePaid > 0) {
+                            return (
+                              <Typography
+                                variant="body1"
+                                color="error.main"
+                                fontWeight="bold"
+                                sx={{
+                                  mt: 0.5,
+                                  mb: 0.5,
+                                  fontSize: '1rem',
+                                  lineHeight: 1
+                                }}
+                              >
+                                €{totalToBePaid.toFixed(2)}
+                              </Typography>
+                            );
+                          }
+                        }
+
+                        // Se non ci sono pagamenti nella modalità selezionata, non mostrare nulla
+                        return null;
+                      })()}
 
                       {/* Riepilogo numero di elementi */}
                       <Typography
@@ -734,22 +864,33 @@ function PaymentCalendarPage() {
                           fontSize: '0.7rem',
                           mb: 1,
                           lineHeight: 1,
-                          mt: hasPayments ? 0 : 1 // aggiungi margine se non ci sono pagamenti
+                          mt: hasPayments ? 0 : 1 // mantieni il margine se non ci sono pagamenti
                         }}
                       >
+                        {/* Mostra sempre le informazioni sui pagamenti, in grassetto solo se viewMode === 'payments' */}
                         {hasPayments && (
-                          <>{dayPayments.length} pagament{dayPayments.length === 1 ? 'o' : 'i'}</>
+                          <span style={{ fontWeight: viewMode === 'payments' ? 'bold' : 'normal' }}>
+                            {dayPayments.length} pagament{dayPayments.length === 1 ? 'o' : 'i'}
+                          </span>
                         )}
+
+                        {/* Mostra sempre le informazioni sulle lezioni non pagate, in grassetto solo se viewMode === 'unpaid' */}
                         {unpaidCount > 0 && (
                           <>
                             {hasPayments && " - "}
-                            <b>{unpaidCount} lezion{unpaidCount === 1 ? 'e' : 'i'} non pagat{unpaidCount === 1 ? 'a' : 'e'}</b>
+                            <span style={{ fontWeight: viewMode === 'unpaid' ? 'bold' : 'normal' }}>
+                              {unpaidCount} lezion{unpaidCount === 1 ? 'e' : 'i'} non pagat{unpaidCount === 1 ? 'a' : 'e'}
+                            </span>
                           </>
                         )}
+
+                        {/* Mostra sempre le informazioni sui pacchetti scaduti, in grassetto solo se viewMode === 'unpaid' */}
                         {expiredCount > 0 && (
                           <>
                             {(hasPayments || unpaidCount > 0) && " - "}
-                            <b>{expiredCount} pacchett{expiredCount === 1 ? 'o scaduto' : 'i scaduti'}</b>
+                            <span style={{ fontWeight: viewMode === 'unpaid' ? 'bold' : 'normal' }}>
+                              {expiredCount} pacchett{expiredCount === 1 ? 'o scaduto' : 'i scaduti'}
+                            </span>
                           </>
                         )}
                       </Typography>
@@ -768,7 +909,9 @@ function PaymentCalendarPage() {
                                 ? 'darkviolet'
                                 : student.type === 'expired-package'
                                   ? 'warning.main'
-                                  : 'primary.main',
+                                  : student.type === 'unpaid'
+                                    ? 'secondary.main'
+                                    : 'primary.main',
                               color: 'white',
                               '& .MuiChip-label': {
                                 px: 0.6,
