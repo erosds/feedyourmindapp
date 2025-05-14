@@ -178,7 +178,7 @@ function DashboardSummary({
 
         {currentTab === 0 ? (
           <Box>
-            <FormControl fullWidth sx={{ mb: 2 }}>
+            <FormControl fullWidth>
               <InputLabel id="period-filter-label">Periodo</InputLabel>
               <Select
                 labelId="period-filter-label"
