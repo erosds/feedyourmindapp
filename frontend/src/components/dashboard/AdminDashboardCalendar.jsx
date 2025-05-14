@@ -42,7 +42,6 @@ function AdminDashboardCalendar({
           flexDirection: { xs: 'column', sm: 'row' }, // Colonna su mobile, riga su tablet/desktop
           alignItems: { xs: 'stretch', sm: 'center' }, // Stretch su mobile per larghezza piena
           justifyContent: 'space-between',
-          mb: 2
         }}
       >
         <Typography variant="h6" sx={{ mb: { xs: 1, sm: 0 } }}>
