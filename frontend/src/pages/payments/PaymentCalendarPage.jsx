@@ -347,6 +347,7 @@ function PaymentCalendarPage() {
   };
 
   // Handle day click
+  // Modifica la funzione handleDayClick
   const handleDayClick = (day) => {
     const dayPayments = payments.filter(payment =>
       isSameDay(parseISO(payment.date), day)
@@ -359,7 +360,15 @@ function PaymentCalendarPage() {
     setDayPayments(dayPayments);
     setDayUnpaidLessons(unpaidLessonsForDay);
     setDayExpiredPackages(expiredPackagesForDay);
-    setViewMode('payments');
+
+    // Se ci sono lezioni non pagate o pacchetti scaduti ma nessun pagamento,
+    // imposta la modalità di visualizzazione a "unpaid"
+    if ((unpaidLessonsForDay.length > 0 || expiredPackagesForDay.length > 0) && dayPayments.length === 0) {
+      setViewMode('unpaid');
+    } else {
+      setViewMode('payments');
+    }
+
     setDialogOpen(true);
   };
 
@@ -642,6 +651,11 @@ function PaymentCalendarPage() {
             const isCurrentDay = isToday(day);
             const studentChips = getStudentNamesForDay(day);
 
+            // MODIFICA QUI: Aggiungi questi calcoli
+            const unpaidCount = getUnpaidCountForDay(day);
+            const expiredCount = getExpiredPackagesCountForDay(day);
+            const hasAnyData = hasPayments || unpaidCount > 0 || expiredCount > 0;
+
             return (
               <Grid item xs={12 / 7} key={`day-${index}`}>
                 <Box
@@ -653,8 +667,9 @@ function PaymentCalendarPage() {
                     position: 'relative',
                     p: 1,
                     pb: 0.5,
-                    cursor: hasPayments ? 'pointer' : 'default',
-                    '&:hover': hasPayments ? {
+                    // MODIFICA QUI: Usa hasAnyData invece di hasPayments
+                    cursor: hasAnyData ? 'pointer' : 'default',
+                    '&:hover': hasAnyData ? {
                       backgroundColor: 'action.hover',
                       transform: 'scale(1.02)',
                       transition: 'transform 0.2s'
@@ -665,7 +680,8 @@ function PaymentCalendarPage() {
                     flexDirection: 'column',
                     overflow: 'hidden'
                   }}
-                  onClick={hasPayments ? () => handleDayClick(day) : undefined}
+                  // MODIFICA QUI: Usa hasAnyData invece di hasPayments
+                  onClick={hasAnyData ? () => handleDayClick(day) : undefined}
                 >
                   {/* Day number in corner */}
                   <Typography
@@ -683,8 +699,8 @@ function PaymentCalendarPage() {
                     {format(day, 'd')}
                   </Typography>
 
-                  {/* Payment indicator with student chips */}
-                  {hasPayments && (
+                  {/* MODIFICA QUI: Cambia la condizione da hasPayments a hasAnyData */}
+                  {hasAnyData && (
                     <Box
                       sx={{
                         display: 'flex',
@@ -693,41 +709,52 @@ function PaymentCalendarPage() {
                         width: '100%'
                       }}
                     >
-                      {/* Amount in bold at the top */}
-                      <Typography
-                        variant="body1"
-                        color="text.main"
-                        fontWeight="bold"
-                        sx={{
-                          mt: 0.5,
-                          mb: 0.5,
-                          fontSize: '1rem',
-                          lineHeight: 1
-                        }}
-                      >
-                        €{dayTotal.toFixed(2)}
-                      </Typography>
+                      {/* Amount in bold at the top - mostra solo se ci sono pagamenti */}
+                      {hasPayments && (
+                        <Typography
+                          variant="body1"
+                          color="text.main"
+                          fontWeight="bold"
+                          sx={{
+                            mt: 0.5,
+                            mb: 0.5,
+                            fontSize: '1rem',
+                            lineHeight: 1
+                          }}
+                        >
+                          €{dayTotal.toFixed(2)}
+                        </Typography>
+                      )}
 
-                      {/* Number of payments below */}
+                      {/* Riepilogo numero di elementi */}
                       <Typography
                         variant="caption"
                         color="text.secondary"
                         sx={{
                           fontSize: '0.7rem',
                           mb: 1,
-                          lineHeight: 1
+                          lineHeight: 1,
+                          mt: hasPayments ? 0 : 1 // aggiungi margine se non ci sono pagamenti
                         }}
                       >
-                        {dayPayments.length} pagament{dayPayments.length === 1 ? 'o' : 'i'}
-                        {getUnpaidCountForDay(day) > 0 && (
-                          <b> - {getUnpaidCountForDay(day)} lezion{getUnpaidCountForDay(day) === 1 ? 'e' : 'i'} non pagat{getUnpaidCountForDay(day) === 1 ? 'a' : 'e'}</b>
+                        {hasPayments && (
+                          <>{dayPayments.length} pagament{dayPayments.length === 1 ? 'o' : 'i'}</>
                         )}
-                        {getExpiredPackagesCountForDay(day) > 0 && (
-                          <b> - {getExpiredPackagesCountForDay(day)} pacchett{getExpiredPackagesCountForDay(day) === 1 ? 'o è scaduto' : 'i sono scaduti'} </b>
+                        {unpaidCount > 0 && (
+                          <>
+                            {hasPayments && " - "}
+                            <b>{unpaidCount} lezion{unpaidCount === 1 ? 'e' : 'i'} non pagat{unpaidCount === 1 ? 'a' : 'e'}</b>
+                          </>
+                        )}
+                        {expiredCount > 0 && (
+                          <>
+                            {(hasPayments || unpaidCount > 0) && " - "}
+                            <b>{expiredCount} pacchett{expiredCount === 1 ? 'o scaduto' : 'i scaduti'}</b>
+                          </>
                         )}
                       </Typography>
 
-                      {/* Student chips with auto-scroll component */}
+                      {/* Student chips with auto-scroll component - always show */}
                       <ScrollableChipsContainer>
                         {studentChips.map((student) => (
                           <Chip
@@ -782,7 +809,7 @@ function PaymentCalendarPage() {
             </Button>
             <Button
               variant={viewMode === 'unpaid' ? 'contained' : 'outlined'}
-              color={viewMode === 'unpaid' ? 'secondary' : 'primary'}
+              color='primary'
               onClick={() => setViewMode('unpaid')}
             >
               Non pagato
@@ -799,14 +826,6 @@ function PaymentCalendarPage() {
                   </Typography>
                   <Typography variant="h5" gutterBottom>
                     €{dayPayments.reduce((sum, payment) => sum + payment.amount, 0).toFixed(2)}
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: 'right' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Numero pagamenti
-                  </Typography>
-                  <Typography variant="h5" gutterBottom>
-                    {dayPayments.length}
                   </Typography>
                 </Box>
               </Box>
@@ -870,14 +889,6 @@ function PaymentCalendarPage() {
                       dayExpiredPackages.reduce((sum, pkg) => sum + pkg.amount, 0)).toFixed(2)}
                   </Typography>
                 </Box>
-                <Box sx={{ textAlign: 'right' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Numero pagamenti
-                  </Typography>
-                  <Typography variant="h5" gutterBottom>
-                    {dayUnpaidLessons.length + dayExpiredPackages.length}
-                  </Typography>
-                </Box>
               </Box>
 
               <Divider sx={{ mb: 1 }} />
@@ -896,7 +907,7 @@ function PaymentCalendarPage() {
                             mb: 1,
                             py: 1,
                             border: '1px solid',
-                            borderColor: 'warning.light',
+                            borderColor: 'divider',
                             borderRadius: 1,
                             '&:hover': {
                               backgroundColor: 'action.hover'
