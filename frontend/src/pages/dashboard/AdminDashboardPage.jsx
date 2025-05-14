@@ -4,9 +4,9 @@ import {
   Box,
   Button,
   ButtonGroup,
+  Card,
   CircularProgress,
   Grid,
-  Paper,
   Typography,
 } from '@mui/material';
 import {
@@ -355,13 +355,14 @@ function AdminDashboardPage() {
       </Typography>
 
       {/* Week selector header */}
-      <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.light' }}>
+      <Card sx={{ mb: 1, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
         <Box
           sx={{
             display: 'flex',
             flexDirection: { xs: 'column', sm: 'row' },
             alignItems: 'center',
             justifyContent: 'space-between',
+            p: 2
           }}
         >
           <Typography
@@ -398,8 +399,8 @@ function AdminDashboardPage() {
             </Button>
           </ButtonGroup>
         </Box>
-      </Paper>
-
+      </Card>
+    
       <Grid container spacing={2}>
         {/* Calendar showing professors for each day */}
         <Grid item xs={12}>

@@ -718,19 +718,19 @@ function PaymentCalendarPage() {
               onClick={handlePreviousMonth}
               sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
             >
-              Mese Precedente
+              Precedente
             </Button>
             <Button
               onClick={handleResetToCurrentMonth}
               sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
             >
-              Mese Corrente
+              Corrente
             </Button>
             <Button
               onClick={handleNextMonth}
               sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
             >
-              Mese Successivo
+              Successivo
             </Button>
           </ButtonGroup>
         </Box>
@@ -1255,7 +1255,7 @@ function PaymentCalendarPage() {
                                 minWidth: '40px', height: '30px', ml: 1, bgcolor: 'warning.main', alignSelf: 'center' // Aggiungi questo per centrare verticalmente
                               }}
                             >
-                              Imposta pagato
+                              Segna come pagato
                             </Button>
                         </ListItem>
                       ))}
@@ -1311,7 +1311,7 @@ function PaymentCalendarPage() {
                             minWidth: '40px', height: '30px', ml: 1, bgcolor: 'secondary.main', alignSelf: 'center' // Aggiungi questo per centrare verticalmente
                           }}
                         >
-                          Imposta pagata
+                          Segna come pagata
                         </Button>
                     </ListItem>
                   ))}
