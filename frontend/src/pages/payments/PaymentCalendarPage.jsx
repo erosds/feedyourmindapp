@@ -525,7 +525,7 @@ function PaymentCalendarPage() {
             <Typography variant="body2" color="text.secondary">
               Totale da pacchetti
             </Typography>
-            <Typography variant="h5" color="secondary.main">
+            <Typography variant="h5" color="darkviolet" fontWeight="bold">
               €{monthStats.packageTotal.toFixed(2)}
             </Typography>
           </Grid>
@@ -543,7 +543,7 @@ function PaymentCalendarPage() {
             <Typography variant="body2" color="text.secondary">
               Totale da lezioni singole
             </Typography>
-            <Typography variant="h5" color="primary.main">
+            <Typography variant="h5" color="primary" fontWeight="bold">
               €{monthStats.lessonTotal.toFixed(2)}
             </Typography>
           </Grid>
@@ -560,7 +560,7 @@ function PaymentCalendarPage() {
                 sx={{
                   textAlign: 'center',
                   fontWeight: 'bold',
-                  backgroundColor: 'primary.light',
+                  backgroundColor: 'primary.dark',
                   color: 'primary.contrastText',
                   borderRadius: 1
                 }}
@@ -671,7 +671,7 @@ function PaymentCalendarPage() {
                       >
                         {dayPayments.length} pagament{dayPayments.length === 1 ? 'o' : 'i'}
                         {getUnpaidCountForDay(day) > 0 && (
-                          <> - {getUnpaidCountForDay(day)} lezion{getUnpaidCountForDay(day) === 1 ? 'e' : 'i'} non pagat{getUnpaidCountForDay(day) === 1 ? 'a' : 'e'}</>
+                          <b> - {getUnpaidCountForDay(day)} lezion{getUnpaidCountForDay(day) === 1 ? 'e' : 'i'} non pagat{getUnpaidCountForDay(day) === 1 ? 'a' : 'e'}</b>
                         )}
                       </Typography>
 
@@ -682,10 +682,11 @@ function PaymentCalendarPage() {
                             key={student.id}
                             label={student.name}
                             size="small"
-                            color={student.type === 'package' ? 'secondary' : 'primary'}
                             sx={{
                               height: 16,
                               margin: '1px',
+                              backgroundColor: student.type === 'package' ? 'darkviolet' : 'primary.main',
+                              color: student.type === 'package' ? 'white' : 'white',
                               '& .MuiChip-label': {
                                 px: 0.6,
                                 fontSize: '0.65rem',
@@ -725,6 +726,7 @@ function PaymentCalendarPage() {
             </Button>
             <Button
               variant={viewMode === 'unpaid' ? 'contained' : 'outlined'}
+              color={viewMode === 'unpaid' ? 'secondary' : 'primary'}
               onClick={() => setViewMode('unpaid')}
             >
               Non pagate
@@ -786,7 +788,7 @@ function PaymentCalendarPage() {
                             <Typography
                               variant="caption"
                               component="span"
-                              color={payment.type === 'lesson' ? 'primary' : 'secondary'}
+                              color={payment.type === 'lesson' ? 'primary' : 'darkviolet'}
                               sx={{ fontWeight: 500 }}
                             >
                               {payment.type === 'lesson' ? 'Lezione singola' : 'Pacchetto'}
@@ -807,7 +809,7 @@ function PaymentCalendarPage() {
                   <Typography variant="body2" color="text.secondary">
                     Totale da saldare
                   </Typography>
-                  <Typography variant="h5" color="error.main" gutterBottom>
+                  <Typography variant="h5" gutterBottom>
                     €{dayUnpaidLessons.reduce((sum, lesson) => sum + lesson.amount, 0).toFixed(2)}
                   </Typography>
                 </Box>
@@ -854,7 +856,7 @@ function PaymentCalendarPage() {
                             <Typography
                               variant="caption"
                               component="span"
-                              color="primary"
+                              color="secondary"
                               sx={{ fontWeight: 500 }}
                             >
                               Lezione singola
