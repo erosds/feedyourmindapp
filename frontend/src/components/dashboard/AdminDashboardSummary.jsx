@@ -218,7 +218,7 @@ function AdminDashboardSummary({
   );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       {/* First Card: Period-based Statistics */}
       <Card>
         <CardContent>

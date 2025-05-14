@@ -83,31 +83,13 @@ function DashboardCalendar({
           flexDirection: { xs: 'column', sm: 'row' }, // Colonna su mobile, riga su tablet/desktop
           alignItems: { xs: 'stretch', sm: 'center' }, // Stretch su mobile per larghezza piena
           justifyContent: 'space-between',
-          mb: 2
         }}
       >
         <Typography variant="h6" sx={{ mb: { xs: 1, sm: 0 } }}>
           Calendario Settimanale
         </Typography>
-        <ButtonGroup size="small" sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}>
-          <Button onClick={() => handleWeekChange('prev')}>Precedente</Button>
-          <Button onClick={() => handleWeekChange('reset')}>
-            Corrente
-          </Button>
-          <Button onClick={() => handleWeekChange('next')}>Successiva</Button>
-        </ButtonGroup>
       </Box>
 
-      <Typography variant="subtitle1" align="center" gutterBottom
-        sx={{
-          fontWeight: 'bold', fontSize: '1.2rem', mb: 2,
-          backgroundColor: 'primary.light',
-          color: 'primary.contrastText',
-          py: 1,
-          borderRadius: 1
-        }}>
-        {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
-      </Typography>
 
       {/* Contenitore con overflow per lo scroll orizzontale su mobile */}
       <Box

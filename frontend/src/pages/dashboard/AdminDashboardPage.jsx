@@ -401,7 +401,7 @@ function AdminDashboardPage() {
         </Box>
       </Card>
     
-      <Grid container spacing={2}>
+      <Grid container spacing={1}>
         {/* Calendar showing professors for each day */}
         <Grid item xs={12}>
           <AdminDashboardCalendar

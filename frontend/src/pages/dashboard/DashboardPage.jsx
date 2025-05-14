@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
+  Button,
+  ButtonGroup,
+  Card,
   CircularProgress,
   Grid,
   Typography,
@@ -12,6 +15,8 @@ import {
 import {
   startOfWeek,
   endOfWeek,
+  addWeeks,
+  subWeeks,
   isEqual,
   isWithinInterval,
   parseISO,
@@ -19,7 +24,10 @@ import {
   endOfMonth,
   startOfYear,
   endOfYear,
+  format
 } from 'date-fns';
+
+import { it } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { lessonService, studentService, professorService, packageService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -361,7 +369,56 @@ function DashboardPage() {
       <Typography variant="h4" gutterBottom mb={3}>
         Dashboard Personale
       </Typography>
-      <Grid container spacing={3}>
+
+      {/* Week selector header */}
+      <Card sx={{ mb: 1, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            p: 2
+          }}
+        >
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 'bold',
+              color: 'primary.contrastText',
+              fontSize: '1.2rem',
+              mb: { xs: 2, sm: 0 }
+            }}
+          >
+            {format(currentWeekStart, "d MMMM yyyy", { locale: it })} -
+            {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), " d MMMM yyyy", { locale: it })}
+          </Typography>
+
+          <ButtonGroup size="small" sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}>
+            <Button
+              onClick={() => handleChangeWeek(subWeeks(currentWeekStart, 1))}
+              sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+            >
+              Precedente
+            </Button>
+            <Button
+              onClick={() => handleChangeWeek(startOfWeek(new Date(), { weekStartsOn: 1 }))}
+              sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+            >
+              Corrente
+            </Button>
+            <Button
+              onClick={() => handleChangeWeek(addWeeks(currentWeekStart, 1))}
+              sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+            >
+              Successiva
+            </Button>
+          </ButtonGroup>
+        </Box>
+      </Card>
+
+
+      <Grid container spacing={1}>
         {/* Calendario Settimanale */}
         <Grid item xs={12} md={9}>
           <DashboardCalendar
@@ -377,38 +434,6 @@ function DashboardPage() {
 
         {/* Pannello laterale con riepilogo guadagni */}
         <Grid item xs={12} md={3}>
-          {currentUser?.is_admin && (
-            <FormControl fullWidth sx={{ mb: 2 }} variant="outlined">
-              <InputLabel id="select-professor-label">Seleziona Professore</InputLabel>
-              <Select
-                labelId="select-professor-label"
-                id="select-professor"
-                value={selectedProfessor}
-                onChange={handleProfessorChange}
-                label="Seleziona Professore"
-              >
-                {professors
-                  .sort((a, b) => {
-                    // Ordinamento alfabetico per nome
-                    const firstNameA = a.first_name.toLowerCase();
-                    const firstNameB = b.first_name.toLowerCase();
-
-                    // Se i nomi sono uguali, ordina per cognome
-                    if (firstNameA === firstNameB) {
-                      return a.last_name.toLowerCase().localeCompare(b.last_name.toLowerCase());
-                    }
-
-                    return firstNameA.localeCompare(firstNameB);
-                  })
-                  .map(professor => (
-                    <MenuItem key={professor.id} value={professor.id}>
-                      {professor.first_name} {professor.last_name}
-                    </MenuItem>
-                  ))
-                }
-              </Select>
-            </FormControl>
-          )}
           <DashboardSummary
             currentWeekLessons={currentWeekLessons}
             currentWeekEarnings={currentWeekEarnings}
@@ -420,6 +445,10 @@ function DashboardPage() {
             periodEarnings={periodEarnings} // Utilizziamo i guadagni calcolati per periodo
             calculateEarnings={calculateEarnings}
             navigate={navigate}
+            professors={professors}
+            selectedProfessor={selectedProfessor}
+            handleProfessorChange={handleProfessorChange}
+            isAdmin={currentUser?.is_admin}
           />
         </Grid>
       </Grid>

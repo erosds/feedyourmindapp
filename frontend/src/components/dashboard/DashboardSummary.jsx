@@ -19,6 +19,7 @@ import {
   Typography
 } from '@mui/material';
 import { parseISO } from 'date-fns';
+import { useAuth } from '../../context/AuthContext';
 
 function DashboardSummary({
   currentWeekLessons = [],
@@ -30,13 +31,18 @@ function DashboardSummary({
   periodLessons = [],
   periodEarnings = 0,
   calculateEarnings,
-  navigate
+  navigate,
+  professors,
+  selectedProfessor,
+  handleProfessorChange,
+  isAdmin
 }) {
   // Stati locali per tracciare i valori effettivi
   const [displayedWeekHours, setDisplayedWeekHours] = useState(0);
   const [displayedWeekEarnings, setDisplayedWeekEarnings] = useState(currentWeekEarnings);
   const [displayedPeriodHours, setDisplayedPeriodHours] = useState(0);
   const [displayedPeriodEarnings, setDisplayedPeriodEarnings] = useState(periodEarnings);
+  const { currentUser } = useAuth();
   
   // Funzione per calcolare il totale delle ore
   const calculateTotalHours = (lessons) => {
@@ -126,13 +132,45 @@ function DashboardSummary({
 
   return (
       <Paper sx={{ p: 2 }}>
+        {isAdmin && (
+            <FormControl fullWidth sx={{ mb: 0 }} variant="outlined">
+              <InputLabel id="select-professor-label">Seleziona Professore</InputLabel>
+              <Select
+                labelId="select-professor-label"
+                id="select-professor"
+                value={selectedProfessor}
+                onChange={handleProfessorChange}
+                label="Seleziona Professore"
+              >
+                {professors
+                  .sort((a, b) => {
+                    // Ordinamento alfabetico per nome
+                    const firstNameA = a.first_name.toLowerCase();
+                    const firstNameB = b.first_name.toLowerCase();
+
+                    // Se i nomi sono uguali, ordina per cognome
+                    if (firstNameA === firstNameB) {
+                      return a.last_name.toLowerCase().localeCompare(b.last_name.toLowerCase());
+                    }
+
+                    return firstNameA.localeCompare(firstNameB);
+                  })
+                  .map(professor => (
+                    <MenuItem key={professor.id} value={professor.id}>
+                      {professor.first_name} {professor.last_name}
+                    </MenuItem>
+                  ))
+                }
+              </Select>
+            </FormControl>
+          )}
         <Tabs
           value={currentTab}
           onChange={handleTabChange}
           indicatorColor="primary"
           textColor="primary"
           variant="fullWidth"
-          sx={{ mb: 2 }}
+          sx={{ mb: 3 }}
         >
           <Tab label="Riepilogo" />
           <Tab label="Dettaglio" />

@@ -664,7 +664,7 @@ function PackageListPage() {
           </Grid>
 
           {/* Filtro per periodo */}
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={3.5}>
             <FormControl fullWidth variant="outlined">
               <InputLabel id="time-filter-label">Data di Inizio</InputLabel>
               <Select
