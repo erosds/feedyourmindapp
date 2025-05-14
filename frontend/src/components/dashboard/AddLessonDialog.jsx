@@ -173,7 +173,7 @@ function AddLessonDialog({
       const duration = parseFloat(lessonForm.duration);
       const availableHours = getAvailableHours();
       if (duration > availableHours) {
-        setError(`Ore eccedenti: il pacchetto ha solo ${availableHours.toFixed(1)} ore rimanenti mentre stai cercando di utilizzarne ${duration}. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.`);
+        setError(`Ore eccedenti: il pacchetto ha solo ${availableHours.toFixed(1)} ore rimanenti mentre stai cercando di utilizzarne ${duration}.`);
         return false;
       }
     }
@@ -187,9 +187,9 @@ function AddLessonDialog({
     if (err.response?.status === 409 && err.response?.data?.detail) {
       const detail = err.response.data.detail;
       if (typeof detail === 'object' && detail.message && detail.message.includes('exceeds remaining')) {
-        setError(`Ore eccedenti: il pacchetto ha solo ${detail.remaining_hours} ore rimanenti. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.`);
+        setError(`La lezione ha una durata maggiore delle ${detail.remaining_hours} ore rimanenti sul pacchetto. Valuta se aprire un nuovo pacchetto.`);
       } else if (typeof detail === 'string' && detail.includes('exceeds remaining')) {
-        setError('Ore eccedenti nel pacchetto. Usa il form completo nella sezione Lezioni per gestire le ore in eccesso.');
+        setError(`La lezione ha una durata maggiore delle ore rimanenti sul pacchetto. Valuta se aprire un nuovo pacchetto.`);
       } else if (typeof detail === 'string' && detail.includes('data della lezione non può essere successiva alla scadenza')) {
         // Aggiungi questo caso specifico
         setError('Non è possibile inserire lezioni dopo la data di scadenza del pacchetto.');
@@ -236,7 +236,6 @@ function AddLessonDialog({
         return;
       }
 
-      console.log("Invio lezione con dati:", formattedValues);
       await lessonService.create(formattedValues);
       await updateLessons();
       onClose();
@@ -259,13 +258,6 @@ function AddLessonDialog({
   // Toggle per lezione da pacchetto
   const handlePackageToggle = async (e) => {
     const isChecked = e.target.checked;
-    console.log("Toggle pacchetto cliccato, nuovo stato:", isChecked);
-    console.log("Student ID at toggle time:", lessonForm.student_id);
-    console.log("Local packages:", localPackages.length);
-    if (!lessonForm.student_id || localPackages.length === 0) {
-      console.log("Toggle non possibile: studente o pacchetti mancanti");
-      return;
-    }
     const updatedForm = {
       ...lessonForm,
       is_package: isChecked,
@@ -273,7 +265,6 @@ function AddLessonDialog({
     };
     if (isChecked && localPackages.length > 0) {
       updatedForm.package_id = localPackages[0].id;
-      console.log("Selezionato automaticamente pacchetto:", localPackages[0].id);
       updatedForm.is_paid = true;
       setLocalSelectedPackage(localPackages[0]);
       if (handlePackageChange) {
@@ -282,7 +273,6 @@ function AddLessonDialog({
     } else {
       setLocalSelectedPackage(null);
     }
-    console.log("Aggiornamento form:", updatedForm);
     setLessonForm(updatedForm);
   };
 
@@ -310,7 +300,6 @@ function AddLessonDialog({
         package_id: null,
         is_package: false
       }));
-      console.log("Studente selezionato:", studentId);
 
       // Load packages
       const packagesResponse = await packageService.getByStudent(studentId);
@@ -336,10 +325,6 @@ function AddLessonDialog({
 
         return isEndedPackage && isRecent;
       });
-
-      console.log("Pacchetti terminati recentemente:", recentlyEnded.length);
-      console.log("Pacchetti attivi:", activePackages.length);
-      console.log("Pacchetti scaduti con ore residue:", expiredWithHoursPackages.length);
 
       setLocalPackages(activePackages);
       setExpiredPackages(expiredWithHoursPackages);
@@ -699,8 +684,7 @@ useEffect(() => {
                 disabled={submitting}
                 error={isDurationExceedingAvailable}
                 helperText={isDurationExceedingAvailable ?
-                  `Attenzione: la durata supera le ore disponibili (${availableHours.toFixed(1)}).      
-                  Creare la lezione dalla sezione Lezioni.` : ''}
+                  `Attenzione: la durata supera le ore disponibili (${availableHours.toFixed(1)}).` : ''}
               />
             </Grid>
             {/* Tariffa oraria */}

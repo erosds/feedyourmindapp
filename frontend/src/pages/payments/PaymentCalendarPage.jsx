@@ -18,7 +18,6 @@ import {
   ListItem,
   ListItemText,
   Paper,
-  Stack,
   Typography,
   useTheme
 } from '@mui/material';
@@ -27,6 +26,7 @@ import {
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
+
   addMonths,
   subMonths,
   isSameDay,
@@ -36,6 +36,8 @@ import {
 import { it } from 'date-fns/locale';
 import { lessonService, packageService, studentService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { TextField, InputAdornment } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers';
 
 // Componente per il contenitore di chip con autoscroll
 const ScrollableChipsContainer = ({ children }) => {
@@ -168,6 +170,11 @@ function PaymentCalendarPage() {
   const [viewMode, setViewMode] = useState('payments'); // 'payments' o 'unpaid'
   const [expiredPackages, setExpiredPackages] = useState([]);
   const [dayExpiredPackages, setDayExpiredPackages] = useState([]);
+  // Aggiungi questi stati dopo gli stati esistenti
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedPaymentItem, setSelectedPaymentItem] = useState(null);
+  const [paymentDate, setPaymentDate] = useState(new Date());
+  const [priceValue, setPriceValue] = useState(0);
 
 
   // Verify admin access
@@ -207,6 +214,167 @@ function PaymentCalendarPage() {
 
   const getExpiredPackagesCountForDay = (day) => {
     return getExpiredPackagesForDay(day).length;
+  };
+
+  // Aggiungi questa funzione dopo handlePaymentClick
+  const handleOpenPaymentDialog = (item, event) => {
+    event.stopPropagation(); // Prevent navigation to details
+    setSelectedPaymentItem(item);
+    setPaymentDate(new Date());
+    setPriceValue(item.amount || 0);
+    setPaymentDialogOpen(true);
+  };
+
+  // Aggiungi questa funzione dopo handleOpenPaymentDialog
+  const handleConfirmPayment = async () => {
+    try {
+      if (!selectedPaymentItem) return;
+
+      const formattedDate = format(paymentDate, 'yyyy-MM-dd');
+
+      if (selectedPaymentItem.type === 'unpaid') {
+        // Per le lezioni non pagate
+        await lessonService.update(selectedPaymentItem.typeId, {
+          is_paid: true,
+          payment_date: formattedDate,
+          price: priceValue
+        });
+      } else if (selectedPaymentItem.type === 'expired-package') {
+        // Per i pacchetti scaduti
+        // Prima ottieni tutti i dati del pacchetto
+        const packageResponse = await packageService.getById(selectedPaymentItem.typeId);
+        const packageData = packageResponse.data;
+
+        // Aggiorna solo i campi necessari
+        await packageService.update(selectedPaymentItem.typeId, {
+          ...packageData,
+          is_paid: true,
+          payment_date: formattedDate,
+          package_cost: priceValue
+        });
+      }
+
+      // Ricarica i dati per aggiornare la UI
+      const monthStart = startOfMonth(currentMonth);
+      const monthEnd = endOfMonth(currentMonth);
+      const startDateStr = format(monthStart, 'yyyy-MM-dd');
+      const endDateStr = format(monthEnd, 'yyyy-MM-dd');
+
+      const [lessonsResponse, packagesResponse] = await Promise.all([
+        lessonService.getAll(),
+        packageService.getAll()
+      ]);
+
+      // Aggiorna i dati nello stato
+      const paidLessons = lessonsResponse.data.filter(lesson =>
+        lesson.is_paid &&
+        lesson.payment_date &&
+        !lesson.is_package &&
+        lesson.payment_date >= startDateStr &&
+        lesson.payment_date <= endDateStr
+      );
+
+      const paidPackages = packagesResponse.data.filter(pkg =>
+        pkg.is_paid &&
+        pkg.payment_date &&
+        pkg.payment_date >= startDateStr &&
+        pkg.payment_date <= endDateStr
+      );
+
+      // Formatta i pagamenti aggiornati
+      const combinedPayments = [
+        ...paidLessons.map(lesson => ({
+          id: `lesson-${lesson.id}`,
+          type: 'lesson',
+          typeId: lesson.id,
+          date: lesson.payment_date,
+          student_id: lesson.student_id,
+          amount: parseFloat(lesson.price || 0),
+          hours: parseFloat(lesson.duration || 0),
+          studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
+        })),
+        ...paidPackages.map(pkg => ({
+          id: `package-${pkg.id}`,
+          type: 'package',
+          typeId: pkg.id,
+          date: pkg.payment_date,
+          student_id: pkg.student_ids?.[0] || null,
+          amount: parseFloat(pkg.package_cost || 0),
+          hours: parseFloat(pkg.total_hours || 0),
+          studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+        }))
+      ];
+
+      // Aggiorna anche lezioni non pagate e pacchetti scaduti
+      const unpaidLessonsData = lessonsResponse.data.filter(lesson =>
+        !lesson.is_paid &&
+        !lesson.is_package &&
+        lesson.lesson_date >= startDateStr &&
+        lesson.lesson_date <= endDateStr
+      );
+
+      const formattedUnpaidLessons = unpaidLessonsData.map(lesson => ({
+        id: `unpaid-${lesson.id}`,
+        type: 'unpaid',
+        typeId: lesson.id,
+        date: lesson.lesson_date,
+        student_id: lesson.student_id,
+        amount: parseFloat(lesson.price || 0),
+        hours: parseFloat(lesson.duration || 0),
+        studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
+      }));
+
+      const expiredPackagesData = packagesResponse.data.filter(pkg =>
+        !pkg.is_paid &&
+        pkg.status === 'expired' &&
+        pkg.expiry_date >= startDateStr &&
+        pkg.expiry_date <= endDateStr
+      );
+
+      const formattedExpiredPackages = expiredPackagesData.map(pkg => ({
+        id: `expired-${pkg.id}`,
+        type: 'expired-package',
+        typeId: pkg.id,
+        date: pkg.expiry_date,
+        student_id: pkg.student_ids?.[0] || null,
+        amount: parseFloat(pkg.package_cost || 0),
+        hours: parseFloat(pkg.total_hours || 0),
+        studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+      }));
+
+      setPayments(combinedPayments);
+      setUnpaidLessons(formattedUnpaidLessons);
+      setExpiredPackages(formattedExpiredPackages);
+
+      // Aggiorna anche i dati visualizzati per il giorno selezionato
+      const dayPayments = combinedPayments.filter(payment =>
+        selectedDay && isSameDay(parseISO(payment.date), selectedDay)
+      );
+
+      const unpaidLessonsForDay = formattedUnpaidLessons.filter(lesson =>
+        selectedDay && isSameDay(parseISO(lesson.date), selectedDay)
+      );
+
+      const expiredPackagesForDay = formattedExpiredPackages.filter(pkg =>
+        selectedDay && isSameDay(parseISO(pkg.date), selectedDay)
+      );
+
+      setDayPayments(dayPayments);
+      setDayUnpaidLessons(unpaidLessonsForDay);
+      setDayExpiredPackages(expiredPackagesForDay);
+
+      // Chiudi il dialogo di pagamento
+      setPaymentDialogOpen(false);
+
+      // Se non ci sono più elementi non pagati, torna alla vista pagamenti
+      if (unpaidLessonsForDay.length === 0 && expiredPackagesForDay.length === 0) {
+        setViewMode('payments');
+      }
+
+    } catch (err) {
+      console.error('Errore durante il salvataggio del pagamento:', err);
+      alert('Errore durante il salvataggio del pagamento. Riprova più tardi.');
+    }
   };
 
   // Load all payments for the current month
@@ -1079,6 +1247,16 @@ function PaymentCalendarPage() {
                             }
                             sx={{ my: 0 }}
                           />
+                            <Button
+                              variant="contained"
+                              size="small"
+                              onClick={(e) => handleOpenPaymentDialog(pkg, e)}
+                              sx={{
+                                minWidth: '40px', height: '30px', ml: 1, bgcolor: 'warning.main', alignSelf: 'center' // Aggiungi questo per centrare verticalmente
+                              }}
+                            >
+                              Imposta pagato
+                            </Button>
                         </ListItem>
                       ))}
                   </List>
@@ -1125,6 +1303,16 @@ function PaymentCalendarPage() {
                         }
                         sx={{ my: 0 }}
                       />
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={(e) => handleOpenPaymentDialog(lesson, e)}
+                          sx={{
+                            minWidth: '40px', height: '30px', ml: 1, bgcolor: 'secondary.main', alignSelf: 'center' // Aggiungi questo per centrare verticalmente
+                          }}
+                        >
+                          Imposta pagata
+                        </Button>
                     </ListItem>
                   ))}
               </List>
@@ -1134,6 +1322,48 @@ function PaymentCalendarPage() {
         <DialogActions>
           <Button onClick={handleCloseDialog} color="primary">
             Chiudi
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialogo per impostare il pagamento */}
+      <Dialog open={paymentDialogOpen} onClose={() => setPaymentDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          Conferma Pagamento
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField
+              fullWidth
+              label={selectedPaymentItem?.type === 'unpaid' ? "Prezzo Lezione" : "Prezzo Pacchetto"}
+              type="number"
+              value={priceValue}
+              onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">€</InputAdornment>,
+              }}
+            />
+            <DatePicker
+              label="Data pagamento"
+              value={paymentDate}
+              onChange={(date) => setPaymentDate(date)}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  variant: "outlined"
+                }
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPaymentDialogOpen(false)}>Annulla</Button>
+          <Button
+            onClick={handleConfirmPayment}
+            variant="contained"
+            color="primary"
+          >
+            Conferma Pagamento
           </Button>
         </DialogActions>
       </Dialog>
