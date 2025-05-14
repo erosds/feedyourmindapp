@@ -9,4 +9,3 @@ __pycache__/
 frontend/build/
 __init__.py
 .vscode/
-deploy.sh

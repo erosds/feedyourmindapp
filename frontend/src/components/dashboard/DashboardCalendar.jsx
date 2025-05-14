@@ -90,7 +90,6 @@ function DashboardCalendar({
         </Typography>
       </Box>
 
-
       {/* Contenitore con overflow per lo scroll orizzontale su mobile */}
       <Box
         sx={{
