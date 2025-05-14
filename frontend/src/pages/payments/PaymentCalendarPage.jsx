@@ -378,7 +378,8 @@ function PaymentCalendarPage() {
   const handlePaymentClick = (payment) => {
     if (payment.type === 'lesson' || payment.type === 'unpaid') {
       navigate(`/lessons/${payment.typeId}`);
-    } else if (payment.type === 'package') {
+    } else if (payment.type === 'package' || payment.type === 'expired-package') {
+      // Aggiungi gestione esplicita per i pacchetti scaduti
       navigate(`/packages/${payment.typeId}`);
     }
     setDialogOpen(false);
@@ -676,7 +677,7 @@ function PaymentCalendarPage() {
                       <Typography variant="body2" color="text.secondary">
                         Totale da lezioni singole
                       </Typography>
-                      <Typography variant="h5" color="error.main" fontWeight="bold">
+                      <Typography variant="h5" color="secondary" fontWeight="bold">
                         €{unpaidTotal.toFixed(2)}
                       </Typography>
                     </Grid>
@@ -716,7 +717,7 @@ function PaymentCalendarPage() {
                 sx={{
                   textAlign: 'center',
                   fontWeight: 'bold',
-                  backgroundColor: 'primary.dark',
+                  backgroundColor: 'primary.light',
                   color: 'primary.contrastText',
                   borderRadius: 1
                 }}
