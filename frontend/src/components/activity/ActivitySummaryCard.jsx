@@ -103,64 +103,59 @@ function ActivityItem({ activity }) {
     addSuffix: true,
     locale: it
   });
+  const navigate = useNavigate();
+
+  const handleClick = (e) => {
+    e.preventDefault();
+    window.location.href = entityUrl;
+  };
 
   return (
-    <ListItem alignItems="flex-start" sx={{ p: 1 }}>
-      <Box display="flex" alignItems="flex-start" width="100%">
-        <Box mr={1.5} mt={0.5}>
+    <ListItem
+      alignItems="flex-start"
+      sx={{
+        p: 1,
+        cursor: 'pointer',
+        '&:hover': {
+          backgroundColor: 'action.hover',
+        }
+      }}
+      onClick={handleClick}
+    >
+      <Box display="flex" alignItems="center" width="100%">
+        <Box display="flex" alignItems="center" mr={1.5}>
           {getActionIcon(activity.action_type)}
+          {getEntityIcon(activity.entity_type)}
         </Box>
         <Box flexGrow={1}>
-          <Box display="flex" alignItems="center" flexWrap="wrap">
-            <Typography variant="body2" component="span" color="text.primary" mr={0.5}>
-              {getActionLabel(activity.action_type)}
-            </Typography>
-            <Box display="inline-flex" alignItems="center">
-              {getEntityIcon(activity.entity_type)}
-              <Typography variant="body2" component="span" mx={0.5}>
-                {getEntityLabel(activity.entity_type)}
-              </Typography>
-              <Link 
-                component="button" 
-                variant="body2" 
-                color="primary" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.location.href = entityUrl;
-                }}
-              >
-                #{activity.entity_id}
-              </Link>
-            </Box>
-          </Box>
-          <Typography variant="body2" color="text.secondary">
-            {activity.description}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {formattedTime}
+          <Typography variant="body2" noWrap>
+            {getActionLabel(activity.action_type)} {getEntityLabel(activity.entity_type)} {activity.description}
           </Typography>
         </Box>
+        <Typography variant="caption" color="text.secondary" ml={1}>
+          {formattedTime}
+        </Typography>
       </Box>
     </ListItem>
   );
 }
 
-function ActivitySummaryCard({ activityData, title, showViewAll = true, maxItems = 5 }) {
+function ActivitySummaryCard({ activityData, title, showViewAll = true, maxItems = 3 }) {
   const navigate = useNavigate();
-  
+
   if (!activityData) return null;
-  
-  const { 
-    professor_id, 
-    professor_name, 
-    last_activity_time, 
-    activities_count, 
-    recent_activities 
+
+  const {
+    professor_id,
+    professor_name,
+    last_activity_time,
+    activities_count,
+    recent_activities
   } = activityData;
-  
+
   const displayActivities = recent_activities.slice(0, maxItems);
-  const hasMoreActivities = recent_activities.length > maxItems;
-  
+  const hasMoreActivities = activities_count > maxItems;
+
   const handleViewAll = () => {
     navigate(`/activities/user/${professor_id}`);
   };
@@ -169,30 +164,29 @@ function ActivitySummaryCard({ activityData, title, showViewAll = true, maxItems
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardContent sx={{ p: 2, pb: 1, flexGrow: 1 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-          <Box display="flex" alignItems="center">
+          <Box display="flex" alignItems="center" flexGrow={1}>
             <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'primary.main' }}>
               {professor_name.charAt(0)}
             </Avatar>
-            <Typography variant="h6">
-              {title || professor_name}
-            </Typography>
+            <Box>
+              <Typography variant="h6" sx={{ display: 'inline' }}>
+                {title || professor_name}
+              </Typography>
+              {last_activity_time && (
+                <Typography variant="body2" color="text.secondary" sx={{ display: 'inline', ml: 1 }}>
+                  (ultima attività: {formatDistance(new Date(last_activity_time), new Date(), { addSuffix: true, locale: it })})
+                </Typography>
+              )}
+            </Box>
           </Box>
-          <Chip 
-            label={`${activities_count} attività`} 
-            size="small" 
-            color="primary" 
+          <Chip
+            label={`${activities_count} attività`}
+            size="small"
+            color="primary"
             variant="outlined"
           />
         </Box>
-        
-        {last_activity_time && (
-          <Typography variant="body2" color="text.secondary" mb={1}>
-            Ultima attività: {formatDistance(new Date(last_activity_time), new Date(), { addSuffix: true, locale: it })}
-          </Typography>
-        )}
-        
-        <Divider sx={{ my: 1 }} />
-        
+
         {displayActivities.length > 0 ? (
           <List disablePadding>
             {displayActivities.map((activity, index) => (
@@ -209,11 +203,11 @@ function ActivitySummaryCard({ activityData, title, showViewAll = true, maxItems
             </Typography>
           </Box>
         )}
-        
+
         {hasMoreActivities && showViewAll && (
           <Box mt={1} display="flex" justifyContent="center">
-            <Button 
-              variant="text" 
+            <Button
+              variant="text"
               size="small"
               onClick={handleViewAll}
             >
