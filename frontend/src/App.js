@@ -17,7 +17,6 @@ import AuthLayout from './components/layouts/AuthLayout';
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
 import ChangePasswordPage from './pages/auth/ChangePasswordPage';
-import AdminResetPasswordPage from './pages/admin/ResetPasswordPage';
 
 // Dashboard Pages
 import DashboardPage from './pages/dashboard/DashboardPage';
@@ -74,10 +73,6 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
               </Route>
               <Route path="/change-password" element={<ChangePasswordPage />} />
-              <Route 
-                path="/admin/reset-password" 
-                element={<AdminRoute><AdminResetPasswordPage /></AdminRoute>} 
-              />
               
               {/* Root redirect based on user role */}
               <Route path="/" element={<RootRedirect />} />

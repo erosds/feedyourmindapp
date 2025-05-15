@@ -90,7 +90,6 @@ function MainLayout() {
       { text: 'Professori', icon: <PeopleIcon />, path: '/professors' },
       {text: 'FAQ', icon: <HelpOutlineIcon />, path: '/faq'},
       { text: 'Cronologia Attività', icon: <HistoryIcon />, path: '/activities' },
-      { text: 'Reset Password', icon: <LockResetIcon />, path: '/admin/reset-password' },
     ];
   } else {
     menuItems = [
