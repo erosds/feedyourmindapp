@@ -239,7 +239,7 @@ def create_package(
         action_type="create",
         entity_type="package",
         entity_id=db_package.id,
-        description=f"Pacchetto di {total_hours} ore per {students_str}"
+        description=f"Creato pacchetto di {total_hours} ore per {students_str}"
     )
     
     return package_orm_to_response(db_package)
@@ -394,6 +394,10 @@ def update_package(
     
     # Estrai gli ID degli studenti in modo sicuro
     student_ids = update_data.pop("student_ids", None)
+
+    # Salva i valori originali
+    old_is_paid = db_package.is_paid
+    old_package_cost = db_package.package_cost
     
     # Aggiorna i campi normali del pacchetto
     for key, value in update_data.items():
@@ -478,14 +482,30 @@ def update_package(
         student_names.append(f"{student.first_name} {student.last_name}")
 
     students_str = ", ".join(student_names) if student_names else "nessuno studente"
+
+    # Descrizione base
+    description = f"Modificato pacchetto di {db_package.total_hours} ore per {students_str}"
+
+    # Aggiungi dettagli sul cambiamento dello stato di pagamento
+    if "is_paid" in update_data and old_is_paid != db_package.is_paid:
+        if db_package.is_paid:
+            description += f" - impostato come pagato (€{db_package.package_cost})"
+        else:
+            description += " - impostato come non pagato"
+
+    # Se è stato cambiato solo il costo senza cambiare lo stato di pagamento
+    elif "package_cost" in update_data and old_package_cost != db_package.package_cost and db_package.is_paid:
+        description += f" - aggiornato importo pagamento a €{db_package.package_cost}"
+
     log_activity(
         db=db,
         professor_id=current_user.id,
         action_type="update",
         entity_type="package",
         entity_id=package_id,
-        description=f"Modificato pacchetto di {db_package.total_hours} ore per {students_str}"
+        description=description
     )
+
     return package_orm_to_response(db_package)  # Use the helper function for consistent response format
 
 # In backend/app/routes/packages.py

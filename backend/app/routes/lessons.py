@@ -436,7 +436,7 @@ def create_lesson(
             action_type="create",
             entity_type="lesson",
             entity_id=db_lesson.id,
-            description=f"Lezione da pacchetto per {student_full_name} di {lesson.duration} ore"
+            description=f"Creata lezione da pacchetto per {student_full_name} di {lesson.duration} ore"
         )
         
         return db_lesson
@@ -476,7 +476,7 @@ def create_lesson(
             action_type="create",
             entity_type="lesson",
             entity_id=db_lesson.id,
-            description=f"Lezione singola per {student_full_name} di {lesson.duration} ore"
+            description=f"Creata lezione singola per {student_full_name} di {lesson.duration} ore"
         )
         return db_lesson
 
@@ -636,6 +636,8 @@ def update_lesson(
     old_duration = db_lesson.duration
     old_is_package = db_lesson.is_package
     old_package_id = db_lesson.package_id
+    old_is_paid = db_lesson.is_paid
+    old_price = db_lesson.price
     
     # Aggiorna i campi della lezione
     update_data = lesson.dict(exclude_unset=True)
@@ -696,14 +698,30 @@ def update_lesson(
     student = db.query(models.Student).filter(models.Student.id == db_lesson.student_id).first()
     student_full_name = f"{student.first_name} {student.last_name}" if student else f"Studente #{db_lesson.student_id}"
     lesson_type = "da pacchetto" if db_lesson.is_package else "singola"
+
+    # Descrizione base
+    description = f"Lezione {lesson_type} per {student_full_name} di {db_lesson.duration} ore"
+
+    # Aggiungi dettagli sul cambiamento dello stato di pagamento
+    if "is_paid" in update_data and old_is_paid != db_lesson.is_paid:
+        if db_lesson.is_paid:
+            description += f" - impostata come pagata (€{db_lesson.price})"
+        else:
+            description += " - impostata come non pagata"
+
+    # Se è stato cambiato solo il prezzo senza cambiare lo stato di pagamento
+    elif "price" in update_data and old_price != db_lesson.price and db_lesson.is_paid:
+        description += f" - aggiornato importo pagamento a €{db_lesson.price}"
+
     log_activity(
         db=db,
         professor_id=current_user.id,
         action_type="update",
         entity_type="lesson",
         entity_id=db_lesson.id,
-        description=f"Lezione {lesson_type} per {student_full_name} di {db_lesson.duration} ore"
+        description=description
     )
+
     return db_lesson
 
 @router.delete("/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
