@@ -8,6 +8,8 @@ from ..database import get_db
 from ..utils import get_password_hash
 from ..auth import get_current_professor, get_current_admin
 
+from app.routes.activity import log_activity  # Importato per registrare le attività
+
 router = APIRouter(
     prefix="/professors",
     tags=["professors"],
@@ -38,6 +40,17 @@ def create_professor(professor: models.ProfessorCreate, db: Session = Depends(ge
     db.add(db_professor)
     db.commit()
     db.refresh(db_professor)
+
+    # Log dell'attività
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="create",
+        entity_type="professor",
+        entity_id=db_professor.id,
+        description=f"Creato professore {db_professor.first_name} {db_professor.last_name}" + 
+                    (f" (admin)" if db_professor.is_admin else "")
+    )
     return db_professor
 
 @router.get("/", response_model=List[models.ProfessorResponse])
@@ -102,6 +115,24 @@ def update_professor(
     
     db.commit()
     db.refresh(db_professor)
+
+    # Log dell'attività
+    description = f"Aggiornato professore {db_professor.first_name} {db_professor.last_name}"
+    if "password" in update_data:
+        description += " (modificata password)"
+    if "is_admin" in update_data:
+        description += f" (status admin: {update_data['is_admin']})"
+    if "notes" in update_data:
+        description += " (modificate note)"
+
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="update",
+        entity_type="professor",
+        entity_id=professor_id,
+        description=description
+    )
     return db_professor
 
 @router.delete("/{professor_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -129,4 +160,15 @@ def delete_professor(professor_id: int, db: Session = Depends(get_db), current_u
     
     db.delete(db_professor)
     db.commit()
+
+    # Log dell'attività
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="delete",
+        entity_type="professor",
+        entity_id=professor_id,
+        description=f"Eliminato professore {db_professor.first_name} {db_professor.last_name}" + 
+                    (f" (admin)" if db_professor.is_admin else "")
+    )
     return None

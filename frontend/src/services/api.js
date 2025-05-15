@@ -230,6 +230,41 @@ export const lessonService = {
   },
 };
 
+// Activity service
+export const activityService = {
+  getAll: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.skip) queryParams.append('skip', params.skip);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.days) queryParams.append('days', params.days);
+    
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return api.get(`/activities/${queryString}`);
+  },
+  
+  getUsersActivity: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.limit_per_user) queryParams.append('limit_per_user', params.limit_per_user);
+    if (params.days) queryParams.append('days', params.days);
+    
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return api.get(`/activities/users${queryString}`);
+  },
+  
+  getUserActivity: async (professorId, params = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.skip) queryParams.append('skip', params.skip);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.days) queryParams.append('days', params.days);
+    
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    return api.get(`/activities/user/${professorId}${queryString}`);
+  }
+};
+
 // Statistics service
 export const statsService = {
   getFinanceStats: async () => {

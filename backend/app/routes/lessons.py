@@ -6,6 +6,9 @@ from typing import List, Dict, Any
 from decimal import Decimal, InvalidOperation
 from datetime import date, time
 
+from ..auth import get_current_professor  # Importato per ottenere l'utente corrente
+from app.routes.activity import log_activity  # Importato per registrare le attività
+
 from .. import models
 from ..database import get_db
 from ..utils import parse_time_string, determine_payment_date
@@ -25,7 +28,7 @@ class PackageOverflowError(HTTPException):
         )
 
 # Funzioni ausiliarie per gestire l'overflow
-def _handle_use_package_option(db, values, lesson_data, package_id, lesson_hours_in_package, overflow_hours):
+def _handle_use_package_option(db, values, lesson_data, package_id, lesson_hours_in_package, overflow_hours, current_user):
     """Gestisce l'opzione di usare un pacchetto esistente con una lezione singola aggiuntiva per le ore in eccesso."""
     from .. import models
     from app.routes.packages import update_package_status
@@ -101,6 +104,30 @@ def _handle_use_package_option(db, values, lesson_data, package_id, lesson_hours
             "total_payment": float(lesson_single.total_payment)
         }
     ]
+
+        # Log delle attività
+    student = db.query(models.Student).filter(models.Student.id == lesson_data["student_id"]).first()
+    student_full_name = f"{student.first_name} {student.last_name}" if student else f"Studente #{lesson_data['student_id']}"
+
+    # Log per la lezione da pacchetto
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="create",
+        entity_type="lesson",
+        entity_id=lesson_in_package.id,
+        description=f"Lezione da pacchetto per {student_full_name} di {lesson_hours_in_package} ore"
+    )
+
+    # Log per la lezione singola
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="create",
+        entity_type="lesson",
+        entity_id=lesson_single.id,
+        description=f"Lezione singola per {student_full_name} di {overflow_hours} ore (overflow da pacchetto)"
+    )
     
     return {
         "lessons_created": lessons_created,
@@ -111,7 +138,7 @@ def _handle_use_package_option(db, values, lesson_data, package_id, lesson_hours
 # In backend/app/routes/lessons.py
 # Update the _handle_create_new_package_option function
 
-def _handle_create_new_package_option(db, values, lesson_data, package_id, lesson_hours_in_package, overflow_hours):
+def _handle_create_new_package_option(db, values, lesson_data, package_id, lesson_hours_in_package, overflow_hours, current_user):
     """Gestisce l'opzione di creare un nuovo pacchetto per le ore in eccesso."""
     from .. import models
     from app.routes.packages import update_package_status, calculate_expiry_date
@@ -231,6 +258,40 @@ def _handle_create_new_package_option(db, values, lesson_data, package_id, lesso
             "total_payment": float(lesson_in_new_package.total_payment)
         }
     ]
+
+    # Log delle attività
+    student = db.query(models.Student).filter(models.Student.id == lesson_data["student_id"]).first()
+    student_full_name = f"{student.first_name} {student.last_name}" if student else f"Studente #{lesson_data['student_id']}"
+
+    # Log per la lezione nel pacchetto originale
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="create",
+        entity_type="lesson",
+        entity_id=lesson_in_original_package.id,
+        description=f"Lezione da pacchetto per {student_full_name} di {lesson_hours_in_package} ore"
+    )
+
+    # Log per la lezione nel nuovo pacchetto
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="create",
+        entity_type="lesson",
+        entity_id=lesson_in_new_package.id,
+        description=f"Lezione in nuovo pacchetto per {student_full_name} di {overflow_hours} ore"
+    )
+
+    # Log per la creazione del nuovo pacchetto
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="create",
+        entity_type="package",
+        entity_id=new_package.id,
+        description=f"Nuovo pacchetto creato per {student_full_name} di {overflow_hours} ore (overflow)"
+    )
     
     return {
         "lessons_created": lessons_created,
@@ -248,7 +309,8 @@ def _handle_create_new_package_option(db, values, lesson_data, package_id, lesso
 @router.post("/", response_model=models.LessonResponse, status_code=status.HTTP_201_CREATED)
 def create_lesson(
     lesson: models.LessonCreate, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_professor)
 ):
     # Importa la funzione update_package_remaining_hours
     from app.routes.packages import update_package_status
@@ -365,6 +427,17 @@ def create_lesson(
         
         # Aggiorna le ore rimanenti del pacchetto usando la nostra funzione helper
         update_package_status(db, package_id)
+
+        # Log dell'attività
+        student_full_name = f"{student.first_name} {student.last_name}"
+        log_activity(
+            db=db,
+            professor_id=current_user.id,
+            action_type="create",
+            entity_type="lesson",
+            entity_id=db_lesson.id,
+            description=f"Lezione da pacchetto per {student_full_name} di {lesson.duration} ore"
+        )
         
         return db_lesson
     
@@ -394,10 +467,25 @@ def create_lesson(
         db.add(db_lesson)
         db.commit()
         db.refresh(db_lesson)
+
+        # Log dell'attività
+        student_full_name = f"{student.first_name} {student.last_name}"
+        log_activity(
+            db=db,
+            professor_id=current_user.id,
+            action_type="create",
+            entity_type="lesson",
+            entity_id=db_lesson.id,
+            description=f"Lezione singola per {student_full_name} di {lesson.duration} ore"
+        )
         return db_lesson
 
 @router.post("/handle-overflow", response_model=Dict[str, Any])
-def handle_lesson_overflow(overflow_data: dict, db: Session = Depends(get_db)):
+def handle_lesson_overflow(
+    overflow_data: dict, 
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_professor)
+):
     """
     Endpoint per gestire l'overflow delle ore del pacchetto.
     
@@ -458,7 +546,8 @@ def handle_lesson_overflow(overflow_data: dict, db: Session = Depends(get_db)):
                 lesson_data, 
                 package_id, 
                 lesson_hours_in_package, 
-                overflow_hours
+                overflow_hours,
+                current_user
             )
             response_data.update(result)
             
@@ -470,7 +559,8 @@ def handle_lesson_overflow(overflow_data: dict, db: Session = Depends(get_db)):
                 lesson_data, 
                 package_id, 
                 lesson_hours_in_package, 
-                overflow_hours
+                overflow_hours,
+                current_user
             )
             response_data.update(result)
             
@@ -525,7 +615,12 @@ def read_student_lessons(student_id: int, db: Session = Depends(get_db)):
     return lessons
 
 @router.put("/{lesson_id}", response_model=models.LessonResponse)
-def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Depends(get_db)):
+def update_lesson(
+    lesson_id: int, 
+    lesson: models.LessonUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_professor)
+):
     """
     Aggiorna una lezione esistente. Se la lezione fa parte di un pacchetto, aggiorna anche le ore rimanenti del pacchetto.
     Gestisce correttamente la modifica della durata della lezione, anche per le lezioni di pacchetti.
@@ -596,10 +691,27 @@ def update_lesson(lesson_id: int, lesson: models.LessonUpdate, db: Session = Dep
     
     # Refresh della lezione per ottenere tutti i campi aggiornati
     db.refresh(db_lesson)
+
+    # Log dell'attività
+    student = db.query(models.Student).filter(models.Student.id == db_lesson.student_id).first()
+    student_full_name = f"{student.first_name} {student.last_name}" if student else f"Studente #{db_lesson.student_id}"
+    lesson_type = "da pacchetto" if db_lesson.is_package else "singola"
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="update",
+        entity_type="lesson",
+        entity_id=db_lesson.id,
+        description=f"Lezione {lesson_type} per {student_full_name} di {db_lesson.duration} ore"
+    )
     return db_lesson
 
 @router.delete("/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_lesson(lesson_id: int, db: Session = Depends(get_db)):
+def delete_lesson(
+    lesson_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_professor)
+):
     # Importa la funzione update_package_remaining_hours
     from app.routes.packages import update_package_status
     
@@ -611,6 +723,23 @@ def delete_lesson(lesson_id: int, db: Session = Depends(get_db)):
     package_id = None
     if db_lesson.is_package and db_lesson.package_id:
         package_id = db_lesson.package_id
+
+    # Log dell'attività
+    # Ottieni i dati necessari per il log prima di eliminare la lezione
+    student = db.query(models.Student).filter(models.Student.id == db_lesson.student_id).first()
+    student_full_name = f"{student.first_name} {student.last_name}" if student else f"Studente #{db_lesson.student_id}"
+    lesson_type = "da pacchetto" if db_lesson.is_package else "singola"
+    lesson_duration = db_lesson.duration
+
+    # Log dell'attività
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="delete",
+        entity_type="lesson",
+        entity_id=lesson_id,
+        description=f"Lezione {lesson_type} per {student_full_name} di {lesson_duration} ore"
+    )
     
     # Elimina la lezione
     db.delete(db_lesson)

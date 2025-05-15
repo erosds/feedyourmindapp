@@ -1,15 +1,15 @@
 # models.py
 from datetime import date, datetime, time
-from typing import Optional, List, Union
+from typing import Optional, List
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date, Time, DECIMAL, TIMESTAMP, CheckConstraint
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date, Time, DateTime, Text, DECIMAL, TIMESTAMP, CheckConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 # Updated import section to correctly import Pydantic v2 validators
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
+from pydantic import BaseModel, field_validator, model_validator, ConfigDict
 
 Base = declarative_base()
 
@@ -27,6 +27,7 @@ class Professor(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     lessons = relationship("Lesson", back_populates="professor")
+    activities = relationship("ActivityLog", back_populates="professor")
     
     """
     Nota sul modello di business:
@@ -450,3 +451,44 @@ class LessonResponse(BaseModel):
         if isinstance(v, time):
             return v.strftime('%H:%M:%S')
         return v
+    
+# Modello SQLAlchemy per il database
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    professor_id = Column(Integer, ForeignKey("professors.id"))
+    action_type = Column(String, index=True)  # create, update, delete
+    entity_type = Column(String, index=True)  # lesson, package, student, professor
+    entity_id = Column(Integer)
+    description = Column(Text)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relazione con il professore
+    professor = relationship("Professor", back_populates="activities")
+
+# Modelli Pydantic per l'API
+class ActivityLogBase(BaseModel):
+    professor_id: int
+    action_type: str
+    entity_type: str
+    entity_id: int
+    description: str
+
+class ActivityLogCreate(ActivityLogBase):
+    pass
+
+class ActivityLogResponse(ActivityLogBase):
+    id: int
+    timestamp: datetime
+    
+    class Config:
+        orm_mode = True
+        
+# Modello per le risposte con aggregazioni per utente
+class UserActivitySummary(BaseModel):
+    professor_id: int
+    professor_name: str
+    last_activity_time: Optional[datetime] = None
+    activities_count: int
+    recent_activities: List[ActivityLogResponse]

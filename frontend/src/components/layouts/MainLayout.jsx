@@ -38,6 +38,7 @@ import logo from '../assets/logo.jpg';
 import GridViewIcon from '@mui/icons-material/GridView';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import DateRangeIcon from '@mui/icons-material/DateRange';
+import HistoryIcon from '@mui/icons-material/History';
 
 const drawerWidth = 250;
 
@@ -87,11 +88,8 @@ function MainLayout() {
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
       { text: 'Professori', icon: <PeopleIcon />, path: '/professors' },
-      {
-        text: 'FAQ',
-        icon: <HelpOutlineIcon />,
-        path: '/faq'
-      },
+      {text: 'FAQ', icon: <HelpOutlineIcon />, path: '/faq'},
+      { text: 'Cronologia Attività', icon: <HistoryIcon />, path: '/activities' },
       { text: 'Reset Password', icon: <LockResetIcon />, path: '/admin/reset-password' },
     ];
   } else {

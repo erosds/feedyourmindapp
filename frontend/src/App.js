@@ -54,10 +54,11 @@ import PaymentCalendarPage from './pages/payments/PaymentCalendarPage';
 
 import FAQPage from './pages/faq/FAQPage';
 
+import ActivityLogPage from './pages/activity/ActivityLogPage';
+import UserActivityPage from './pages/activity/UserActivityPage';
+
 // Scegli tema
 import {theme} from './services/theme'
-
-
 
 
 function App() {
@@ -95,6 +96,15 @@ function App() {
                 <Route 
                   path="/payments/calendar" 
                   element={<AdminRoute><PaymentCalendarPage /></AdminRoute>} 
+                />
+
+                <Route 
+                  path="/activities" 
+                  element={<AdminRoute><ActivityLogPage /></AdminRoute>} 
+                />
+                <Route 
+                  path="/activities/user/:professorId" 
+                  element={<AdminRoute><UserActivityPage /></AdminRoute>} 
                 />
 
                 {/* Professor Routes */}

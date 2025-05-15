@@ -6,6 +6,9 @@ from datetime import date, timedelta
 from decimal import Decimal
 from sqlalchemy import func
 
+from ..auth import get_current_professor  # Importato per ottenere l'utente corrente
+from app.routes.activity import log_activity  # Importato per registrare le attività
+
 from .. import models
 from ..database import get_db
 
@@ -112,7 +115,12 @@ def package_orm_to_response(package_orm):
 # In backend/app/routes/packages.py
 # Update the create_package function to check for existing future packages
 @router.post("/", response_model=models.PackageResponse)
-def create_package(package: models.PackageCreate, allow_multiple: bool = False, db: Session = Depends(get_db)):
+def create_package(
+    package: models.PackageCreate, 
+    allow_multiple: bool = False, 
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_professor)
+):
     # Verifica che tutti gli studenti esistano
     for student_id in package.student_ids:
         student = db.query(models.Student).filter(models.Student.id == student_id).first()
@@ -216,6 +224,23 @@ def create_package(package: models.PackageCreate, allow_multiple: bool = False, 
     
     db.commit()
     db.refresh(db_package)
+
+    # Log dell'attività
+    student_names = []
+    for student_id in package.student_ids:
+        student = db.query(models.Student).filter(models.Student.id == student_id).first()
+        if student:
+            student_names.append(f"{student.first_name} {student.last_name}")
+
+    students_str = ", ".join(student_names) if student_names else "nessuno studente"
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="create",
+        entity_type="package",
+        entity_id=db_package.id,
+        description=f"Pacchetto di {total_hours} ore per {students_str}"
+    )
     
     return package_orm_to_response(db_package)
 
@@ -318,7 +343,13 @@ def read_student_active_package(student_id: int, db: Session = Depends(get_db)):
 
 # Modifica della funzione update_package in packages.py
 @router.put("/{package_id}", response_model=models.PackageResponse)
-def update_package(package_id: int, package: models.PackageUpdate, allow_multiple: bool = False, db: Session = Depends(get_db)):
+def update_package(
+    package_id: int, 
+    package: models.PackageUpdate, 
+    allow_multiple: bool = False, 
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_professor)
+):
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
@@ -440,13 +471,32 @@ def update_package(package_id: int, package: models.PackageUpdate, allow_multipl
     
     # Refresh package data
     db.refresh(db_package)
+
+    # Log dell'attività
+    student_names = []
+    for student in db_package.students:
+        student_names.append(f"{student.first_name} {student.last_name}")
+
+    students_str = ", ".join(student_names) if student_names else "nessuno studente"
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="update",
+        entity_type="package",
+        entity_id=package_id,
+        description=f"Modificato pacchetto di {db_package.total_hours} ore per {students_str}"
+    )
     return package_orm_to_response(db_package)  # Use the helper function for consistent response format
 
 # In backend/app/routes/packages.py
 # Update the extend_package_expiry function
 
 @router.put("/{package_id}/extend", response_model=models.PackageResponse)
-def extend_package_expiry(package_id: int, db: Session = Depends(get_db)):
+def extend_package_expiry(
+    package_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_professor)
+):
     """Estende la scadenza del pacchetto alla domenica successiva"""
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
@@ -484,11 +534,31 @@ def extend_package_expiry(package_id: int, db: Session = Depends(get_db)):
     
     db.commit()
     db.refresh(db_package)
+
+    # Log dell'attività
+    student_names = []
+    for student in db_package.students:
+        student_names.append(f"{student.first_name} {student.last_name}")
+
+    students_str = ", ".join(student_names) if student_names else "nessuno studente"
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="update",
+        entity_type="package",
+        entity_id=package_id,
+        description=f"Estesa scadenza del pacchetto per {students_str} a {new_expiry.strftime('%d/%m/%Y')}"
+    )
+
     return db_package
 
 # Add this to backend/app/routes/packages.py
 @router.put("/{package_id}/cancel-extension", response_model=models.PackageResponse)
-def cancel_package_extension(package_id: int, db: Session = Depends(get_db)):
+def cancel_package_extension(
+    package_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_professor)
+):
     """Cancella l'ultima estensione del pacchetto riducendo la data di scadenza di 7 giorni"""
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
@@ -527,10 +597,30 @@ def cancel_package_extension(package_id: int, db: Session = Depends(get_db)):
     
     db.commit()
     db.refresh(db_package)
+
+    # Log dell'attività
+    student_names = []
+    for student in db_package.students:
+        student_names.append(f"{student.first_name} {student.last_name}")
+
+    students_str = ", ".join(student_names) if student_names else "nessuno studente"
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="update",
+        entity_type="package",
+        entity_id=package_id,
+        description=f"Annullata estensione del pacchetto per {students_str}, nuova scadenza: {db_package.expiry_date.strftime('%d/%m/%Y')}"
+    )
+
     return db_package
 
 @router.delete("/{package_id}", response_model=dict)
-def delete_package(package_id: int, db: Session = Depends(get_db)):
+def delete_package(
+    package_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_professor)
+):
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     if db_package is None:
         raise HTTPException(status_code=404, detail="Package not found")
@@ -560,6 +650,21 @@ def delete_package(package_id: int, db: Session = Depends(get_db)):
     # Delete the package
     db.delete(db_package)
     db.commit()
+
+    # Log dell'attività
+    student_names = []
+    for student in db_package.students:
+        student_names.append(f"{student.first_name} {student.last_name}")
+
+    students_str = ", ".join(student_names) if student_names else "nessuno studente"
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="delete",
+        entity_type="package",
+        entity_id=package_id,
+        description=f"Eliminato pacchetto di {db_package.total_hours} ore per {students_str}"
+    )
     
     # Return information about what was deleted
     return {

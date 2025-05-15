@@ -4,6 +4,9 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
 
+from ..auth import get_current_professor  # Per ottenere l'utente corrente
+from app.routes.activity import log_activity  # Per registrare le attività
+
 from .. import models
 from ..database import get_db
 
@@ -31,7 +34,7 @@ def check_student_homonyms(first_name: str, last_name: str, db: Session = Depend
     return {"has_homonyms": has_homonyms, "message": message}
 
 @router.post("/", response_model=models.StudentResponse, status_code=status.HTTP_201_CREATED)
-def create_student(student: models.StudentCreate, db: Session = Depends(get_db)):
+def create_student(student: models.StudentCreate, db: Session = Depends(get_db), current_user: models.Professor = Depends(get_current_professor)):
     # Cerca studenti con lo stesso nome e cognome
     existing_students = db.query(models.Student).filter(
         models.Student.first_name == student.first_name,
@@ -67,6 +70,16 @@ def create_student(student: models.StudentCreate, db: Session = Depends(get_db))
     db.add(db_student)
     db.commit()
     db.refresh(db_student)
+
+    # Log dell'attività
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="create",
+        entity_type="student",
+        entity_id=db_student.id,
+        description=f"Creato studente {db_student.first_name} {db_student.last_name}"
+    )
     return db_student
 
 @router.get("/", response_model=List[models.StudentResponse])
@@ -82,7 +95,7 @@ def read_student(student_id: int, db: Session = Depends(get_db)):
     return db_student
 
 @router.put("/{student_id}", response_model=models.StudentResponse)
-def update_student(student_id: int, student: models.StudentUpdate, db: Session = Depends(get_db)):
+def update_student(student_id: int, student: models.StudentUpdate, db: Session = Depends(get_db), current_user: models.Professor = Depends(get_current_professor)):
     db_student = db.query(models.Student).filter(models.Student.id == student_id).first()
     if db_student is None:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -115,14 +128,37 @@ def update_student(student_id: int, student: models.StudentUpdate, db: Session =
     
     db.commit()
     db.refresh(db_student)
+
+    # Log dell'attività
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="update",
+        entity_type="student",
+        entity_id=student_id,
+        description=f"Aggiornato studente {db_student.first_name} {db_student.last_name}"
+    )
     return db_student
 
 @router.delete("/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_student(student_id: int, db: Session = Depends(get_db)):
+def delete_student(student_id: int, db: Session = Depends(get_db), current_user: models.Professor = Depends(get_current_professor)):
     db_student = db.query(models.Student).filter(models.Student.id == student_id).first()
     if db_student is None:
         raise HTTPException(status_code=404, detail="Student not found")
     
+    # Prima di eliminare lo studente (per poter accedere ai dati)
+    student_name = f"{db_student.first_name} {db_student.last_name}"
+    
     db.delete(db_student)
     db.commit()
+
+    # Dopo aver eliminato lo studente
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="delete",
+        entity_type="student",
+        entity_id=student_id,
+        description=f"Eliminato studente {student_name}"
+    )
     return None
