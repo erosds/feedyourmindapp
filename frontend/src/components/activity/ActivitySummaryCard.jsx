@@ -129,7 +129,7 @@ function ActivityItem({ activity }) {
         </Box>
         <Box flexGrow={1}>
           <Typography variant="body2" noWrap>
-            {getActionLabel(activity.action_type)} {getEntityLabel(activity.entity_type)} {activity.description}
+            {activity.description}
           </Typography>
         </Box>
         <Typography variant="caption" color="text.secondary" ml={1}>
