@@ -3,107 +3,24 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
-  Card,
   CircularProgress,
   Divider,
   FormControl,
   Grid,
   IconButton,
   InputLabel,
-  List,
-  ListItem,
-  ListItemText,
   MenuItem,
   Paper,
   Select,
-  Tooltip,
   Typography,
-  Link
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { activityService, professorService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { format, formatDistance, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import {
-  Add as CreateIcon,
-  Edit as UpdateIcon,
-  Delete as DeleteIcon,
-  AccountCircle as AccountIcon,
-  School as SchoolIcon,
-  MenuBook as LessonIcon,
-  Book as PackageIcon
-} from '@mui/icons-material';
-
-function getActionIcon(actionType) {
-  switch (actionType) {
-    case 'create':
-      return <CreateIcon fontSize="small" sx={{ color: 'success.main' }} />;
-    case 'update':
-      return <UpdateIcon fontSize="small" sx={{ color: 'primary.main' }} />;
-    case 'delete':
-      return <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} />;
-    default:
-      return null;
-  }
-}
-
-function getEntityIcon(entityType) {
-  switch (entityType) {
-    case 'professor':
-      return <AccountIcon fontSize="small" />;
-    case 'student':
-      return <SchoolIcon fontSize="small" />;
-    case 'lesson':
-      return <LessonIcon fontSize="small" />;
-    case 'package':
-      return <PackageIcon fontSize="small" />;
-    default:
-      return null;
-  }
-}
-
-function getActionLabel(actionType) {
-  switch (actionType) {
-    case 'create':
-      return 'ha creato';
-    case 'update':
-      return 'ha modificato';
-    case 'delete':
-      return 'ha cancellato';
-    default:
-      return 'ha interagito con';
-  }
-}
-
-function getEntityLabel(entityType) {
-  switch (entityType) {
-    case 'professor':
-      return 'il professore';
-    case 'student':
-      return 'lo studente';
-    case 'lesson':
-      return 'la lezione';
-    case 'package':
-      return 'il pacchetto';
-    default:
-      return "l'elemento";
-  }
-}
-
-function getActionColor(actionType) {
-  switch (actionType) {
-    case 'create':
-      return 'success';
-    case 'update':
-      return 'primary';
-    case 'delete':
-      return 'error';
-    default:
-      return 'default';
-  }
-}
+import ActivitySummaryCard from '../../components/activity/ActivitySummaryCard';
 
 function UserActivityPage() {
   const { professorId } = useParams();
@@ -119,7 +36,7 @@ function UserActivityPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [canLoadMore, setCanLoadMore] = useState(true);
   const [page, setPage] = useState(0);
-  const limit = 50; // Numero di attività per pagina
+  const limit = 10; // Numero di attività per pagina
   
   // Check admin access
   useEffect(() => {
@@ -251,6 +168,17 @@ function UserActivityPage() {
     );
   }
 
+  // Crea un oggetto activityData singolo per il professore
+  const createProfessorActivityData = () => {
+    return {
+      professor_id: parseInt(professorId),
+      professor_name: professor ? `${professor.first_name} ${professor.last_name}` : `Utente #${professorId}`,
+      last_activity_time: activities.length > 0 ? activities[0].timestamp : null,
+      activities_count: activities.length,
+      recent_activities: activities
+    };
+  };
+
   return (
     <Box>
       <Box display="flex" flexDirection="row" alignItems="center" mb={3}>
@@ -285,6 +213,7 @@ function UserActivityPage() {
                 value={timeRange}
                 label="Intervallo temporale"
                 onChange={handleTimeRangeChange}
+                size="small"
               >
                 <MenuItem value={7}>Ultimi 7 giorni</MenuItem>
                 <MenuItem value={30}>Ultimi 30 giorni</MenuItem>
@@ -301,6 +230,15 @@ function UserActivityPage() {
               {sortedDays.map(dayKey => {
                 const dayActivities = groupedActivities[dayKey];
                 const dayDate = parseISO(dayKey);
+                
+                // Crea un activityData specifico per questo giorno
+                const dayActivityData = {
+                  professor_id: parseInt(professorId),
+                  professor_name: professor ? `${professor.first_name} ${professor.last_name}` : `Utente #${professorId}`,
+                  last_activity_time: dayActivities[0].timestamp,
+                  activities_count: dayActivities.length,
+                  recent_activities: dayActivities
+                };
                 
                 return (
                   <Box key={dayKey} mb={4}>
@@ -319,71 +257,12 @@ function UserActivityPage() {
                       {format(dayDate, 'EEEE d MMMM yyyy', { locale: it })}
                     </Typography>
                     
-                    <List>
-                      {dayActivities.map((activity) => {
-                        const timestamp = parseISO(activity.timestamp);
-                        const time = format(timestamp, 'HH:mm');
-                        const entityUrl = `/${activity.entity_type}s/${activity.entity_id}`;
-                        
-                        return (
-                          <ListItem 
-                            key={activity.id}
-                            sx={{ 
-                              py: 1, 
-                              borderLeft: '4px solid',
-                              borderColor: `${getActionColor(activity.action_type)}.main`,
-                              pl: 2,
-                              mb: 1,
-                              bgcolor: 'background.paper',
-                              '&:hover': {
-                                bgcolor: 'action.hover',
-                              },
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                            }}
-                          >
-                            <Box display="flex" alignItems="flex-start" width="100%">
-                              <Box sx={{ minWidth: 40, mr: 2, color: 'text.secondary' }}>
-                                <Typography variant="body2">{time}</Typography>
-                              </Box>
-                              
-                              <Box flexGrow={1}>
-                                <Box display="flex" alignItems="center" flexWrap="wrap" mb={0.5}>
-                                  <Box sx={{ mr: 1 }}>
-                                    {getActionIcon(activity.action_type)}
-                                  </Box>
-                                  
-                                  <Typography variant="body2" component="span">
-                                    {getActionLabel(activity.action_type)}
-                                  </Typography>
-                                  
-                                  <Box display="inline-flex" alignItems="center" mx={0.5}>
-                                    {getEntityIcon(activity.entity_type)}
-                                    <Typography variant="body2" component="span" sx={{ mx: 0.5 }}>
-                                      {getEntityLabel(activity.entity_type)}
-                                    </Typography>
-                                    <Link 
-                                      component="button" 
-                                      variant="body2" 
-                                      color="primary" 
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        navigate(entityUrl);
-                                      }}
-                                    >
-                                      #{activity.entity_id}
-                                    </Link>
-                                  </Box>
-                                </Box>
-                                
-                                <Typography variant="body2" color="text.secondary">
-                                  {activity.description}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </ListItem>
-                        );
-                      })}
-                    </List>
+                    <ActivitySummaryCard 
+                      activityData={dayActivityData}
+                      showViewAll={false}
+                      maxItems={100} // Mostra tutte le attività del giorno
+                      title="" // Nessun titolo necessario poiché abbiamo già l'intestazione del giorno
+                    />
                   </Box>
                 );
               })}

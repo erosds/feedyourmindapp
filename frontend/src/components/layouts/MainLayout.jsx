@@ -88,8 +88,11 @@ function MainLayout() {
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
       { text: 'Professori', icon: <PeopleIcon />, path: '/professors' },
-      {text: 'FAQ', icon: <HelpOutlineIcon />, path: '/faq'},
-      { text: 'Cronologia Attività', icon: <HistoryIcon />, path: '/activities' },
+      { text: 'FAQ', icon: <HelpOutlineIcon />, path: '/faq' },
+      // Mostra le voci del menu attività solo se l'utente è erosdesimone
+      ...(currentUser && currentUser.username === 'erosdesimone' ? [
+        { text: 'Cronologia Attività', icon: <HistoryIcon />, path: '/activities' },
+      ] : []),
     ];
   } else {
     menuItems = [
@@ -114,7 +117,7 @@ function MainLayout() {
         bgcolor: 'transparent'
       }}
     >
-      <Toolbar sx={{my:1.5}}>
+      <Toolbar sx={{ my: 1.5 }}>
         <img src={logo} alt="Logo" style={{ height: 46, marginRight: 12, borderRadius: 8 }} />
         <Typography variant="h6" noWrap component="div" fontWeight="bold">
           FeedYourMind
