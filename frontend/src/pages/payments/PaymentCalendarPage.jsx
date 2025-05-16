@@ -1244,16 +1244,22 @@ function PaymentCalendarPage() {
                             }
                             sx={{ my: 0 }}
                           />
-                            <Button
-                              variant="contained"
-                              size="small"
-                              onClick={(e) => handleOpenPaymentDialog(pkg, e)}
-                              sx={{
-                                minWidth: '40px', height: '30px', ml: 1, bgcolor: 'warning.main', alignSelf: 'center' // Aggiungi questo per centrare verticalmente
-                              }}
-                            >
-                              Segna come pagato
-                            </Button>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={(e) => handleOpenPaymentDialog(pkg, e)}
+                            sx={{
+                              minWidth: '40px',
+                              height: '30px',
+                              ml: 1,
+                              bgcolor: 'warning.main',
+                              alignSelf: 'center',
+                              fontSize: { xs: '0.65rem', sm: '0.8125rem' }, // Testo più piccolo su mobile
+                              px: { xs: 0.5, sm: 1 }  // Padding ridotto su mobile
+                            }}
+                          >
+                            Segna come pagato
+                          </Button>
                         </ListItem>
                       ))}
                   </List>
@@ -1300,16 +1306,22 @@ function PaymentCalendarPage() {
                         }
                         sx={{ my: 0 }}
                       />
-                        <Button
-                          variant="contained"
-                          size="small"
-                          onClick={(e) => handleOpenPaymentDialog(lesson, e)}
-                          sx={{
-                            minWidth: '40px', height: '30px', ml: 1, bgcolor: 'secondary.main', alignSelf: 'center' // Aggiungi questo per centrare verticalmente
-                          }}
-                        >
-                          Segna come pagata
-                        </Button>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={(e) => handleOpenPaymentDialog(lesson, e)}
+                        sx={{
+                          minWidth: '40px',
+                          height: '30px',
+                          ml: 1,
+                          bgcolor: 'secondary.main',
+                          alignSelf: 'center',
+                          fontSize: { xs: '0.65rem', sm: '0.8125rem' }, // Testo più piccolo su mobile
+                          px: { xs: 0.5, sm: 1 }  // Padding ridotto su mobile
+                        }}
+                      >
+                        Segna come pagata
+                      </Button>
                     </ListItem>
                   ))}
               </List>
