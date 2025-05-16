@@ -1,5 +1,5 @@
 // src/pages/lessons/components/LessonForm.jsx
-import React from 'react';
+import React, {useState} from 'react';
 import {
   Box,
   Button,
@@ -23,6 +23,8 @@ import PackageStudentSelector from '../../../components/common/PackageStudentSel
 import { studentService, professorService } from '../../../services/api';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
 // Schema di validazione
 const LessonSchema = Yup.object().shape({
@@ -37,7 +39,7 @@ const LessonSchema = Yup.object().shape({
     then: () => Yup.number().required('Hai scelto parte di un pacchetto, ora seleziona il pacchetto.'),
     otherwise: () => Yup.number().nullable(),
   }),
-  hourly_rate: Yup.number().positive('La tariffa oraria deve essere positiva').required('Tariffa oraria obbligatoria'),
+  hourly_rate: Yup.number().positive('Il compenso orario deve essere positivo').required('Compenso orario obbligatorio'),
   is_paid: Yup.boolean(),
   payment_date: Yup.date().nullable().when('is_paid', {
     is: true,
@@ -64,6 +66,8 @@ function LessonForm({
   fixedPackageId = null,
   packageStudents = [] // Students associated with the current package when coming from package detail
 }) {
+  const [showRateFields, setShowRateFields] = useState(false);
+
   return (
     <Formik
       initialValues={initialValues}
@@ -243,53 +247,6 @@ function LessonForm({
                 )}
               </Grid>
 
-              {/* Tariffa oraria */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  name="hourly_rate"
-                  label="Tariffa oraria"
-                  type="number"
-                  value={values.hourly_rate}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={touched.hourly_rate && Boolean(errors.hourly_rate)}
-                  helperText={touched.hourly_rate && errors.hourly_rate}
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                  }}
-                  required
-                />
-              </Grid>
-
-              {/* Totale calcolato automaticamente */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Totale lezione"
-                  value={`€ ${(values.duration * values.hourly_rate).toFixed(2) || '0.00'}`}
-                  InputProps={{
-                    readOnly: true,
-                  }}
-                />
-              </Grid>
-
-              {/* Toggle per lezione online */}
-              <Grid item xs={12} md={4}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="is_online"
-                      checked={values.is_online || false}
-                      onChange={(e) => {
-                        setFieldValue('is_online', e.target.checked);
-                      }}
-                    />
-                  }
-                  label="Lezione online"
-                />
-              </Grid>
-
               {/* Checkbox pacchetto - Hide in package detail context since it's always a package lesson */}
               {!isPackageDetailContext && (
                 <Grid item xs={12} md={4}>
@@ -396,6 +353,22 @@ function LessonForm({
                 </>
               )}
 
+              {/* Toggle per lezione online */}
+              <Grid item xs={12} md={4}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      name="is_online"
+                      checked={values.is_online || false}
+                      onChange={(e) => {
+                        setFieldValue('is_online', e.target.checked);
+                      }}
+                    />
+                  }
+                  label="Lezione online"
+                />
+              </Grid>
+
               {/* Selezione pacchetto - Hide in package detail context or show but disabled */}
               {values.is_package && !isPackageDetailContext ? (
                 <Grid item xs={12}>
@@ -451,6 +424,56 @@ function LessonForm({
                   </FormControl>
                 </Grid>
               ) : null}
+
+              <Grid item xs={12}>
+                <Button
+                  type="button"
+                  variant="text"
+                  color="primary"
+                  size="small"
+                  onClick={() => setShowRateFields(!showRateFields)}
+                  startIcon={showRateFields ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                >
+                  {showRateFields ? "Nascondi compenso" : "Mostra compenso"}
+                </Button>
+              </Grid>
+
+              {showRateFields && (
+                <React.Fragment>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      name="hourly_rate"
+                      label="Compenso orario (€)"
+                      type="number"
+                      inputProps={{ step: "0.5", min: "0" }}
+                      value={values.hourly_rate}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        setFieldValue('hourly_rate', value);
+                        setFieldValue('total_payment', value * values.duration);
+                      }}
+                      error={touched.hourly_rate && Boolean(errors.hourly_rate)}
+                      helperText={touched.hourly_rate && errors.hourly_rate}
+                      disabled={isSubmitting}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      name="total_payment"
+                      label="Totale lezione (€)"
+                      type="number"
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                        readOnly: true,
+                      }}
+                      value={(values.hourly_rate * values.duration).toFixed(2)}
+                      disabled={true}
+                    />
+                  </Grid>
+                </React.Fragment>
+              )}
 
               {/* Pulsanti di azione */}
               <Grid item xs={12}>

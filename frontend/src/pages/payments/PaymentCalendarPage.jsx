@@ -19,14 +19,12 @@ import {
   ListItemText,
   Paper,
   Typography,
-  useTheme
 } from '@mui/material';
 import {
   format,
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
-
   addMonths,
   subMonths,
   isSameDay,
@@ -153,7 +151,6 @@ const ScrollableChipsContainer = ({ children }) => {
 function PaymentCalendarPage() {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
-  const theme = useTheme();
 
   // States
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -742,7 +739,7 @@ function PaymentCalendarPage() {
           {viewMode === 'payments' ? (
             /* Statistiche per i pagamenti effettuati */
             <>
-              <Grid item xs={12} sm={2}>
+              <Grid item xs={12} sm={1.5}>
                 <Typography variant="body2" color="text.secondary">
                   Totale incassato
                 </Typography>
@@ -805,7 +802,7 @@ function PaymentCalendarPage() {
 
                 return (
                   <>
-                    <Grid item xs={12} sm={2}>
+                    <Grid item xs={12} sm={1.5}>
                       <Typography variant="body2" color="text.secondary">
                         Totale da ricevere
                       </Typography>

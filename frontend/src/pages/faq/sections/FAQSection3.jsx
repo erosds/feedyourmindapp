@@ -164,7 +164,7 @@ function FAQSection3({ searchQuery = '' }) {
         <Typography paragraph>
           Vai alla <b>pagina dettaglio</b> del pacchetto cliccandoci sopra una volta individuato nella lista dei pacchetti.
           Nella parte inferiore della pagina troverai una <b>tabella</b> con tutte le lezioni associate a quel pacchetto,
-          con informazioni su studente, professore, data, durata e tariffa. Inoltre, è disponibile un <b>calendario</b>
+          con informazioni su studente, professore, data e durata. Inoltre, è disponibile un <b>calendario</b>
           mensile che mostra visivamente la distribuzione delle lezioni.
         </Typography>
       )

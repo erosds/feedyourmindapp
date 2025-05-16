@@ -814,7 +814,7 @@ function PackageDetailPage() {
                         )}
                         <TableCell>Professore</TableCell>
                         <TableCell>Durata (ore)</TableCell>
-                        <TableCell>Tariffa Oraria</TableCell>
+                        <TableCell>Compenso Orario</TableCell>
                         <TableCell>Totale</TableCell>
                         <TableCell align="right">Azioni</TableCell>
 

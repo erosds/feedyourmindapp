@@ -127,8 +127,15 @@ function ActivityItem({ activity }) {
           {getActionIcon(activity.action_type)}
           {getEntityIcon(activity.entity_type)}
         </Box>
-        <Box flexGrow={1}>
-          <Typography variant="body2" noWrap>
+        <Box flexGrow={1} sx={{ maxWidth: { xs: '180px', sm: '100%' } }}>
+          <Typography
+            variant="body2"
+            sx={{
+              whiteSpace: { xs: 'normal', sm: 'nowrap' },
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
             {activity.description}
           </Typography>
         </Box>

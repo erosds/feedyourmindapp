@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
-  Chip,
   CircularProgress,
   Divider,
   FormControl,
@@ -129,7 +128,8 @@ function ActivityLogPage() {
             flexDirection: { xs: 'column', sm: 'row' },
             justifyContent: 'space-between',
             alignItems: { xs: 'flex-start', sm: 'center' },
-            mb: 2
+            mb: 2,
+            width: '100%'
           }}
         >
           <Tabs
@@ -137,15 +137,27 @@ function ActivityLogPage() {
             onChange={handleTabChange}
             indicatorColor="primary"
             textColor="primary"
-            sx={{ mb: { xs: 2, sm: 0 } }}
+            sx={{
+              mb: { xs: 2, sm: 0 },
+              width: { xs: '100%', sm: 'auto' }
+            }}
+            variant="fullWidth"
           >
             <Tab label="Utenti attivi" />
             <Tab label="Utenti inattivi" />
           </Tabs>
 
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
-            {/* Aggiungi il selettore di ordinamento */}
-            <FormControl sx={{ minWidth: 200 }}>
+          <Box sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2,
+            width: { xs: '100%', sm: 'auto' }
+          }}>
+            <FormControl sx={{
+              minWidth: { sm: 200 },
+              width: { xs: '100%', sm: 'auto' },
+              mb: { xs: 2, sm: 0 }
+            }}>
               <InputLabel id="sort-order-label">Ordina per</InputLabel>
               <Select
                 labelId="sort-order-label"
@@ -159,7 +171,10 @@ function ActivityLogPage() {
               </Select>
             </FormControl>
 
-            <FormControl sx={{ minWidth: 200 }}>
+            <FormControl sx={{
+              minWidth: { sm: 200 },
+              width: { xs: '100%', sm: 'auto' }
+            }}>
               <InputLabel id="time-range-label">Intervallo temporale</InputLabel>
               <Select
                 labelId="time-range-label"
@@ -188,8 +203,8 @@ function ActivityLogPage() {
                     activityData={userData}
                     maxItems={3}
                     showViewAll={true}
-                  />                
-                  </Grid>
+                  />
+                </Grid>
               ))
             ) : (
               <Grid item xs={12}>

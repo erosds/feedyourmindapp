@@ -214,7 +214,7 @@ function LessonDetailsDialog({ open, onClose, selectedLesson, studentsMap }) {
             </Grid>
 
             <Grid item xs={12} md={3}>
-              <Typography variant="subtitle2" color="text.secondary">Tariffa Oraria</Typography>
+              <Typography variant="subtitle2" color="text.secondary">Compenso Orario</Typography>
               <Typography variant="body1" fontWeight="medium">
                 €{parseFloat(selectedLesson.hourly_rate).toFixed(2)}
               </Typography>

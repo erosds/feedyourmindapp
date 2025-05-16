@@ -274,7 +274,7 @@ function LessonFormPage() {
       price: defaultPrice,
     });
 
-    setInfoMessage(`Stai creando una lezione singola per ${overflow_hours} ore in eccesso da un'altra lezione. Puoi modificare la tariffa oraria o altri dettagli se necessario.`);
+    setInfoMessage(`Stai creando una lezione singola per ${overflow_hours} ore in eccesso da un'altra lezione. Puoi modificare il compenso orario o altri dettagli se necessario.`);
   };
 
   // Modifica la funzione handleStudentChange in LessonFormPage.jsx

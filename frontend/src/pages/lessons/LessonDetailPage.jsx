@@ -479,12 +479,12 @@ function LessonDetailPage() {
               </Typography>
             </Grid>
 
-            {/* Tariffa oraria */}
+            {/* Compenso orario */}
             <Grid item xs={12} md={3}>
               <Box display="flex" alignItems="center" mb={1}>
                 <EuroIcon sx={{ mr: 1 }} color="primary" />
                 <Typography variant="body2" color="text.secondary">
-                  Tariffa oraria
+                  Compenso orario
                 </Typography>
               </Box>
               <Typography variant="body1" fontWeight="medium">
