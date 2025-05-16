@@ -1,5 +1,5 @@
 // src/pages/lessons/components/LessonForm.jsx
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Button,
@@ -249,7 +249,7 @@ function LessonForm({
 
               {/* Checkbox pacchetto - Hide in package detail context since it's always a package lesson */}
               {!isPackageDetailContext && (
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={5}>
                   <FormControlLabel
                     control={
                       <Switch
@@ -280,7 +280,7 @@ function LessonForm({
               {/* Stato pagamento (solo per lezioni singole) */}
               {!values.is_package && (
                 <>
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={5}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -305,56 +305,12 @@ function LessonForm({
                     />
                   </Grid>
 
-                  {/* Data di pagamento e prezzo (solo se pagata) */}
-                  {values.is_paid && (
-                    <>
-                      <Grid item xs={12} md={6}>
-                        <DatePicker
-                          label="Data pagamento"
-                          value={values.payment_date}
-                          onChange={(date) => setFieldValue('payment_date', date)}
-                          slotProps={{
-                            textField: {
-                              fullWidth: true,
-                              required: true,
-                              error: touched.payment_date && Boolean(errors.payment_date),
-                              helperText: touched.payment_date && errors.payment_date,
-                            },
-                          }}
-                        />
-                      </Grid>
 
-                      {/* Prezzo (solo per admin) */}
-                      {isAdmin && (
-                        <Grid item xs={12} md={6}>
-                          <TextField
-                            fullWidth
-                            name="price"
-                            label="Prezzo studente"
-                            type="number"
-                            value={values.price || 20 * values.duration}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            InputProps={{
-                              startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                            }}
-                            inputProps={{
-                              min: 0,
-                              step: 0.5,
-                            }}
-                          />
-                          <FormHelperText>
-                            Prezzo pagato dallo studente all'associazione
-                          </FormHelperText>
-                        </Grid>
-                      )}
-                    </>
-                  )}
                 </>
               )}
 
               {/* Toggle per lezione online */}
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={2}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -368,6 +324,52 @@ function LessonForm({
                   label="Lezione online"
                 />
               </Grid>
+
+              {/* Data di pagamento e prezzo (solo se pagata) */}
+              {values.is_paid && (
+                <>
+                  <Grid item xs={12} md={6}>
+                    <DatePicker
+                      label="Data pagamento"
+                      value={values.payment_date}
+                      onChange={(date) => setFieldValue('payment_date', date)}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: true,
+                          error: touched.payment_date && Boolean(errors.payment_date),
+                          helperText: touched.payment_date && errors.payment_date,
+                        },
+                      }}
+                    />
+                  </Grid>
+
+                  {/* Prezzo (solo per admin) */}
+                  {isAdmin && (
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        name="price"
+                        label="Prezzo studente"
+                        type="number"
+                        value={values.price || 20 * values.duration}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                        }}
+                        inputProps={{
+                          min: 0,
+                          step: 0.5,
+                        }}
+                      />
+                      <FormHelperText>
+                        Prezzo pagato dallo studente all'associazione
+                      </FormHelperText>
+                    </Grid>
+                  )}
+                </>
+              )}
 
               {/* Selezione pacchetto - Hide in package detail context or show but disabled */}
               {values.is_package && !isPackageDetailContext ? (

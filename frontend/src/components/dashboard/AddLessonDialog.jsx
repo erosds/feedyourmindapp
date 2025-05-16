@@ -612,7 +612,7 @@ function AddLessonDialog({
             )
           )}
 
-          <Grid container spacing={3} sx={{ mt: 1 }}>
+          <Grid container spacing={3} sx={{ mt: -2 }}>
             {/* Selezione studente */}
             <Grid item xs={12} md={6}>
               {context === 'packageDetail' ? (
@@ -692,7 +692,7 @@ function AddLessonDialog({
 
             {/* Toggle per pacchetto - nascondi nel contesto del pacchetto */}
             {context !== 'packageDetail' && (
-              <Grid item xs={12} md={4.5}>
+              <Grid item xs={12} md={5}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -725,7 +725,7 @@ function AddLessonDialog({
             )}
 
             {/* Toggle pagamento (disabilitato per lezioni da pacchetto) */}
-            <Grid item xs={12} md={4.5}>
+            <Grid item xs={12} md={4}>
               <FormControlLabel
                 control={
                   <Switch
