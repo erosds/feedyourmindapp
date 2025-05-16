@@ -702,15 +702,15 @@ def update_lesson(
     # Descrizione base
     description = f"Lezione {lesson_type} per {student_full_name} di {db_lesson.duration} ore"
 
-    # Aggiungi dettagli sul cambiamento dello stato di pagamento
-    if "is_paid" in update_data and old_is_paid != db_lesson.is_paid:
+    # Aggiungi dettagli sul cambiamento dello stato di pagamento SOLO per lezioni singole
+    if "is_paid" in update_data and old_is_paid != db_lesson.is_paid and not db_lesson.is_package:
         if db_lesson.is_paid:
             description += f" - impostata come pagata (€{db_lesson.price})"
         else:
             description += " - impostata come non pagata"
 
-    # Se è stato cambiato solo il prezzo senza cambiare lo stato di pagamento
-    elif "price" in update_data and old_price != db_lesson.price and db_lesson.is_paid:
+    # Se è stato cambiato solo il prezzo senza cambiare lo stato di pagamento (solo per lezioni singole)
+    elif "price" in update_data and old_price != db_lesson.price and db_lesson.is_paid and not db_lesson.is_package:
         description += f" - aggiornato importo pagamento a €{db_lesson.price}"
 
     log_activity(
