@@ -240,7 +240,7 @@ function DashboardCalendar({
             sx={{
               mt: 1.5,
               py: 0.3,
-              minHeight: '36px',
+              minHeight: '28px',
               fontSize: '0.7rem',
               bgcolor: 'action.hover',
               justifyContent: 'center',
