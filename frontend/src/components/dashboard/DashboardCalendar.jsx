@@ -111,7 +111,7 @@ function DashboardCalendar({
                           mb: 0.5,
                           py: 0.5,
                           minHeight: '28px',
-                          bgcolor: isCurrentDay ? 'primary.dark' : 'action.hover',
+                          bgcolor: isCurrentDay ? 'primary.main' : 'action.hover',
                           borderRadius: 1,
                           color: 'text.primary',
                           opacity: 0.85,
