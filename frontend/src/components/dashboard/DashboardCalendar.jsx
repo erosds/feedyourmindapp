@@ -3,11 +3,9 @@ import React from 'react';
 import {
   Box,
   Button,
-  ButtonGroup,
   Card,
   Chip,
   Grid,
-  IconButton,
   Paper,
   Typography,
   useMediaQuery,
@@ -15,30 +13,22 @@ import {
 } from '@mui/material';
 import {
   format,
-  startOfWeek,
   endOfWeek,
   eachDayOfInterval,
-  addWeeks,
-  subWeeks,
   isToday,
-  parseISO
 } from 'date-fns';
-import { it } from 'date-fns/locale';
 import AddIcon from '@mui/icons-material/Add';
-import SearchIcon from '@mui/icons-material/Search';
 import WifiIcon from '@mui/icons-material/Wifi';
+import ViewTimelineIcon from '@mui/icons-material/ViewTimeline';
 
 function DashboardCalendar({
   currentWeekStart,
-  handleChangeWeek,
   getLessonsForDay,
   studentsMap,
   handleLessonClick,
   handleDayClick,
   handleAddLessonClick
 }) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   // Genera i giorni della settimana corrente (da lunedì a domenica)
   const daysOfWeek = eachDayOfInterval({
@@ -228,7 +218,7 @@ function DashboardCalendar({
                 <Box sx={{ mt: 'auto' }}>
                   <Button
                     fullWidth
-                    startIcon={<SearchIcon fontSize="small" />}
+                    startIcon={<ViewTimelineIcon fontSize="small" />}
                     variant="text"
                     size="small"
                     onClick={(e) => {
@@ -244,7 +234,7 @@ function DashboardCalendar({
                       }
                     }}
                   >
-                    Dettaglio giorno
+                    Timeline
                   </Button>
                 </Box>
               </Paper>

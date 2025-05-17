@@ -9,7 +9,6 @@ import {
   Paper,
   Typography
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
 import {
   format,
   endOfWeek,
@@ -19,6 +18,7 @@ import {
   parseISO
 } from 'date-fns';
 import { it } from 'date-fns/locale';
+import ViewTimelineIcon from '@mui/icons-material/ViewTimeline';
 
 // Componente per il contenitore di chip con autoscroll
 const ScrollableChipsContainer = ({ children }) => {
@@ -270,7 +270,7 @@ function AdminDashboardCalendar({
                     <Button
                       variant="text"
                       size="small"
-                      startIcon={<SearchIcon fontSize="small" />}
+                      startIcon={<ViewTimelineIcon fontSize="small" />}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDayClick(day);
@@ -292,7 +292,7 @@ function AdminDashboardCalendar({
                         }
                       }}
                     >
-                      Dettagli
+                      Timeline
                     </Button>
                   </>
                 ) : (
