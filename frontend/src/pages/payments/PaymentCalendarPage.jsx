@@ -32,7 +32,7 @@ import {
   parseISO
 } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { lessonService, packageService, studentService } from '../../services/api';
+import { lessonService, packageService, studentService, professorService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { TextField, InputAdornment } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers';
@@ -172,6 +172,47 @@ function PaymentCalendarPage() {
   const [selectedPaymentItem, setSelectedPaymentItem] = useState(null);
   const [paymentDate, setPaymentDate] = useState(new Date());
   const [priceValue, setPriceValue] = useState(0);
+
+  // Aggiungi questo stato accanto allo stato students
+  const [professors, setProfessors] = useState({});
+
+  // Aggiungi questa funzione
+  const getProfessorName = (professorId) => {
+    return professors[professorId] || `Professore #${professorId}`;
+  };
+
+  // Modifica questo useEffect
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Caricamento parallelo degli studenti e dei professori
+        const [studentsResponse, professorsResponse] = await Promise.all([
+          studentService.getAll(),
+          professorService.getAll()
+        ]);
+
+        const studentsMap = {};
+        if (studentsResponse && studentsResponse.data) {
+          studentsResponse.data.forEach(student => {
+            studentsMap[student.id] = `${student.first_name} ${student.last_name}`;
+          });
+        }
+        setStudents(studentsMap);
+
+        const professorsMap = {};
+        if (professorsResponse && professorsResponse.data) {
+          professorsResponse.data.forEach(professor => {
+            professorsMap[professor.id] = `${professor.first_name} ${professor.last_name}`;
+          });
+        }
+        setProfessors(professorsMap);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+      }
+    };
+
+    fetchData();
+  }, []);
 
 
   // Verify admin access
@@ -318,7 +359,8 @@ function PaymentCalendarPage() {
         student_id: lesson.student_id,
         amount: parseFloat(lesson.price || 0),
         hours: parseFloat(lesson.duration || 0),
-        studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
+        studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`,
+        professorName: getProfessorName(lesson.professor_id) // Aggiungi una funzione per ottenere il nome del professore
       }));
 
       const expiredPackagesData = packagesResponse.data.filter(pkg =>
@@ -481,7 +523,8 @@ function PaymentCalendarPage() {
           student_id: lesson.student_id,
           amount: parseFloat(lesson.price || 0),
           hours: parseFloat(lesson.duration || 0),
-          studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
+          studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`,
+          professorName: getProfessorName(lesson.professor_id) // Aggiungi una funzione per ottenere il nome del professore
         }));
 
         setUnpaidLessons(formattedUnpaidLessons);
@@ -739,21 +782,21 @@ function PaymentCalendarPage() {
           {viewMode === 'payments' ? (
             /* Statistiche per i pagamenti effettuati */
             <>
-              <Grid item xs={12} sm={1.5}>
+              <Grid item xs={12} sm={2.5}>
                 <Typography variant="body2" color="text.secondary">
-                  Totale incassato
+                  Incasso
                 </Typography>
                 <Typography variant="h5" fontWeight="bold" color="success.main">
                   €{monthStats.totalAmount.toFixed(2)}
                 </Typography>
               </Grid>
 
-              <Grid item xs={12} sm={2}>
+              <Grid item xs={12} sm={1.5}>
                 <Typography variant="body2" color="text.secondary">
-                  Pacchetti pagati
+                  Pacchetti
                 </Typography>
                 <Typography variant="h5">
-                  {monthStats.packageCount} pacchett{monthStats.packageCount === 1 ? 'o' : 'i'}
+                  {monthStats.packageCount}
                 </Typography>
               </Grid>
 
@@ -768,7 +811,7 @@ function PaymentCalendarPage() {
 
               <Grid item xs={12} sm={2}>
                 <Typography variant="body2" color="text.secondary">
-                  Lezioni singole pagate
+                  Lezioni singole
                 </Typography>
                 <Typography variant="h5">
                   {monthStats.lessonHours.toFixed(1)} ore
@@ -777,7 +820,7 @@ function PaymentCalendarPage() {
 
               <Grid item xs={12} sm={2}>
                 <Typography variant="body2" color="text.secondary">
-                  Totale da lezioni singole
+                  Totale da lezioni
                 </Typography>
                 <Typography variant="h5" color="primary" fontWeight="bold">
                   €{monthStats.lessonTotal.toFixed(2)}
@@ -802,21 +845,21 @@ function PaymentCalendarPage() {
 
                 return (
                   <>
-                    <Grid item xs={12} sm={1.5}>
+                    <Grid item xs={12} sm={2.5}>
                       <Typography variant="body2" color="text.secondary">
-                        Totale da ricevere
+                        Da incassare
                       </Typography>
                       <Typography variant="h5" fontWeight="bold" color="error.main">
                         €{totalToBePaid.toFixed(2)}
                       </Typography>
                     </Grid>
 
-                    <Grid item xs={12} sm={2}>
+                    <Grid item xs={12} sm={1.5}>
                       <Typography variant="body2" color="text.secondary">
-                        Pacchetti da saldare
+                        Pacchetti
                       </Typography>
                       <Typography variant="h5">
-                        {expiredPackagesCount} pacchett{expiredPackagesCount === 1 ? 'o' : 'i'}
+                        {expiredPackagesCount}
                       </Typography>
                     </Grid>
 
@@ -831,7 +874,7 @@ function PaymentCalendarPage() {
 
                     <Grid item xs={12} sm={2}>
                       <Typography variant="body2" color="text.secondary">
-                        Lezioni singole non pagate
+                        Lezioni singole
                       </Typography>
                       <Typography variant="h5">
                         {unpaidHours.toFixed(1)} ore
@@ -840,7 +883,7 @@ function PaymentCalendarPage() {
 
                     <Grid item xs={12} sm={2}>
                       <Typography variant="body2" color="text.secondary">
-                        Totale da lezioni singole
+                        Totale da lezioni
                       </Typography>
                       <Typography variant="h5" color="secondary" fontWeight="bold">
                         €{unpaidTotal.toFixed(2)}
@@ -1302,6 +1345,7 @@ function PaymentCalendarPage() {
                               Lezione singola
                             </Typography>{' '}
                             di {lesson.hours} ore
+                            {lesson.professorName && <> con <b>{lesson.professorName}</b></>}
                           </Typography>
                         }
                         sx={{ my: 0 }}
