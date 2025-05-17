@@ -6,15 +6,12 @@ import {
   Card,
   Chip,
   Grid,
-  IconButton,
   Paper,
   Typography
 } from '@mui/material';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import SearchIcon from '@mui/icons-material/Search';
 import {
   format,
-  startOfWeek,
   endOfWeek,
   eachDayOfInterval,
   isToday,

@@ -1,3 +1,4 @@
+// src/pages/dashboard/DashboardPage.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -7,10 +8,7 @@ import {
   CircularProgress,
   Grid,
   Typography,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
+  Paper,
 } from '@mui/material';
 import {
   startOfWeek,
@@ -79,7 +77,6 @@ function DashboardPage() {
   });
 
   // Aggiorna lessonForm quando cambia selectedProfessor
-  // Add this useEffect in DashboardPage.jsx
   useEffect(() => {
     if (currentUser && selectedProfessor) {
       fetchData(selectedProfessor);
@@ -417,10 +414,85 @@ function DashboardPage() {
         </Box>
       </Card>
 
+      {/* Riepilogo settimanale - nuovo layout a larghezza piena */}
+      <Paper sx={{ p: 2, mb: 1 }}>
+        <Grid container spacing={2} alignItems="center">
+          {/* Statistiche a sinistra */}
+          <Grid item xs={12} sm={9}>
+            <Grid container spacing={2}>
+              {/* Guadagno totale */}
+              <Grid item xs={12} md={3}>
+                <Typography variant="body2" color="text.secondary">
+                  Guadagno totale
+                </Typography>
+                <Typography variant="h5" fontWeight="bold" color="success.main">
+                  €{periodEarnings.toFixed(2)}
+                </Typography>
+              </Grid>
+              
+              {/* Ore svolte */}
+              <Grid item xs={12} md={3}>
+                <Typography variant="body2" color="text.secondary">
+                  Ore svolte
+                </Typography>
+                <Typography variant="h5">
+                  {periodLessons.reduce((total, lesson) => total + parseFloat(lesson.duration || 0), 0).toFixed(1)}
+                </Typography>
+              </Grid>
+              
+              {/* Ore lezioni singole */}
+              <Grid item xs={12} md={3}>
+                <Typography variant="body2" color="text.secondary">
+                  Ore lezioni singole
+                </Typography>
+                <Typography variant="h5">
+                  {periodLessons.filter(lesson => !lesson.is_package)
+                    .reduce((total, lesson) => total + parseFloat(lesson.duration || 0), 0).toFixed(1)}
+                </Typography>
+              </Grid>
+              
+              {/* Lezioni singole pagate */}
+              <Grid item xs={12} md={3}>
+                <Typography variant="body2" color="text.secondary">
+                  Lezioni singole pagate
+                </Typography>
+                <Typography variant="h5">
+                  {(() => {
+                    const singleLessons = periodLessons.filter(lesson => !lesson.is_package);
+                    const paidSingleLessons = singleLessons.filter(lesson => lesson.is_paid);
+                    return `${paidSingleLessons.length}/${singleLessons.length}`;
+                  })()}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Grid>
+          
+          {/* Selettore professore a destra (solo per admin) */}
+          <Grid item xs={12} sm={3}>
+            <DashboardSummary
+              currentWeekLessons={currentWeekLessons}
+              currentWeekEarnings={currentWeekEarnings}
+              currentTab={currentTab}
+              setCurrentTab={setCurrentTab}
+              periodFilter={periodFilter}
+              setPeriodFilter={setPeriodFilter}
+              periodLessons={periodLessons}
+              periodEarnings={periodEarnings}
+              calculateEarnings={calculateEarnings}
+              navigate={navigate}
+              professors={professors}
+              selectedProfessor={selectedProfessor}
+              handleProfessorChange={handleProfessorChange}
+              isAdmin={currentUser?.is_admin}
+              compactMode={true} // Aggiungiamo questa proprietà per visualizzare solo il selettore
+            />
+          </Grid>
+        </Grid>
+      </Paper>
 
+      {/* Calendario a larghezza piena */}
       <Grid container spacing={1}>
-        {/* Calendario Settimanale */}
-        <Grid item xs={12} md={9}>
+        <Grid item xs={12}>
           <DashboardCalendar
             currentWeekStart={currentWeekStart}
             handleChangeWeek={handleChangeWeek}
@@ -429,26 +501,6 @@ function DashboardPage() {
             handleLessonClick={handleLessonClick}
             handleDayClick={handleDayClick}
             handleAddLessonClick={handleAddLessonClick}
-          />
-        </Grid>
-
-        {/* Pannello laterale con riepilogo guadagni */}
-        <Grid item xs={12} md={3}>
-          <DashboardSummary
-            currentWeekLessons={currentWeekLessons}
-            currentWeekEarnings={currentWeekEarnings}
-            currentTab={currentTab}
-            setCurrentTab={setCurrentTab}
-            periodFilter={periodFilter}
-            setPeriodFilter={setPeriodFilter}
-            periodLessons={periodLessons} // Utilizziamo le lezioni filtrate per periodo
-            periodEarnings={periodEarnings} // Utilizziamo i guadagni calcolati per periodo
-            calculateEarnings={calculateEarnings}
-            navigate={navigate}
-            professors={professors}
-            selectedProfessor={selectedProfessor}
-            handleProfessorChange={handleProfessorChange}
-            isAdmin={currentUser?.is_admin}
           />
         </Grid>
       </Grid>
@@ -491,7 +543,7 @@ function DashboardPage() {
         handlePackageChange={handlePackageChange}
         calculatePackageHours={calculatePackageHours}
         currentUser={currentUser}
-        selectedProfessor={selectedProfessor} // Aggiungi questa riga
+        selectedProfessor={selectedProfessor}
         updateLessons={() => fetchData(selectedProfessor)}
         lessons={lessons}
       />

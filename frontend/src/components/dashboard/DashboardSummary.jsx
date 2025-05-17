@@ -3,23 +3,14 @@ import React, { useEffect, useState } from 'react';
 import {
   Box,
   Button,
-  Card,
-  CardContent,
-  Divider,
   FormControl,
   InputLabel,
-  List,
-  ListItem,
-  ListItemText,
   MenuItem,
-  Paper,
   Select,
-  Tab,
-  Tabs,
   Typography
 } from '@mui/material';
-import { parseISO } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
+import { parseISO } from 'date-fns';
 
 function DashboardSummary({
   currentWeekLessons = [],
@@ -35,7 +26,9 @@ function DashboardSummary({
   professors,
   selectedProfessor,
   handleProfessorChange,
-  isAdmin
+  isAdmin,
+  // Nuova proprietà per mostrare solo il selettore del professore
+  compactMode = false
 }) {
   // Stati locali per tracciare i valori effettivi
   const [displayedWeekHours, setDisplayedWeekHours] = useState(0);
@@ -130,146 +123,106 @@ function DashboardSummary({
     setCurrentTab(newValue);
   };
 
-  return (
-      <Paper sx={{ p: 2 }}>
-        {isAdmin && (
-            <FormControl fullWidth sx={{ mb: 0 }} variant="outlined">
-              <InputLabel id="select-professor-label">Seleziona Professore</InputLabel>
-              <Select
-                labelId="select-professor-label"
-                id="select-professor"
-                value={selectedProfessor}
-                onChange={handleProfessorChange}
-                label="Seleziona Professore"
-              >
-                {professors
-                  .sort((a, b) => {
-                    // Ordinamento alfabetico per nome
-                    const firstNameA = a.first_name.toLowerCase();
-                    const firstNameB = b.first_name.toLowerCase();
-
-                    // Se i nomi sono uguali, ordina per cognome
-                    if (firstNameA === firstNameB) {
-                      return a.last_name.toLowerCase().localeCompare(b.last_name.toLowerCase());
-                    }
-
-                    return firstNameA.localeCompare(firstNameB);
-                  })
-                  .map(professor => (
-                    <MenuItem key={professor.id} value={professor.id}>
-                      {professor.first_name} {professor.last_name}
-                    </MenuItem>
-                  ))
-                }
-              </Select>
-            </FormControl>
-          )}
-        <Tabs
-          value={currentTab}
-          onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
-          sx={{ mb: 3 }}
+  // Se siamo in modalità compatta, mostra solo il selettore del professore
+  if (compactMode) {
+    return isAdmin ? (
+      <FormControl fullWidth variant="outlined">
+        <InputLabel id="select-professor-label">Seleziona Professore</InputLabel>
+        <Select
+          labelId="select-professor-label"
+          id="select-professor"
+          value={selectedProfessor}
+          onChange={handleProfessorChange}
+          label="Seleziona Professore"
         >
-          <Tab label="Riepilogo" />
-          <Tab label="Dettaglio" />
-        </Tabs>
+          {professors
+            .sort((a, b) => {
+              // Ordinamento alfabetico per nome
+              const firstNameA = a.first_name.toLowerCase();
+              const firstNameB = b.first_name.toLowerCase();
 
-        {currentTab === 0 ? (
-          <Box>
-            <FormControl fullWidth>
-              <InputLabel id="period-filter-label">Periodo</InputLabel>
-              <Select
-                labelId="period-filter-label"
-                value={periodFilter}
-                label="Periodo"
-                onChange={handlePeriodChange}
-              >
-                <MenuItem value="week">Settimana Selezionata</MenuItem>
-                <MenuItem value="month">Mese Corrente</MenuItem>
-                <MenuItem value="year">Anno Corrente</MenuItem>
-              </Select>
-            </FormControl>
+              // Se i nomi sono uguali, ordina per cognome
+              if (firstNameA === firstNameB) {
+                return a.last_name.toLowerCase().localeCompare(b.last_name.toLowerCase());
+              }
 
-            <Box mt={3}>
-              <Typography variant="body2" color="text.secondary">
-                Ore svolte nel periodo
-              </Typography>
-              <Typography variant="h5">
-                {displayedPeriodHours.toFixed(1)}
-              </Typography>
+              return firstNameA.localeCompare(firstNameB);
+            })
+            .map(professor => (
+              <MenuItem key={professor.id} value={professor.id}>
+                {professor.first_name} {professor.last_name}
+              </MenuItem>
+            ))
+          }
+        </Select>
+      </FormControl>
+    ) : null;
+  }
 
-              <Divider sx={{ my: 2 }} />
+  return (
+    <Box>
+      {isAdmin && (
+        <FormControl fullWidth sx={{ mb: 0 }} variant="outlined">
+          <InputLabel id="select-professor-label">Seleziona Professore</InputLabel>
+          <Select
+            labelId="select-professor-label"
+            id="select-professor"
+            value={selectedProfessor}
+            onChange={handleProfessorChange}
+            label="Seleziona Professore"
+          >
+            {professors
+              .sort((a, b) => {
+                // Ordinamento alfabetico per nome
+                const firstNameA = a.first_name.toLowerCase();
+                const firstNameB = b.first_name.toLowerCase();
 
-              <Typography variant="body2" color="text.secondary">
-                Guadagni nel periodo
-              </Typography>
-              <Typography variant="h5" color="primary">
-                €{displayedPeriodEarnings.toFixed(2)}
-              </Typography>
-            </Box>
-          </Box>
-        ) : (
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>
-              Ore per tipo di lezione
-            </Typography>
+                // Se i nomi sono uguali, ordina per cognome
+                if (firstNameA === firstNameB) {
+                  return a.last_name.toLowerCase().localeCompare(b.last_name.toLowerCase());
+                }
 
-            <List dense>
-              <ListItem>
-                <ListItemText
-                  primary="Lezioni singole"
-                  secondary={
-                    <Box>
-                      <Typography variant="body2">
-                        {singleLessonsCount} lezioni
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        di cui pagate: {paidSingleLessons}
-                      </Typography>
-                    </Box>
-                  }
-                />
-                <Typography>
-                  €{singleEarnings.toFixed(2)}
-                </Typography>
-              </ListItem>
-              <ListItem>
-                <ListItemText
-                  primary="Lezioni da pacchetti"
-                  secondary={
-                    <Box>
-                      <Typography variant="body2">
-                        {packageLessonsCount} lezioni
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        di cui in scadenza: {lessonsFromExpiringPackages}
-                      </Typography>
-                    </Box>
-                  }
-                />
-                <Typography>
-                  €{packageEarnings.toFixed(2)}
-                </Typography>
-              </ListItem>
-            </List>
+                return firstNameA.localeCompare(firstNameB);
+              })
+              .map(professor => (
+                <MenuItem key={professor.id} value={professor.id}>
+                  {professor.first_name} {professor.last_name}
+                </MenuItem>
+              ))
+            }
+          </Select>
+        </FormControl>
+      )}
+      
+      <Box mt={3}>
+        <Typography variant="body2" color="text.secondary">
+          Ore svolte nel periodo
+        </Typography>
+        <Typography variant="h5">
+          {displayedPeriodHours.toFixed(1)}
+        </Typography>
 
-            <Divider sx={{ my: 2 }} />
+        <Box my={2} sx={{ height: '1px', bgcolor: 'divider' }} />
 
-            <Box display="flex" justifyContent="space-between">
-              <Button
-                variant="outlined"
-                color="primary"
-                onClick={() => navigate('/lessons')}
-                fullWidth
-              >
-                Visualizza tutte le lezioni
-              </Button>
-            </Box>
-          </Box>
-        )}
-      </Paper>
+        <Typography variant="body2" color="text.secondary">
+          Guadagni nel periodo
+        </Typography>
+        <Typography variant="h5" color="primary">
+          €{displayedPeriodEarnings.toFixed(2)}
+        </Typography>
+      </Box>
+
+      <Box mt={3} display="flex" justifyContent="space-between">
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={() => navigate('/lessons')}
+          fullWidth
+        >
+          Visualizza tutte le lezioni
+        </Button>
+      </Box>
+    </Box>
   );
 }
 

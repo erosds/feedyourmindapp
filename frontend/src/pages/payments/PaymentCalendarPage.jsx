@@ -600,7 +600,7 @@ function PaymentCalendarPage() {
   });
 
   // Get weekday names
-  const weekdays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+  const weekdays = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
 
   // Get payments for a specific day
   const getPaymentsForDay = (day) => {
