@@ -46,7 +46,7 @@ const ScrollableChipsContainer = ({ children }) => {
     let pauseTimer = null;
     let isPaused = true; // Inizia in pausa all'inizio
     const scrollSpeed = 0.2; // Velocità di scroll (pixel per frame)
-    const pauseDuration = 1200; // Pausa di 1 secondo sia all'inizio che alla fine
+    const pauseDuration = 700; // Pausa di 700 millisecondi sia all'inizio che alla fine
     const maxScrollTop = containerRef.current.scrollHeight - containerRef.current.clientHeight;
 
     // Funzione ricorsiva per l'animazione
@@ -206,8 +206,8 @@ function AdminDashboardCalendar({
       <Paper
         sx={{
           p: 1,
-          height: isMobile ? 'auto' : 150, // Altezza flessibile su mobile
-          minHeight: isMobile ? 100 : 150, // Altezza minima per consistenza
+          height: isMobile ? 'auto' : '100%',  // Altezza flessibile su mobile
+          minHeight: isMobile ? 120 : 'auto', // Altezza minima per garantire consistenza
           border: '1px solid',
           borderColor: isCurrentDay ? 'primary.main' : 'divider',
           borderRadius: 1,
@@ -307,10 +307,13 @@ function AdminDashboardCalendar({
                 width: 'calc(100% - 4px)',  // Modifica da (100% - 8px) a (100% - 4px)
                 justifyContent: 'center',
                 fontSize: '0.7rem',
-                color: 'text.secondary',
+                color: 'text.primary',
+                opacity: 0.85,
                 backgroundColor: 'rgba(0, 0, 0, 0.03)',
                 '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                  backgroundColor: 'action.hover',
+                  boxShadow: 1,
+                  opacity: 1,
                 }
               }}
             >

@@ -68,8 +68,8 @@ function DashboardCalendar({
         elevation={isCurrentDay ? 3 : 1}
         sx={{
           p: 1,
-          height: 'auto',  // Altezza flessibile su mobile
-          minHeight: isMobile ? 120 : 180, // Altezza minima per garantire consistenza
+          height: isMobile ? 'auto' : '100%',  // Altezza flessibile su mobile
+          minHeight: isMobile ? 120 : 'auto', // Altezza minima per garantire consistenza
           border: '1px solid',
           borderColor: isCurrentDay ? 'primary.main' : 'divider',
           borderRadius: 1,
@@ -238,15 +238,18 @@ function DashboardCalendar({
               handleDayClick(day);
             }}
             sx={{
-              mt: 1.5,
+              mt: 0.5,
               py: 0.3,
               minHeight: '28px',
               fontSize: '0.7rem',
               bgcolor: 'action.hover',
               justifyContent: 'center',
-              color: 'text.secondary',
+              color: 'text.primary',
+              opacity: 0.85,
               '&:hover': {
                 backgroundColor: 'action.hover',
+                boxShadow: 1,
+                opacity: 1,
               }
             }}
           >
