@@ -118,15 +118,25 @@ const ScrollableChipsContainer = ({ children }) => {
         flexWrap: 'wrap',
         gap: '2px',
         mt: 0,
-        maxHeight: '100px',
+        maxHeight: '80px', // MODIFICATO: ridotto da 100px a 60px
         overflow: 'hidden',
         overflowY: 'auto',
         flexGrow: 1,
+        position: 'relative', // AGGIUNTO: garantisce posizionamento corretto
+        zIndex: 1, // AGGIUNTO: imposta un z-index esplicito
         scrollbarWidth: 'none', // Firefox
         '&::-webkit-scrollbar': { // Chrome/Safari/Edge
           display: 'none'
         },
-        msOverflowStyle: 'none' // IE
+        msOverflowStyle: 'none', // IE
+        // AGGIUNTO: assicuriamo che lo scroll avvenga solo all'interno del contenitore
+        containIntrinsic: 'size layout',
+        // AGGIUNTO: assicuriamo che il contenitore non superi il suo contenitore padre
+        overflowX: 'hidden',
+        // AGGIUNTO: fermiamo lo scroll animato quando l'utente interagisce
+        '&:hover': {
+          animation: 'none'
+        }
       }}
     >
       {children}
@@ -134,10 +144,10 @@ const ScrollableChipsContainer = ({ children }) => {
   );
 };
 
-function AdminDashboardCalendar({ 
-  currentWeekStart, 
-  getProfessorsForDay, 
-  handleProfessorClick, 
+function AdminDashboardCalendar({
+  currentWeekStart,
+  getProfessorsForDay,
+  handleProfessorClick,
   handleDayClick,
   lessons = [] // Aggiungi questo parametro per le lezioni
 }) {
@@ -150,7 +160,7 @@ function AdminDashboardCalendar({
   // Funzione per formattare i dati dei professori per un determinato giorno
   const getProfessorChipsForDay = (day) => {
     const professors = getProfessorsForDay(day);
-    
+
     // Ottieni le lezioni di questo giorno per verificare quali professori hanno lezioni online
     const dayLessons = lessons.filter(lesson => {
       try {
@@ -163,7 +173,7 @@ function AdminDashboardCalendar({
         return false;
       }
     });
-    
+
     // Crea una mappa dei professori con lezioni online per questo giorno
     const professorsWithOnlineLessons = new Set();
     dayLessons.forEach(lesson => {
@@ -171,7 +181,7 @@ function AdminDashboardCalendar({
         professorsWithOnlineLessons.add(lesson.professor_id);
       }
     });
-    
+
     // Formatta i dati per ogni professore
     return professors.map(professor => ({
       id: professor.id,
@@ -181,31 +191,14 @@ function AdminDashboardCalendar({
   };
 
   return (
-    <Card sx={{ mt: 1, p: 2, mb: 2 }}>
-      <Box 
-        display="flex" 
-        alignItems="center" 
-        justifyContent="space-between" 
-        mb={2}
-      >
-        <Typography variant="h6" component="h2">
-          Professori in servizio questa settimana
-        </Typography>
-        
-        <Box>
-          <Typography variant="caption" color="text.secondary">
-            {format(currentWeekStart, "d MMMM", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
-          </Typography>
-        </Box>
-      </Box>
-
+    <Card sx={{ mt: 0, p: 2, mb: 0 }}>
       <Grid container spacing={1}>
         {/* Intestazione dei giorni della settimana */}
         {daysOfWeek.map((day, index) => (
           <Grid item xs={12 / 7} key={`header-${index}`}>
-            <Paper 
+            <Paper
               elevation={0}
-              sx={{ 
+              sx={{
                 bgcolor: 'primary.light',
                 color: 'primary.contrastText',
                 p: 0.5,
@@ -243,14 +236,14 @@ function AdminDashboardCalendar({
               >
                 {hasProfessors ? (
                   <>
-                    <Typography 
-                      variant="subtitle2" 
+                    <Typography
+                      variant="subtitle2"
                       color="text.secondary"
                       sx={{ fontSize: '0.75rem', mb: 0.5 }}
                     >
                       {dayProfessors.length} professor{dayProfessors.length === 1 ? 'e' : 'i'}
                     </Typography>
-                    
+
                     <ScrollableChipsContainer>
                       {dayProfessors.map((professor) => (
                         <Chip
@@ -276,7 +269,7 @@ function AdminDashboardCalendar({
                         />
                       ))}
                     </ScrollableChipsContainer>
-                    
+
                     {/* Pulsante per visualizzare i dettagli del giorno */}
                     <Button
                       variant="text"
@@ -307,11 +300,11 @@ function AdminDashboardCalendar({
                     </Button>
                   </>
                 ) : (
-                  <Box 
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       height: '100%',
                       color: 'text.secondary',
                       fontStyle: 'italic',
