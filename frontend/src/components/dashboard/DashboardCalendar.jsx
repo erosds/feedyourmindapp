@@ -238,9 +238,9 @@ function DashboardCalendar({
               handleDayClick(day);
             }}
             sx={{
-              mt: 1,
+              mt: 1.5,
               py: 0.3,
-              minHeight: '28px',
+              minHeight: '36px',
               fontSize: '0.7rem',
               bgcolor: 'action.hover',
               justifyContent: 'center',

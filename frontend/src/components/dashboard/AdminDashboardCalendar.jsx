@@ -302,6 +302,7 @@ function AdminDashboardCalendar({
                 mt: 'auto',
                 mx: 'auto',  // Aggiungi questo per centrare orizzontalmente
                 padding: '3px 8px',
+                minHeight: '36px',
                 width: 'calc(100% - 4px)',  // Modifica da (100% - 8px) a (100% - 4px)
                 justifyContent: 'center',
                 fontSize: '0.7rem',
