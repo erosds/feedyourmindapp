@@ -981,7 +981,7 @@ function PaymentCalendarPage() {
                       transform: 'scale(1.02)',
                       transition: 'transform 0.2s'
                     } : {},
-                    boxShadow: isCurrentDay ? 1 : 0,
+                    boxShadow: 0,
                     backgroundColor: 'inherit',
                     display: 'flex',
                     flexDirection: 'column',

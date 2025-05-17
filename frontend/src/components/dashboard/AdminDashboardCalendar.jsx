@@ -213,7 +213,7 @@ function AdminDashboardCalendar({
           borderRadius: 1,
           overflow: 'hidden',
           position: 'relative',
-          boxShadow: isCurrentDay ? 1 : 0,
+          boxShadow: 0,
           display: 'flex',
           flexDirection: 'column',
           mb: isMobile ? 2 : 0, // Margine inferiore solo su mobile
@@ -236,7 +236,7 @@ function AdminDashboardCalendar({
               variant="subtitle1"
               sx={{
                 fontWeight: isCurrentDay ? 'bold' : 'normal',
-                color: isCurrentDay ? 'primary.main' : 'inherit'
+                color: isCurrentDay ? 'primary.main' : 'inherit',
               }}
             >
               {weekdays[index]} {format(day, 'd')}
@@ -245,6 +245,7 @@ function AdminDashboardCalendar({
               <Chip
                 label="Oggi"
                 size="small"
+
                 color="primary"
                 variant="outlined"
                 sx={{ height: 20 }}
@@ -348,9 +349,9 @@ function AdminDashboardCalendar({
                 sx={{
                   bgcolor: 'primary.light',
                   color: 'primary.contrastText',
+                  fontWeight: 'bold',
                   textAlign: 'center',
                   borderRadius: 1,
-                  fontWeight: 'medium'
                 }}
               >
                 {format(day, 'EEE d', { locale: it })}

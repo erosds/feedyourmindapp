@@ -77,7 +77,7 @@ function DashboardCalendar({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          boxShadow: isCurrentDay ? 1 : 0,
+          boxShadow: 0,
           mb: isMobile ? 2 : 0, // Aggiungi un margine bottom su mobile
         }}
       >
