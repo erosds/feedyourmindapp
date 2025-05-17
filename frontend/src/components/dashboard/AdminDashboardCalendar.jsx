@@ -1,186 +1,332 @@
-import React, { useState } from 'react';
+// src/components/dashboard/AdminDashboardCalendar.jsx
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
-  Typography,
+  Button,
+  Card,
+  Chip,
   Grid,
+  IconButton,
   Paper,
-  List,
-  ListItem,
-  ButtonGroup,
-  Button
+  Typography
 } from '@mui/material';
-import {
-  Search as SearchIcon
-} from '@mui/icons-material';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import SearchIcon from '@mui/icons-material/Search';
 import {
   format,
+  startOfWeek,
   endOfWeek,
   eachDayOfInterval,
   isToday,
-  startOfWeek
+  isEqual,
+  parseISO
 } from 'date-fns';
 import { it } from 'date-fns/locale';
 
-function AdminDashboardCalendar({
-  currentWeekStart,
-  getProfessorsForDay,
-  handleProfessorClick,
-  handleDayClick,
+// Componente per il contenitore di chip con autoscroll
+const ScrollableChipsContainer = ({ children }) => {
+  const containerRef = useRef(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const [needsScroll, setNeedsScroll] = useState(false);
 
-}) {
-  // Genera i giorni della settimana a partire dal lunedì
-  const daysOfWeek = eachDayOfInterval({
-    start: currentWeekStart,
-    end: endOfWeek(currentWeekStart, { weekStartsOn: 1 }),
-  });
+  // Verifica se il contenuto necessita di scroll
+  useEffect(() => {
+    if (containerRef.current) {
+      setNeedsScroll(
+        containerRef.current.scrollHeight > containerRef.current.clientHeight
+      );
+    }
+  }, [children]);
+
+  // Gestisce l'effetto di scroll automatico
+  useEffect(() => {
+    if (!isHovering || !needsScroll || !containerRef.current) return;
+
+    let animationId;
+    let scrollTop = 0;
+    let pauseTimer = null;
+    let isPaused = true; // Inizia in pausa all'inizio
+    const scrollSpeed = 0.2; // Velocità di scroll (pixel per frame)
+    const pauseDuration = 1200; // Pausa di 1 secondo sia all'inizio che alla fine
+    const maxScrollTop = containerRef.current.scrollHeight - containerRef.current.clientHeight;
+
+    // Funzione ricorsiva per l'animazione
+    const scrollAnimation = () => {
+      if (!containerRef.current) return;
+
+      if (isPaused) {
+        // Quando è in pausa, attendi e poi continua
+        return;
+      }
+
+      // Aggiorna la posizione di scroll
+      scrollTop += scrollSpeed;
+
+      // Quando raggiunge il fondo, metti in pausa
+      if (scrollTop >= maxScrollTop) {
+        isPaused = true;
+        scrollTop = maxScrollTop; // Assicurati di essere esattamente in fondo
+
+        // Dopo la pausa, torna in cima e riprendi
+        pauseTimer = setTimeout(() => {
+          scrollTop = 0;
+          containerRef.current.scrollTop = 0;
+
+          // Rimani fermo per un momento anche all'inizio
+          pauseTimer = setTimeout(() => {
+            isPaused = false;
+            animationId = requestAnimationFrame(scrollAnimation);
+          }, pauseDuration);
+
+        }, pauseDuration);
+
+        return;
+      }
+
+      // Applica lo scroll
+      containerRef.current.scrollTop = scrollTop;
+
+      // Continua l'animazione
+      animationId = requestAnimationFrame(scrollAnimation);
+    };
+
+    // Inizia con una pausa all'inizio
+    pauseTimer = setTimeout(() => {
+      isPaused = false;
+      animationId = requestAnimationFrame(scrollAnimation);
+    }, pauseDuration);
+
+    // Pulizia quando l'hover finisce
+    return () => {
+      if (pauseTimer) clearTimeout(pauseTimer);
+      cancelAnimationFrame(animationId);
+
+      // Torna in cima quando il mouse esce
+      if (containerRef.current) {
+        containerRef.current.scrollTop = 0;
+      }
+    };
+  }, [isHovering, needsScroll]);
 
   return (
-    <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' }, // Colonna su mobile, riga su tablet/desktop
-          alignItems: { xs: 'stretch', sm: 'center' }, // Stretch su mobile per larghezza piena
-          justifyContent: 'space-between',
-        }}
+    <Box
+      ref={containerRef}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+      sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '2px',
+        mt: 0,
+        maxHeight: '100px',
+        overflow: 'hidden',
+        overflowY: 'auto',
+        flexGrow: 1,
+        scrollbarWidth: 'none', // Firefox
+        '&::-webkit-scrollbar': { // Chrome/Safari/Edge
+          display: 'none'
+        },
+        msOverflowStyle: 'none' // IE
+      }}
+    >
+      {children}
+    </Box>
+  );
+};
+
+function AdminDashboardCalendar({ 
+  currentWeekStart, 
+  getProfessorsForDay, 
+  handleProfessorClick, 
+  handleDayClick,
+  lessons = [] // Aggiungi questo parametro per le lezioni
+}) {
+  // Ottieni i giorni della settimana corrente (da lunedì a domenica)
+  const daysOfWeek = eachDayOfInterval({
+    start: currentWeekStart,
+    end: endOfWeek(currentWeekStart, { weekStartsOn: 1 })
+  });
+
+  // Funzione per formattare i dati dei professori per un determinato giorno
+  const getProfessorChipsForDay = (day) => {
+    const professors = getProfessorsForDay(day);
+    
+    // Ottieni le lezioni di questo giorno per verificare quali professori hanno lezioni online
+    const dayLessons = lessons.filter(lesson => {
+      try {
+        const lessonDate = parseISO(lesson.lesson_date);
+        return isEqual(
+          new Date(lessonDate.getFullYear(), lessonDate.getMonth(), lessonDate.getDate()),
+          new Date(day.getFullYear(), day.getMonth(), day.getDate())
+        );
+      } catch (err) {
+        return false;
+      }
+    });
+    
+    // Crea una mappa dei professori con lezioni online per questo giorno
+    const professorsWithOnlineLessons = new Set();
+    dayLessons.forEach(lesson => {
+      if (lesson.is_online && lesson.professor_id) {
+        professorsWithOnlineLessons.add(lesson.professor_id);
+      }
+    });
+    
+    // Formatta i dati per ogni professore
+    return professors.map(professor => ({
+      id: professor.id,
+      name: `${professor.first_name.charAt(0)}. ${professor.last_name}`,
+      isOnline: professorsWithOnlineLessons.has(professor.id)
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  return (
+    <Card sx={{ mt: 1, p: 2, mb: 2 }}>
+      <Box 
+        display="flex" 
+        alignItems="center" 
+        justifyContent="space-between" 
+        mb={2}
       >
-        <Typography variant="h6" sx={{ mb: { xs: 1, sm: 0 } }}>
-          Calendario Professori in Sede
+        <Typography variant="h6" component="h2">
+          Professori in servizio questa settimana
         </Typography>
+        
+        <Box>
+          <Typography variant="caption" color="text.secondary">
+            {format(currentWeekStart, "d MMMM", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
+          </Typography>
+        </Box>
       </Box>
 
-      <Grid
-        container
-        spacing={1}
-        sx={{
-          flexGrow: 1,
-          mt: 0,
-          width: '100%',  // Sempre 100% della larghezza disponibile
-          flexWrap: 'wrap'  // Sempre wrap per adattarsi alla larghezza dello schermo
-        }}
-      >        {daysOfWeek.map(day => {
-        // Ottieni i professori per questo giorno
-        const dayProfessors = getProfessorsForDay(day);
-        
-        // Ordina i professori alfabeticamente per nome e poi per cognome
-        const sortedProfessors = [...dayProfessors].sort((a, b) => {
-          // Prima confronta per nome
-          const firstNameComparison = a.first_name.localeCompare(b.first_name);
-          // Se i nomi sono uguali, confronta per cognome
-          return firstNameComparison !== 0 ? firstNameComparison : a.last_name.localeCompare(b.last_name);
-        });
-        
-        const isCurrentDay = isToday(day);
-        return (
-          <Grid
-            item
-            xs={12} sm={12 / 7}  // 100% width on xs, 1/7 on larger screens
-            sx={{
-              width: '100%',  // Larghezza piena
-              minWidth: 'auto'  // Nessuna larghezza minima
-            }}
-            key={day.toString()}
-          >
-            <Paper
-              elevation={isCurrentDay ? 3 : 1}
-              sx={{
-                p: 1,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                position: 'relative', // Aggiunto per posizionare l'icona
-                bgcolor: isCurrentDay ? 'primary.light' : 'background.paper',
-                color: isCurrentDay ? 'primary.contrastText' : 'text.primary',
-                border: '1px solid',
-                borderColor: 'divider',
-                boxSizing: 'border-box',
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  cursor: 'pointer'
-                }
+      <Grid container spacing={1}>
+        {/* Intestazione dei giorni della settimana */}
+        {daysOfWeek.map((day, index) => (
+          <Grid item xs={12 / 7} key={`header-${index}`}>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                bgcolor: 'primary.light',
+                color: 'primary.contrastText',
+                p: 0.5,
+                textAlign: 'center',
+                borderRadius: 1,
+                fontWeight: 'medium'
               }}
-              onClick={() => handleDayClick(day)}
             >
-              <Typography
-                variant="subtitle2"
-                align="center"
+              {format(day, 'EEE d', { locale: it })}
+            </Paper>
+          </Grid>
+        ))}
+
+        {/* Celle dei giorni con professori */}
+        {daysOfWeek.map((day, index) => {
+          const isCurrentDay = isToday(day);
+          const dayProfessors = getProfessorChipsForDay(day);
+          const hasProfessors = dayProfessors.length > 0;
+
+          return (
+            <Grid item xs={12 / 7} key={`day-${index}`}>
+              <Paper
                 sx={{
-                  fontWeight: isCurrentDay ? 'bold' : 'normal',
-                  mb: 1,
-                  borderBottom: '1px solid',
-                  borderColor: 'divider',
-                  pb: 0.5
+                  p: 1,
+                  height: 150,
+                  border: '1px solid',
+                  borderColor: isCurrentDay ? 'primary.main' : 'divider',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  boxShadow: isCurrentDay ? 1 : 0,
+                  display: 'flex',
+                  flexDirection: 'column'
                 }}
               >
-                {format(day, "EE d", { locale: it })}
-              </Typography>
-
-              {sortedProfessors.length === 0 ? (
-                <Box textAlign="center" mb={6} mt={2} sx={{ flexGrow: 1 }}>
-                  <Typography variant="body2" color={isCurrentDay ? 'primary.contrastText' : 'text.secondary'}>
-                    Nessun professore in sede
-                  </Typography>
-                </Box>
-              ) : (
-                <List dense disablePadding sx={{ flexGrow: 1, mb: 5 }}>
-                  {sortedProfessors.map(professor => (
-                    <ListItem
-                      key={professor.id}
-                      button
+                {hasProfessors ? (
+                  <>
+                    <Typography 
+                      variant="subtitle2" 
+                      color="text.secondary"
+                      sx={{ fontSize: '0.75rem', mb: 0.5 }}
+                    >
+                      {dayProfessors.length} professor{dayProfessors.length === 1 ? 'e' : 'i'}
+                    </Typography>
+                    
+                    <ScrollableChipsContainer>
+                      {dayProfessors.map((professor) => (
+                        <Chip
+                          key={professor.id}
+                          label={professor.name}
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleProfessorClick(professor.id);
+                          }}
+                          sx={{
+                            height: 16,
+                            margin: '1px',
+                            backgroundColor: professor.isOnline ? 'secondary.main' : 'primary.main',
+                            color: 'white',
+                            '& .MuiChip-label': {
+                              px: 0.6,
+                              fontSize: '0.65rem',
+                              fontWeight: 'medium',
+                              whiteSpace: 'nowrap'
+                            }
+                          }}
+                        />
+                      ))}
+                    </ScrollableChipsContainer>
+                    
+                    {/* Pulsante per visualizzare i dettagli del giorno */}
+                    <Button
+                      variant="text"
+                      size="small"
+                      startIcon={<SearchIcon fontSize="small" />}
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent day click when clicking on professor
-                        handleProfessorClick(professor.id);
+                        e.stopPropagation();
+                        handleDayClick(day);
                       }}
                       sx={{
-                        mb: 0.5,
-                        p: 0, // Remove default padding
-                        borderRadius: 1,
+                        position: 'absolute',
+                        bottom: 4,
+                        left: 2,
+                        right: 2,
+                        margin: '0 auto',
+                        padding: '3px 8px',
+                        width: 'calc(100% - 8px)',
+                        justifyContent: 'center',
+                        fontSize: '0.7rem',
+                        color: 'text.secondary',
+                        backgroundColor: 'rgba(0, 0, 0, 0.03)',
                         '&:hover': {
-                          // Avoid duplicate hover background
-                          bgcolor: 'transparent',
+                          backgroundColor: 'rgba(0, 0, 0, 0.08)',
                         }
                       }}
                     >
-                      <Box
-                        sx={{
-                          width: '100%',
-                          bgcolor: 'primary.main',
-                          color: 'white',
-                          py: 0.7,
-                          px: 1,
-                          borderRadius: 1,
-                          textAlign: 'center',
-                          '&:hover': {
-                            opacity: 0.9, // Subtle hover effect on colored box
-                          }
-                        }}
-                      >
-                        {professor.first_name} {professor.last_name ? professor.last_name.charAt(0) + '.' : ''}
-                      </Box>
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-
-              {/* Icona di ricerca in basso a centro */}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: 7,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  color: 'text.secondary',
-                  opacity: 0.5
-                }}
-              >
-                <SearchIcon fontSize="small" />
-              </Box>
-            </Paper>
-          </Grid>
-        );
-      })}
+                      Dettagli
+                    </Button>
+                  </>
+                ) : (
+                  <Box 
+                    sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      height: '100%',
+                      color: 'text.secondary',
+                      fontStyle: 'italic',
+                      fontSize: '0.8rem'
+                    }}
+                  >
+                    Nessun professore
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+          );
+        })}
       </Grid>
-    </Paper>
+    </Card>
   );
 }
 
