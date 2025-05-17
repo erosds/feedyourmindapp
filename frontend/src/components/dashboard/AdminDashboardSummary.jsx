@@ -1,3 +1,4 @@
+// Modifiche a AdminDashboardSummary.jsx
 import React, { useMemo } from 'react';
 import {
   Box,
@@ -26,7 +27,8 @@ import {
 } from '@mui/icons-material';
 import {
   parseISO,
-  format
+  format,
+  isWithinInterval
 } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import PaymentRemindersCard from './PaymentRemindersCard';
@@ -116,6 +118,34 @@ function AdminDashboardSummary({
     };
   }, [allLessons, allPackages, periodStartDate, periodEndDate]);
 
+  // NUOVO: Calcola i compensi ai professori per il periodo selezionato
+  const professorPaymentsForPeriod = useMemo(() => {
+    if (!periodStartDate || !periodEndDate || !Array.isArray(allLessons)) {
+      return 0;
+    }
+
+    // Filtra le lezioni nel periodo selezionato
+    const lessonsInPeriod = allLessons.filter(lesson => {
+      if (!lesson.lesson_date) return false;
+      
+      try {
+        const lessonDate = parseISO(lesson.lesson_date);
+        return isWithinInterval(lessonDate, {
+          start: periodStartDate,
+          end: periodEndDate
+        });
+      } catch (err) {
+        console.error("Error filtering lessons for period in admin summary:", err);
+        return false;
+      }
+    });
+
+    // Calcola il totale dei pagamenti ai professori per questo periodo
+    return lessonsInPeriod.reduce((sum, lesson) => {
+      return sum + parseFloat(lesson.total_payment || 0);
+    }, 0);
+  }, [allLessons, periodStartDate, periodEndDate]);
+
   // Calculate expiring packages
   const expiringPackages = useMemo(() => {
     // Get the Monday of the current week
@@ -158,7 +188,7 @@ function AdminDashboardSummary({
 
   // Period data for display
   const totalIncome = paymentsData.totals.total;
-  const totalExpenses = professorWeeklyData.reduce((sum, prof) => sum + prof.totalPayment, 0);
+  const totalExpenses = professorPaymentsForPeriod; // Usa il nuovo calcolo per il periodo
   const netProfit = totalIncome - totalExpenses;
 
   const activeProfessorsCount = professorWeeklyData.length;

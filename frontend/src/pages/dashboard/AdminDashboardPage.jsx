@@ -400,7 +400,7 @@ function AdminDashboardPage() {
           </ButtonGroup>
         </Box>
       </Card>
-    
+
       <Grid container spacing={1}>
         {/* Calendar showing professors for each day */}
         <Grid item xs={12}>
@@ -409,6 +409,7 @@ function AdminDashboardPage() {
             getProfessorsForDay={getProfessorsForDay}
             handleProfessorClick={handleProfessorClick}
             handleDayClick={handleDayClick}
+            lessons={lessons} // Aggiungi questa riga
           />
         </Grid>
 
