@@ -201,7 +201,6 @@ function AdminDashboardCalendar({
               sx={{
                 bgcolor: 'primary.light',
                 color: 'primary.contrastText',
-                p: 0.5,
                 textAlign: 'center',
                 borderRadius: 1,
                 fontWeight: 'medium'
