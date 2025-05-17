@@ -7,7 +7,9 @@ import {
   Chip,
   Grid,
   Paper,
-  Typography
+  Typography,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   format,
@@ -115,22 +117,23 @@ const ScrollableChipsContainer = ({ children }) => {
         flexWrap: 'wrap',
         gap: '2px',
         mt: 0,
-        maxHeight: '80px', // MODIFICATO: ridotto da 100px a 60px
+        mb: 1,
+        maxHeight: '80px',
         overflow: 'hidden',
         overflowY: 'auto',
         flexGrow: 1,
-        position: 'relative', // AGGIUNTO: garantisce posizionamento corretto
-        zIndex: 1, // AGGIUNTO: imposta un z-index esplicito
+        position: 'relative',
+        zIndex: 1,
         scrollbarWidth: 'none', // Firefox
         '&::-webkit-scrollbar': { // Chrome/Safari/Edge
           display: 'none'
         },
         msOverflowStyle: 'none', // IE
-        // AGGIUNTO: assicuriamo che lo scroll avvenga solo all'interno del contenitore
+        // Assicuriamo che lo scroll avvenga solo all'interno del contenitore
         containIntrinsic: 'size layout',
-        // AGGIUNTO: assicuriamo che il contenitore non superi il suo contenitore padre
+        // Assicuriamo che il contenitore non superi il suo contenitore padre
         overflowX: 'hidden',
-        // AGGIUNTO: fermiamo lo scroll animato quando l'utente interagisce
+        // Fermiamo lo scroll animato quando l'utente interagisce
         '&:hover': {
           animation: 'none'
         }
@@ -146,8 +149,11 @@ function AdminDashboardCalendar({
   getProfessorsForDay,
   handleProfessorClick,
   handleDayClick,
-  lessons = [] // Aggiungi questo parametro per le lezioni
+  lessons = []
 }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   // Ottieni i giorni della settimana corrente (da lunedì a domenica)
   const daysOfWeek = eachDayOfInterval({
     start: currentWeekStart,
@@ -187,134 +193,189 @@ function AdminDashboardCalendar({
     })).sort((a, b) => a.name.localeCompare(b.name));
   };
 
-  return (
-    <Card sx={{ mt: 0, p: 2, mb: 0 }}>
-      <Grid container spacing={1}>
-        {/* Intestazione dei giorni della settimana */}
-        {daysOfWeek.map((day, index) => (
-          <Grid item xs={12 / 7} key={`header-${index}`}>
-            <Paper
-              elevation={0}
+  // Get weekday names
+  const weekdays = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
+
+  // Componente per visualizzare un singolo giorno - riutilizzabile sia per mobile che desktop
+  const DayComponent = ({ day, index, isMobile }) => {
+    const isCurrentDay = isToday(day);
+    const dayProfessors = getProfessorChipsForDay(day);
+    const hasProfessors = dayProfessors.length > 0;
+
+    return (
+      <Paper
+        sx={{
+          p: 1,
+          height: isMobile ? 'auto' : 150, // Altezza flessibile su mobile
+          minHeight: isMobile ? 100 : 150, // Altezza minima per consistenza
+          border: '1px solid',
+          borderColor: isCurrentDay ? 'primary.main' : 'divider',
+          borderRadius: 1,
+          overflow: 'hidden',
+          position: 'relative',
+          boxShadow: isCurrentDay ? 1 : 0,
+          display: 'flex',
+          flexDirection: 'column',
+          mb: isMobile ? 2 : 0, // Margine inferiore solo su mobile
+        }}
+      >
+        {/* Intestazione del giorno su mobile */}
+        {isMobile && (
+          <Box
+            sx={{
+              mb: 1,
+              pb: 1,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Typography
+              variant="subtitle1"
               sx={{
-                bgcolor: 'primary.light',
-                color: 'primary.contrastText',
-                textAlign: 'center',
-                borderRadius: 1,
-                fontWeight: 'medium'
+                fontWeight: isCurrentDay ? 'bold' : 'normal',
+                color: isCurrentDay ? 'primary.main' : 'inherit'
               }}
             >
-              {format(day, 'EEE d', { locale: it })}
-            </Paper>
-          </Grid>
-        ))}
+              {weekdays[index]} {format(day, 'd')}
+            </Typography>
+            {isCurrentDay && (
+              <Chip
+                label="Oggi"
+                size="small"
+                color="primary"
+                variant="outlined"
+                sx={{ height: 20 }}
+              />
+            )}
+          </Box>
+        )}
 
-        {/* Celle dei giorni con professori */}
-        {daysOfWeek.map((day, index) => {
-          const isCurrentDay = isToday(day);
-          const dayProfessors = getProfessorChipsForDay(day);
-          const hasProfessors = dayProfessors.length > 0;
+        {hasProfessors ? (
+          <>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              sx={{ fontSize: '0.75rem', mb: 0.5 }}
+            >
+              {dayProfessors.length} professor{dayProfessors.length === 1 ? 'e' : 'i'}
+            </Typography>
 
-          return (
-            <Grid item xs={12 / 7} key={`day-${index}`}>
+            <ScrollableChipsContainer>
+              {dayProfessors.map((professor) => (
+                <Chip
+                  key={professor.id}
+                  label={professor.name}
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleProfessorClick(professor.id);
+                  }}
+                  sx={{
+                    height: 16,
+                    margin: '1px',
+                    backgroundColor: professor.isOnline ? 'secondary.main' : 'primary.main',
+                    color: 'white',
+                    '& .MuiChip-label': {
+                      px: 0.6,
+                      fontSize: '0.65rem',
+                      fontWeight: 'medium',
+                      whiteSpace: 'nowrap'
+                    }
+                  }}
+                />
+              ))}
+            </ScrollableChipsContainer>
+
+            {/* Pulsante per visualizzare i dettagli del giorno */}
+            <Button
+              variant="text"
+              size="small"
+              startIcon={<ViewTimelineIcon fontSize="small" />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDayClick(day);
+              }}
+              sx={{
+                mt: 'auto',
+                mx: 'auto',  // Aggiungi questo per centrare orizzontalmente
+                padding: '3px 8px',
+                width: 'calc(100% - 4px)',  // Modifica da (100% - 8px) a (100% - 4px)
+                justifyContent: 'center',
+                fontSize: '0.7rem',
+                color: 'text.secondary',
+                backgroundColor: 'rgba(0, 0, 0, 0.03)',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                }
+              }}
+            >
+              Timeline
+            </Button>
+          </>
+        ) : (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              color: 'text.secondary',
+              fontStyle: 'italic',
+              fontSize: '0.8rem'
+            }}
+          >
+            Nessun professore
+          </Box>
+        )}
+      </Paper>
+    );
+  };
+
+  return (
+    <Card sx={{ mt: 0, p: 2, mb: 0 }}>
+      {/* Layout Desktop */}
+      {!isMobile && (
+        <Grid container spacing={1}>
+          {/* Intestazione dei giorni della settimana */}
+          {daysOfWeek.map((day, index) => (
+            <Grid item xs={12 / 7} key={`header-${index}`}>
               <Paper
+                elevation={0}
                 sx={{
-                  p: 1,
-                  height: 150,
-                  border: '1px solid',
-                  borderColor: isCurrentDay ? 'primary.main' : 'divider',
+                  bgcolor: 'primary.light',
+                  color: 'primary.contrastText',
+                  textAlign: 'center',
                   borderRadius: 1,
-                  overflow: 'hidden',
-                  position: 'relative',
-                  boxShadow: isCurrentDay ? 1 : 0,
-                  display: 'flex',
-                  flexDirection: 'column'
+                  fontWeight: 'medium'
                 }}
               >
-                {hasProfessors ? (
-                  <>
-                    <Typography
-                      variant="subtitle2"
-                      color="text.secondary"
-                      sx={{ fontSize: '0.75rem', mb: 0.5 }}
-                    >
-                      {dayProfessors.length} professor{dayProfessors.length === 1 ? 'e' : 'i'}
-                    </Typography>
-
-                    <ScrollableChipsContainer>
-                      {dayProfessors.map((professor) => (
-                        <Chip
-                          key={professor.id}
-                          label={professor.name}
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleProfessorClick(professor.id);
-                          }}
-                          sx={{
-                            height: 16,
-                            margin: '1px',
-                            backgroundColor: professor.isOnline ? 'secondary.main' : 'primary.main',
-                            color: 'white',
-                            '& .MuiChip-label': {
-                              px: 0.6,
-                              fontSize: '0.65rem',
-                              fontWeight: 'medium',
-                              whiteSpace: 'nowrap'
-                            }
-                          }}
-                        />
-                      ))}
-                    </ScrollableChipsContainer>
-
-                    {/* Pulsante per visualizzare i dettagli del giorno */}
-                    <Button
-                      variant="text"
-                      size="small"
-                      startIcon={<ViewTimelineIcon fontSize="small" />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDayClick(day);
-                      }}
-                      sx={{
-                        position: 'absolute',
-                        bottom: 4,
-                        left: 2,
-                        right: 2,
-                        margin: '0 auto',
-                        padding: '3px 8px',
-                        width: 'calc(100% - 8px)',
-                        justifyContent: 'center',
-                        fontSize: '0.7rem',
-                        color: 'text.secondary',
-                        backgroundColor: 'rgba(0, 0, 0, 0.03)',
-                        '&:hover': {
-                          backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                        }
-                      }}
-                    >
-                      Timeline
-                    </Button>
-                  </>
-                ) : (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '100%',
-                      color: 'text.secondary',
-                      fontStyle: 'italic',
-                      fontSize: '0.8rem'
-                    }}
-                  >
-                    Nessun professore
-                  </Box>
-                )}
+                {format(day, 'EEE d', { locale: it })}
               </Paper>
             </Grid>
-          );
-        })}
-      </Grid>
+          ))}
+
+          {/* Celle dei giorni con professori - Layout desktop */}
+          {daysOfWeek.map((day, index) => (
+            <Grid item xs={12 / 7} key={`day-${index}`}>
+              <DayComponent day={day} index={index} isMobile={false} />
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {/* Layout Mobile - giorni in verticale */}
+      {isMobile && (
+        <Box>
+          {daysOfWeek.map((day, index) => (
+            <Box key={`day-mobile-${index}`} sx={{ mb: 2 }}>
+              <DayComponent day={day} index={index} isMobile={true} />
+            </Box>
+          ))}
+        </Box>
+      )}
     </Card>
   );
 }

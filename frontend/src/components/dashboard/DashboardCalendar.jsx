@@ -29,6 +29,8 @@ function DashboardCalendar({
   handleDayClick,
   handleAddLessonClick
 }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   // Genera i giorni della settimana corrente (da lunedì a domenica)
   const daysOfWeek = eachDayOfInterval({
@@ -53,195 +55,251 @@ function DashboardCalendar({
   // Get weekday names
   const weekdays = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
 
-  return (
-    <Card sx={{ p: 2, mb: 3 }}>
-      {/* Calendar header with weekdays */}
-      <Grid container spacing={1} sx={{ mb: 1 }}>
-        {weekdays.map((day, index) => (
-          <Grid item xs={12 / 7} key={`weekday-${index}`}>
-            <Box
-              sx={{
-                textAlign: 'center',
-                fontWeight: 'bold',
-                backgroundColor: 'primary.light',
-                color: 'primary.contrastText',
-                borderRadius: 1,
+  // Componente per visualizzare un singolo giorno - riutilizzabile sia per mobile che desktop
+  const DayComponent = ({ day, index, isMobile }) => {
+    const dayLessons = getLessonsForDay(day);
+    const hasLessons = dayLessons.length > 0;
+    // Ordina le lezioni per orario di inizio
+    const sortedLessons = sortLessonsByTime(dayLessons);
+    const isCurrentDay = isToday(day);
+
+    return (
+      <Paper
+        elevation={isCurrentDay ? 3 : 1}
+        sx={{
+          p: 1,
+          height: isMobile ? 'auto' : 180, // Altezza flessibile su mobile
+          minHeight: isMobile ? 120 : 180, // Altezza minima per garantire consistenza
+          border: '1px solid',
+          borderColor: isCurrentDay ? 'primary.main' : 'divider',
+          borderRadius: 1,
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          boxShadow: isCurrentDay ? 1 : 0,
+          mb: isMobile ? 2 : 0, // Aggiungi un margine bottom su mobile
+        }}
+      >
+        {/* Intestazione del giorno su mobile */}
+        {isMobile && (
+          <Box
+            sx={{
+              mb: 1,
+              pb: 1,
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Typography 
+              variant="subtitle1" 
+              sx={{ 
+                fontWeight: isCurrentDay ? 'bold' : 'normal',
+                color: isCurrentDay ? 'primary.main' : 'inherit'
               }}
             >
-              {day} {daysOfWeek[index] && format(daysOfWeek[index], 'd')}
-            </Box>
-          </Grid>
-        ))}
-      </Grid>
+              {weekdays[index]} {format(day, 'd')}
+            </Typography>
+            {isCurrentDay && (
+              <Chip 
+                label="Oggi" 
+                size="small" 
+                color="primary" 
+                variant="outlined"
+                sx={{ height: 20 }}
+              />
+            )}
+          </Box>
+        )}
 
-      {/* Days of the week */}
-      <Grid container spacing={1}>
-        {daysOfWeek.map((day, index) => {
-          const dayLessons = getLessonsForDay(day);
-          const hasLessons = dayLessons.length > 0;
-          // Ordina le lezioni per orario di inizio
-          const sortedLessons = sortLessonsByTime(dayLessons);
-          const isCurrentDay = isToday(day);
-
-          return (
-            <Grid item xs={12 / 7} key={`day-${index}`}>
-              <Paper
-                elevation={isCurrentDay ? 3 : 1}
+        <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+          <Box sx={{ overflowY: 'auto', height: '100%'}}>
+            {sortedLessons.map((lesson, idx) => (
+              <Box
+                key={`lesson-${lesson.id}-${idx}`}
                 sx={{
-                  p: 1,
-                  height: 180, // Aumentato per aggiungere spazio per il secondo pulsante
-                  border: '1px solid',
-                  borderColor: isCurrentDay ? 'primary.main' : 'divider',
+                  mb: 0.5,
+                  py: 0.5,
+                  minHeight: '28px',
+                  bgcolor: 'action.hover',
                   borderRadius: 1,
+                  color: 'text.primary',
+                  opacity: 0.85,
                   position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  overflow: 'hidden',
-                  boxShadow: isCurrentDay ? 1 : 0
+                  px: 1, // Padding uniforme
+                  cursor: 'pointer',
+                  mx: 'auto', // Centra orizzontalmente
+                  '&:hover': {
+                    opacity: 1,
+                    boxShadow: 1
+                  }
+                }}
+                onClick={(e) => {
+                  handleLessonClick(lesson);
                 }}
               >
+                <Typography variant="body2" noWrap sx={{ color: 'text.primary', fontSize: '0.8rem', fontWeight: 'medium' }}>
+                  {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
+                </Typography>
+                <Typography variant="body2" noWrap sx={{ color: 'text.primary', fontSize: '0.75rem' }}>
+                  {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
+                </Typography>
+                <Typography variant="body2" noWrap sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                  {lesson.duration} {lesson.duration === 1 || lesson.duration === 1.00 ? 'ora' : 'ore'}
+                </Typography>
 
-
-                <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-                  <Box sx={{ overflowY: 'auto', height: '100%'}}>
-                    {sortedLessons.map((lesson, idx) => (
-                      <Box
-                        key={`lesson-${lesson.id}-${idx}`}
-                        sx={{
-                          mb: 0.5,
-                          py: 0.5,
-                          minHeight: '28px',
-                          bgcolor: isCurrentDay ? 'primary.main' : 'action.hover',
-                          borderRadius: 1,
-                          color: 'text.primary',
-                          opacity: 0.85,
-                          position: 'relative',
-                          px: 1, // Padding uniforme
-                          cursor: 'pointer',
-                          mx: 'auto', // Centra orizzontalmente
-                          '&:hover': {
-                            opacity: 1,
-                            boxShadow: 1
-                          }
-                        }}
-                        onClick={(e) => {
-                          handleLessonClick(lesson);
-                        }}
-                      >
-                        <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'primary.contrastText' : 'text.primary', fontSize: '0.8rem', fontWeight: 'medium' }}>
-                          {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
-                        </Typography>
-                        <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'primary.contrastText' : 'text.primary', fontSize: '0.75rem' }}>
-                          {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
-                        </Typography>
-                        <Typography variant="body2" noWrap sx={{ color: isCurrentDay ? 'secondary.contrastText' : 'text.secondary', fontSize: '0.7rem' }}>
-                          {lesson.duration} {lesson.duration === 1 || lesson.duration === 1.00 ? 'ora' : 'ore'}
-                        </Typography>
-
-                        {/* Chip per lezione in pacchetto */}
-                        {lesson.is_package && (
-                          <Chip
-                            label="P"
-                            size="small"
-                            color="primary"
-                            sx={{
-                              position: 'absolute',
-                              top: 3,
-                              right: 3,
-                              borderRadius: 1,
-                              width: 'auto',
-                              height: 16,
-                              fontSize: '0.650rem',
-                            }}
-                          />
-                        )}
-
-                        {/* Chip per lezione online */}
-                        {lesson.is_online && (
-                          <Chip
-                            icon={<WifiIcon style={{ fontSize: '0.7rem' }} />}
-                            size="small"
-                            color="secondary"
-                            sx={{
-                              position: 'absolute',
-                              bottom: 3,
-                              right: 3,
-                              borderRadius: 1,
-                              width: 'auto',
-                              height: 16,
-                              fontSize: '0.650rem',
-                              '& .MuiChip-icon': {
-                                marginLeft: '5px',
-                                marginRight: '-10px'
-                              }
-                            }}
-                          />
-                        )}
-                      </Box>
-                    ))}
-                    
-                    {/* Pulsante "Nuova lezione" all'interno del contenitore delle lezioni */}
-                    <Box
-                      sx={{
-                        mb: 0.5,
-                        py: 0.5,
-                        minHeight: '28px',
-                        bgcolor: 'action.hover',
-                        borderRadius: 1,
-                        color: 'text.primary',
-                        opacity: 0.85,
-                        position: 'relative',
-                        px: 1,
-                        cursor: 'pointer',
-                        mx: 'auto',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        '&:hover': {
-                          opacity: 1,
-                          boxShadow: 1
-                        }
-                      }}
-                      onClick={(e) => {
-                        handleAddLessonClick(day);
-                      }}
-                    >
-                      <AddIcon fontSize="small" sx={{ mr: 0.5, fontSize: '0.9rem' }}/>
-                      <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.75rem', fontWeight: 'medium' }}>
-                        Nuova lezione
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
-
-                {/* Solo il pulsante Dettaglio giorno rimane in fondo */}
-                <Box sx={{ mt: 'auto' }}>
-                  <Button
-                    fullWidth
-                    startIcon={<ViewTimelineIcon fontSize="small" />}
-                    variant="text"
+                {/* Chip per lezione in pacchetto */}
+                {lesson.is_package && (
+                  <Chip
+                    label="P"
                     size="small"
-                    onClick={(e) => {
-                      handleDayClick(day);
-                    }}
+                    color="primary"
                     sx={{
-                      py: 0.3,
-                      fontSize: '0.7rem',
-                      justifyContent: 'center',
-                      color: 'text.secondary',
-                      '&:hover': {
-                        backgroundColor: 'action.hover',
+                      position: 'absolute',
+                      top: 3,
+                      right: 3,
+                      borderRadius: 1,
+                      width: 'auto',
+                      height: 16,
+                      fontSize: '0.650rem',
+                    }}
+                  />
+                )}
+
+                {/* Chip per lezione online */}
+                {lesson.is_online && (
+                  <Chip
+                    icon={<WifiIcon style={{ fontSize: '0.7rem' }} />}
+                    size="small"
+                    color="secondary"
+                    sx={{
+                      position: 'absolute',
+                      bottom: 3,
+                      right: 3,
+                      borderRadius: 1,
+                      width: 'auto',
+                      height: 16,
+                      fontSize: '0.650rem',
+                      '& .MuiChip-icon': {
+                        marginLeft: '5px',
+                        marginRight: '-10px'
                       }
                     }}
-                  >
-                    Timeline
-                  </Button>
+                  />
+                )}
+              </Box>
+            ))}
+            
+            {/* Pulsante "Nuova lezione" all'interno del contenitore delle lezioni */}
+            <Box
+              sx={{
+                mb: 0.5,
+                py: 0.5,
+                minHeight: '28px',
+                bgcolor: 'action.hover',
+                borderRadius: 1,
+                color: 'text.primary',
+                opacity: 0.85,
+                position: 'relative',
+                px: 1,
+                cursor: 'pointer',
+                mx: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                '&:hover': {
+                  opacity: 1,
+                  boxShadow: 1
+                }
+              }}
+              onClick={(e) => {
+                handleAddLessonClick(day);
+              }}
+            >
+              <AddIcon fontSize="small" sx={{ mr: 0.5, fontSize: '0.9rem' }}/>
+              <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.75rem', fontWeight: 'medium' }}>
+                Nuova lezione
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Solo il pulsante Dettaglio giorno rimane in fondo */}
+        <Box sx={{ mt: 'auto' }}>
+          <Button
+            fullWidth
+            startIcon={<ViewTimelineIcon fontSize="small" />}
+            variant="text"
+            size="small"
+            onClick={(e) => {
+              handleDayClick(day);
+            }}
+            sx={{
+              py: 0.3,
+              fontSize: '0.7rem',
+              bgcolor: 'action.hover',
+              justifyContent: 'center',
+              color: 'text.secondary',
+              '&:hover': {
+                backgroundColor: 'action.hover',
+              }
+            }}
+          >
+            Timeline
+          </Button>
+        </Box>
+      </Paper>
+    );
+  };
+
+  return (
+    <Card sx={{ p: 2, mb: 3 }}>
+      {/* Layout Desktop */}
+      {!isMobile && (
+        <>
+          {/* Calendar header with weekdays */}
+          <Grid container spacing={1} sx={{ mb: 1 }}>
+            {weekdays.map((day, index) => (
+              <Grid item xs={12 / 7} key={`weekday-${index}`}>
+                <Box
+                  sx={{
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    backgroundColor: 'primary.light',
+                    color: 'primary.contrastText',
+                    borderRadius: 1,
+                  }}
+                >
+                  {day} {daysOfWeek[index] && format(daysOfWeek[index], 'd')}
                 </Box>
-              </Paper>
-            </Grid>
-          );
-        })}
-      </Grid>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Days of the week - Layout desktop */}
+          <Grid container spacing={1}>
+            {daysOfWeek.map((day, index) => (
+              <Grid item xs={12 / 7} key={`day-${index}`}>
+                <DayComponent day={day} index={index} isMobile={false} />
+              </Grid>
+            ))}
+          </Grid>
+        </>
+      )}
+
+      {/* Layout Mobile - giorni in verticale */}
+      {isMobile && (
+        <Box>
+          {daysOfWeek.map((day, index) => (
+            <Box key={`day-mobile-${index}`} sx={{ mb: 2 }}>
+              <DayComponent day={day} index={index} isMobile={true} />
+            </Box>
+          ))}
+        </Box>
+      )}
     </Card>
   );
 }
