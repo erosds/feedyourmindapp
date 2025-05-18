@@ -164,7 +164,7 @@ function AdminDashboardCalendar({
   const getProfessorChipsForDay = (day) => {
     const professors = getProfessorsForDay(day);
 
-    // Ottieni le lezioni di questo giorno per verificare quali professori hanno lezioni online
+    // Ottieni le lezioni di questo giorno
     const dayLessons = lessons.filter(lesson => {
       try {
         const lessonDate = parseISO(lesson.lesson_date);
@@ -177,20 +177,41 @@ function AdminDashboardCalendar({
       }
     });
 
-    // Crea una mappa dei professori con lezioni online per questo giorno
-    const professorsWithOnlineLessons = new Set();
+    // Per ogni professore, controlla se TUTTE le lezioni sono online
+    const professorsOnlineStatus = {};
+
+    // Prima, inizializza con contatori per ogni professore
+    professors.forEach(professor => {
+      professorsOnlineStatus[professor.id] = {
+        totalLessons: 0,
+        onlineLessons: 0
+      };
+    });
+
+    // Poi conta le lezioni totali e online per ogni professore
     dayLessons.forEach(lesson => {
-      if (lesson.is_online && lesson.professor_id) {
-        professorsWithOnlineLessons.add(lesson.professor_id);
+      if (lesson.professor_id && professorsOnlineStatus[lesson.professor_id]) {
+        professorsOnlineStatus[lesson.professor_id].totalLessons++;
+
+        if (lesson.is_online) {
+          professorsOnlineStatus[lesson.professor_id].onlineLessons++;
+        }
       }
     });
 
     // Formatta i dati per ogni professore
-    return professors.map(professor => ({
-      id: professor.id,
-      name: `${professor.first_name.charAt(0)}. ${professor.last_name}`,
-      isOnline: professorsWithOnlineLessons.has(professor.id)
-    })).sort((a, b) => a.name.localeCompare(b.name));
+    return professors.map(professor => {
+      const stats = professorsOnlineStatus[professor.id];
+      // Un professore è considerato "online" solo se tutte le sue lezioni sono online
+      // E se ha almeno una lezione nel giorno
+      const isFullyOnline = stats.totalLessons > 0 && stats.totalLessons === stats.onlineLessons;
+
+      return {
+        id: professor.id,
+        name: `${professor.first_name.charAt(0)}. ${professor.last_name}`,
+        isOnline: isFullyOnline
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
   };
 
   // Get weekday names
