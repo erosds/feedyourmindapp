@@ -258,7 +258,10 @@ function LessonForm({
                         onChange={(e) => {
                           setFieldValue('is_package', e.target.checked);
                           if (!e.target.checked) {
+                            // Quando deseleziono l'opzione pacchetto
                             setFieldValue('package_id', null);
+                            setFieldValue('is_paid', false); // Imposta il pagamento a "non pagato"
+                            setFieldValue('payment_date', null); // Rimuovi anche la data di pagamento
                           }
                         }}
                       />
@@ -326,7 +329,7 @@ function LessonForm({
               </Grid>
 
               {/* Data di pagamento e prezzo (solo se pagata) */}
-              {values.is_paid && (
+              {values.is_paid && !values.is_package && (
                 <>
                   <Grid item xs={12} md={6}>
                     <DatePicker
