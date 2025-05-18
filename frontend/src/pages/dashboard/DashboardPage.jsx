@@ -454,7 +454,7 @@ function DashboardPage() {
               {/* Lezioni singole pagate */}
               <Grid item xs={12} md={3}>
                 <Typography variant="body2" color="text.secondary">
-                  Lezioni singole pagate
+                  Lezioni singole saldate
                 </Typography>
                 <Typography variant="h5">
                   {(() => {
