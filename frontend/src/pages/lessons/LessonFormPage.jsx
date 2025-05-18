@@ -521,7 +521,7 @@ function LessonFormPage() {
           const lessonDate = parseISO(formattedValues.lesson_date);
 
           if (lessonDate > expiryDate) {
-            setError(`Non è possibile inserire lezioni dopo la data di scadenza del pacchetto (${format(expiryDate, 'd MMMM yyyy', { locale: it })}).`);
+            setError(`Non è possibile inserire lezioni dopo la data di scadenza del pacchetto (${format(expiryDate, 'd MMMM yyyy', { locale: it })}). Valuta di estendere prima il pacchetto.`);
             return false;
           }
         }
