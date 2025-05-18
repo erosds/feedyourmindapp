@@ -528,7 +528,7 @@ function AdminDashboardSummary({
 
             <ClickableStatBlock
               icon={<MoneyIcon />}
-              label="Lezioni singole da saldare"
+              label="Lezioni da saldare"
               value={unpaidLessons.length}
               onClick={() => navigateToLessons('unpaid')}
               color="error.main"

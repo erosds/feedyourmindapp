@@ -1,4 +1,3 @@
-// src/pages/dashboard/AdminDashboardPage.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -33,6 +32,7 @@ import { useAuth } from '../../context/AuthContext';
 import ProfessorWeeklyTable from '../../components/dashboard/ProfessorWeeklyTable';
 import AdminDashboardCalendar from '../../components/dashboard/AdminDashboardCalendar';
 import AdminDashboardSummary from '../../components/dashboard/AdminDashboardSummary';
+import AdminDashboardWeekSummary from '../../components/dashboard/AdminDashboardWeekSummary'; // New import
 import DayProfessorsDialog from '../../components/dashboard/DayProfessorsDialog';
 
 function AdminDashboardPage() {
@@ -289,6 +289,7 @@ function AdminDashboardPage() {
   // Computed values
   const currentWeekLessons = getCurrentWeekLessons();
   const periodLessons = getLessonsForPeriod();
+  const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
 
   // Calculate weekly data for professors
   const professorWeeklyData = professors.map(professor => {
@@ -401,6 +402,15 @@ function AdminDashboardPage() {
         </Box>
       </Card>
 
+      {/* New Weekly Financial Summary Component */}
+      <AdminDashboardWeekSummary
+        currentWeekStart={currentWeekStart}
+        weekEnd={weekEnd}
+        allLessons={lessons}
+        allPackages={packages}
+        professorWeeklyData={professorWeeklyData}
+      />
+
       <Grid container spacing={1}>
         {/* Calendar showing professors for each day */}
         <Grid item xs={12}>
@@ -409,7 +419,7 @@ function AdminDashboardPage() {
             getProfessorsForDay={getProfessorsForDay}
             handleProfessorClick={handleProfessorClick}
             handleDayClick={handleDayClick}
-            lessons={lessons} // Aggiungi questa riga
+            lessons={lessons}
           />
         </Grid>
 
