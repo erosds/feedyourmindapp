@@ -13,7 +13,6 @@ import {
   FormControl,
   FormControlLabel,
   FormHelperText,
-
   Grid,
   InputAdornment,
   InputLabel,
@@ -29,8 +28,8 @@ import { lessonService, packageService } from '../../services/api';
 import StudentAutocomplete from '../common/StudentAutocomplete';
 import PackageStudentSelector from '../common/PackageStudentSelector'; // Import the new component
 import LessonOverlapDialog from '../lessons/LessonOverlapDialog';
+import PackageAlertsComponent from '../lessons/PackageAlertsComponent'; // Importa il nuovo componente
 import { checkLessonOverlap } from '../../utils/lessonOverlapUtils';
-// Aggiungi in cima all'import
 import { Link as RouterLink } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -384,10 +383,7 @@ function AddLessonDialog({
     parseFloat(lessonForm.duration) > availableHours;
   const totalAmount = ((parseFloat(lessonForm.duration) || 0) * (parseFloat(lessonForm.hourly_rate) || 0)).toFixed(2);
 
-
-
   // Modifica all'useEffect per resettare correttamente gli stati quando il dialogo si apre
-
   useEffect(() => {
     if (open) {
       // Reset stati quando si apre il dialogo
@@ -481,140 +477,17 @@ function AddLessonDialog({
           Aggiungi Lezione per {selectedDay ? format(selectedDay, "EEEE d MMMM yyyy", { locale: it }) : ""}
         </DialogTitle>
         <DialogContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          {/* Alert per pacchetti terminati recentemente */}
-          {recentlyEndedPackages.length > 0 && localPackages.length === 0 && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                {recentlyEndedPackages.length === 1
-                  ? "È stato rilevato un pacchetto terminato recentemente."
-                  : `Sono stati rilevati ${recentlyEndedPackages.length} pacchetti terminati recentemente.`}
-                {" "}
-                Se lo studente intende proseguire con un nuovo pacchetto, crealo prima gi aggiungere la lezione.
-              </Typography>
-
-              {recentlyEndedPackages.map((pkg, idx) => (
-                <Box component="div" key={pkg.id} sx={{ mt: 1.5, display: 'flex', alignItems: 'center' }}>
-                  <Chip
-                    component={RouterLink}
-                    to={`/packages/${pkg.id}`}
-                    label={`Pacchetto #${pkg.id}`}
-                    color="default"
-                    variant="outlined"
-                    clickable
-                    sx={{
-                      mr: 1.5,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
-                      }
-                    }}
-                  />
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {`${pkg.status === 'completed' ? 'Completato' : 'Scaduto (senza ore residue)'} il ${format(parseISO(pkg.expiry_date), 'dd/MM/yyyy')}`}
-                  </Typography>
-                </Box>
-              ))}
-
-              <Box sx={{ mt: 0, display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                  component={RouterLink}
-                  to={`/packages/new?student=${encodeURIComponent(students[lessonForm.student_id] || '')}`}
-                  variant="contained"
-                  color="primary"
-                  size="small"
-                  sx={{ fontSize: '0.8rem' }}
-                >
-                  Crea nuovo pacchetto
-                </Button>
-              </Box>
-            </Alert>
-          )}
-          {/* Alert modificato con chip cliccabile e informazioni separate */}
-          {expiredPackages.length > 0 && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                Attenzione: lo studente ha {expiredPackages.length} pacchett{expiredPackages.length === 1 ? 'o' : 'i'} scadut{expiredPackages.length === 1 ? 'o' : 'i'} con ore residue.
-                Prima di usare nuovi pacchetti, valuta di estendere quell{expiredPackages.length === 1 ? 'o' : 'i'} scadut{expiredPackages.length === 1 ? 'o' : 'i'} cliccando qui sotto.
-              </Typography>
-              {expiredPackages.map((pkg, idx) => (
-                <Box component="div" key={pkg.id} sx={{ mt: 1.5, display: 'flex', alignItems: 'center' }}>
-                  <Chip
-                    component={RouterLink}
-                    to={`/packages/${pkg.id}`}
-                    label={`Pacchetto #${pkg.id}`}
-                    color="primary"
-                    variant="outlined"
-                    clickable
-                    sx={{
-                      mr: 1.5,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
-                      }
-                    }}
-                  />
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {`iniziato il ${format(parseISO(pkg.start_date), 'dd/MM/yyyy')} e scaduto il ${format(parseISO(pkg.expiry_date), 'dd/MM/yyyy')} - ${parseFloat(pkg.remaining_hours).toFixed(1)} ore rimanenti.`}
-                  </Typography>
-                </Box>
-              ))}
-            </Alert>
-          )}
-          {/* Messaggio specifico per il contesto "packageDetail" */}
-          {context === 'packageDetail' && fixedPackageId ? (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                <Typography variant="body2" sx={{ display: 'inline' }}>
-                  Stai aggiungendo una nuova lezione direttamente al
-                </Typography>
-                <Chip
-                  component={RouterLink}
-                  to={`/packages/${fixedPackageId}`}
-                  label={`Pacchetto #${fixedPackageId}`}
-                  color="primary"
-                  variant="outlined"
-                  clickable
-                  size="small"
-                  sx={{
-                    mx: 0.5,
-                    my: 0.25,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
-                    }
-                  }}
-                />
-                <Typography variant="body2" sx={{ display: 'inline' }}>
-                  La lezione verrà automaticamente registrata come parte di questo pacchetto.
-                </Typography>
-              </Box>
-            </Alert>
-          ) : (
-            /* Avviso per più pacchetti disponibili - solo nel contesto normale */
-            lessonForm.student_id && localPackages.length > 0 && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                <Typography variant="body2">
-                  {localPackages.length > 1 ? (
-                    <>
-                      Sono stati trovati {localPackages.length} pacchetti attivi per questo studente.
-                      Assicurati di spuntare l'opzione sotto che indica che la lezione fa parte di un pacchetto.
-                      Solitamente andrebbero esaurite prima le ore del pacchetto più vecchio.
-                    </>
-                  ) : (
-                    <>
-                      È stato trovato un pacchetto attivo per questo studente.
-                      Assicurati di spuntare l'opzione sotto che indica che la lezione fa parte di un pacchetto.
-                    </>
-                  )}
-                </Typography>
-              </Alert>
-            )
-          )}
+          {/* Utilizziamo il nuovo componente di avvisi */}
+          <PackageAlertsComponent
+            error={error}
+            context={context}
+            fixedPackageId={fixedPackageId}
+            lessonForm={lessonForm}
+            localPackages={localPackages}
+            expiredPackages={expiredPackages}
+            recentlyEndedPackages={recentlyEndedPackages}
+            students={students}
+          />
 
           <Grid container spacing={3} sx={{ mt: -2 }}>
             {/* Selezione studente */}
