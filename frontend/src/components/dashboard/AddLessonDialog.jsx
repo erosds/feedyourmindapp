@@ -266,6 +266,7 @@ function AddLessonDialog({
       package_id: null
     };
     if (isChecked && localPackages.length > 0) {
+      // Se si seleziona l'opzione pacchetto e ci sono pacchetti disponibili
       updatedForm.package_id = localPackages[0].id;
       updatedForm.is_paid = true;
       setLocalSelectedPackage(localPackages[0]);
@@ -273,7 +274,10 @@ function AddLessonDialog({
         await handlePackageChange(localPackages[0].id);
       }
     } else {
+      // Se si deseleziona l'opzione pacchetto
       setLocalSelectedPackage(null);
+      updatedForm.is_paid = false; // Imposta come non pagata
+      updatedForm.payment_date = null; // Rimuovi anche la data di pagamento
     }
     setLessonForm(updatedForm);
   };
