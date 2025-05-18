@@ -5,7 +5,8 @@ import {
   Grid,
   Paper,
   Typography,
-  Divider
+  Divider,
+  Tooltip
 } from '@mui/material';
 import { parseISO, isWithinInterval, format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -21,7 +22,10 @@ function AdminDashboardWeekSummary({
     income: 0,
     payments: 0,
     profit: 0,
-    pendingAmount: 0
+    pendingAmount: 0,
+    // Nuovi campi
+    lessonsCount: { total: 0, paid: 0 },
+    packagesCount: { expiring: 0, paid: 0 }
   });
 
   useEffect(() => {
@@ -35,7 +39,9 @@ function AdminDashboardWeekSummary({
         income: 0,
         payments: 0,
         profit: 0,
-        pendingAmount: 0
+        pendingAmount: 0,
+        lessonsCount: { total: 0, paid: 0 },
+        packagesCount: { expiring: 0, paid: 0 }
       });
       return;
     }
@@ -98,20 +104,52 @@ function AdminDashboardWeekSummary({
 
     const totalPendingAmount = unpaidAmount + unpaidPackagesAmount;
 
+    // NUOVO: Calcolo statistiche su lezioni della settimana 
+    const weekLessons = allLessons.filter(lesson =>
+      lesson.lesson_date >= weekStartStr &&
+      lesson.lesson_date <= weekEndStr &&
+      !lesson.is_package // Solo lezioni singole
+    );
+
+    const weekLessonsPaid = weekLessons.filter(lesson => lesson.is_paid);
+
+    // NUOVO: Calcolo statistiche su pacchetti in scadenza questa settimana
+    const expiringPackages = allPackages.filter(pkg =>
+      pkg.expiry_date >= weekStartStr &&
+      pkg.expiry_date <= weekEndStr
+    );
+
+    const paidExpiringPackages = expiringPackages.filter(pkg => pkg.is_paid);
+
     // Update state with calculated values
     setWeeklyStats({
       income: totalIncome,
       payments: totalPayments,
       profit: totalIncome - totalPayments,
-      pendingAmount: totalPendingAmount
+      pendingAmount: totalPendingAmount,
+      lessonsCount: {
+        total: weekLessons.length,
+        paid: weekLessonsPaid.length
+      },
+      packagesCount: {
+        expiring: expiringPackages.length,
+        paid: paidExpiringPackages.length
+      }
     });
+  };
+
+  // Funzione per creare testo tooltip per rapporti
+  const getRatioTooltip = (paid, total, type) => {
+    if (total === 0) return `Nessun ${type} questa settimana`;
+    const percentage = Math.round((paid / total) * 100);
+    return `${paid} ${type} pagati su ${total} (${percentage}%)`;
   };
 
   return (
     <Paper sx={{ p: 2, mb: 1 }}>
       <Grid container spacing={2}>
         {/* Income */}
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={6} md={2.5}>
           <Typography variant="body2" color="text.secondary">
             Incasso
           </Typography>
@@ -120,8 +158,32 @@ function AdminDashboardWeekSummary({
           </Typography>
         </Grid>
 
+        {/* NUOVO: Statistiche lezioni settimana */}
+        <Grid item xs={12} sm={6} md={1.5}>
+          <Typography variant="body2" color="text.secondary">
+            Lezioni saldate
+          </Typography>
+          <Tooltip title={getRatioTooltip(weeklyStats.lessonsCount.paid, weeklyStats.lessonsCount.total, "lezioni")} arrow>
+            <Typography variant="h5" color="text.primary">
+              {weeklyStats.lessonsCount.paid}/{weeklyStats.lessonsCount.total}
+            </Typography>
+          </Tooltip>
+        </Grid>
+
+        {/* NUOVO: Statistiche pacchetti in scadenza */}
+        <Grid item xs={12} sm={6} md={2}>
+          <Typography variant="body2" color="text.secondary">
+            Pacchetti saldati
+          </Typography>
+          <Tooltip title={getRatioTooltip(weeklyStats.packagesCount.paid, weeklyStats.packagesCount.expiring, "pacchetti")} arrow>
+            <Typography variant="h5" color="text.primary">
+              {weeklyStats.packagesCount.paid}/{weeklyStats.packagesCount.expiring}
+            </Typography>
+          </Tooltip>
+        </Grid>
+
         {/* Pending Payments */}
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <Typography variant="body2" color="text.secondary">
             Da incassare
           </Typography>
@@ -131,7 +193,7 @@ function AdminDashboardWeekSummary({
         </Grid>
 
         {/* Payments to professors */}
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <Typography variant="body2" color="text.secondary">
             Pagamenti
           </Typography>
@@ -141,7 +203,7 @@ function AdminDashboardWeekSummary({
         </Grid>
 
         {/* Profit */}
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={6} md={2}>
           <Typography variant="body2" color="text.secondary">
             Ricavi
           </Typography>
