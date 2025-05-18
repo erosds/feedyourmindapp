@@ -1,14 +1,11 @@
-// src/components/lessons/PackageAlertsComponent.jsx
+// Modifiche a PackageAlertsComponent.jsx
+// Aggiungi un nuovo tipo di avviso per la data oltre la scadenza
 import React from 'react';
 import { Alert, Box, Button, Chip, Typography } from '@mui/material';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Link as RouterLink } from 'react-router-dom';
 
-/**
- * Componente che gestisce tutti gli avvisi relativi ai pacchetti
- * nel dialogo di aggiunta lezioni
- */
 function PackageAlertsComponent({
   error,
   context,
@@ -17,7 +14,12 @@ function PackageAlertsComponent({
   localPackages,
   expiredPackages,
   recentlyEndedPackages,
-  students
+  students,
+  // Nuove props
+  selectedPackage,
+  isDateAfterExpiry,
+  expiryDate,
+  onExtendPackage
 }) {
   return (
     <>
@@ -25,6 +27,36 @@ function PackageAlertsComponent({
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
+        </Alert>
+      )}
+
+      {/* Nuovo avviso per data oltre la scadenza con pulsante per estendere */}
+      {isDateAfterExpiry && selectedPackage && expiryDate && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          action={
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              height: '100%'  // Aggiunta questa proprietà per centrare verticalmente
+            }}>
+              <Button
+                color="primary"
+                size="small"
+                onClick={onExtendPackage}
+                variant="contained"
+              >
+                Sì, estendi
+              </Button>
+            </Box>
+          }
+        >
+          <Typography variant="body2">
+            Non è possibile inserire lezioni dopo la data di scadenza del pacchetto ({format(parseISO(expiryDate), 'd MMMM yyyy', { locale: it })}).
+            <br />
+            Estendere la durata del pacchetto di una settimana?
+          </Typography>
         </Alert>
       )}
 
@@ -36,11 +68,15 @@ function PackageAlertsComponent({
               ? "È stato rilevato un pacchetto terminato recentemente."
               : `Sono stati rilevati ${recentlyEndedPackages.length} pacchetti terminati recentemente.`}
             {" "}
-            Se lo studente intende proseguire con un nuovo pacchetto, crealo prima gi aggiungere la lezione.
+            Se lo studente intende proseguire con un nuovo pacchetto, crealo prima di aggiungere la lezione.
           </Typography>
 
           {recentlyEndedPackages.map((pkg, idx) => (
-            <Box component="div" key={pkg.id} sx={{ mt: 1.5, display: 'flex', alignItems: 'center' }}>
+            <Box
+              component="div"
+              key={pkg.id}
+              sx={{ mt: 1.5, display: 'flex', alignItems: 'center' }}
+            >
               <Chip
                 component={RouterLink}
                 to={`/packages/${pkg.id}`}
@@ -53,27 +89,36 @@ function PackageAlertsComponent({
                   cursor: 'pointer',
                   '&:hover': {
                     boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
-                  }
+                  },
                 }}
               />
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                {`${pkg.status === 'completed' ? 'Completato' : 'Scaduto (senza ore residue)'} il ${format(parseISO(pkg.expiry_date), 'dd/MM/yyyy')}`}
+              <Typography
+                variant="body2"
+                sx={{ color: 'text.secondary', mr: 1.5 }}
+              >
+                {`${pkg.status === 'completed' ? 'Completato' : 'Scaduto (senza ore residue)'} il ${format(
+                  parseISO(pkg.expiry_date),
+                  'dd/MM/yyyy'
+                )}`}
               </Typography>
+
+              {/* Spacer che spinge il pulsante a destra */}
+              <Box sx={{ flexGrow: 1 }} />
+
+              <Button
+                component={RouterLink}
+                to={`/packages/new?student=${encodeURIComponent(
+                  students[lessonForm.student_id] || ''
+                )}`}
+                variant="contained"
+                color="primary"
+                size="small"
+                sx={{ fontSize: '0.8rem' }}
+              >
+                Crea nuovo pacchetto
+              </Button>
             </Box>
           ))}
-
-          <Box sx={{ mt: 0, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button
-              component={RouterLink}
-              to={`/packages/new?student=${encodeURIComponent(students[lessonForm.student_id] || '')}`}
-              variant="contained"
-              color="primary"
-              size="small"
-              sx={{ fontSize: '0.8rem' }}
-            >
-              Crea nuovo pacchetto
-            </Button>
-          </Box>
         </Alert>
       )}
 
@@ -84,7 +129,7 @@ function PackageAlertsComponent({
             Attenzione: lo studente ha {expiredPackages.length} pacchett{expiredPackages.length === 1 ? 'o' : 'i'} scadut{expiredPackages.length === 1 ? 'o' : 'i'} con ore residue.
             Prima di usare nuovi pacchetti, valuta di estendere quell{expiredPackages.length === 1 ? 'o' : 'i'} scadut{expiredPackages.length === 1 ? 'o' : 'i'} cliccando qui sotto.
           </Typography>
-          
+
           {expiredPackages.map((pkg, idx) => (
             <Box component="div" key={pkg.id} sx={{ mt: 1.5, display: 'flex', alignItems: 'center' }}>
               <Chip

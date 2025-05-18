@@ -35,6 +35,7 @@ import { format, parseISO } from 'date-fns';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
+
 function AddLessonDialog({
   open,
   onClose,
@@ -70,6 +71,58 @@ function AddLessonDialog({
   const [recentlyEndedPackages, setRecentlyEndedPackages] = useState([]);
   const [showRateFields, setShowRateFields] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
+  // Nuovo stato per tracciare la data oltre la scadenza
+  const [isDateAfterExpiry, setIsDateAfterExpiry] = useState(false);
+  const [packageExpiryDate, setPackageExpiryDate] = useState(null);
+
+  // Funzione per estendere il pacchetto
+  const handleExtendPackage = async () => {
+    if (!lessonForm.package_id) return;
+
+    try {
+      setSubmitting(true);
+      setError('');
+
+      // Chiamata API per estendere il pacchetto
+      await packageService.extendPackage(lessonForm.package_id);
+
+      // Ricarica i dati del pacchetto
+      const packageResponse = await packageService.getById(lessonForm.package_id);
+      const updatedPackage = packageResponse.data;
+
+      // Aggiorna lo stato locale
+      if (localSelectedPackage) {
+        const updatedLocalPackage = {
+          ...localSelectedPackage,
+          expiry_date: updatedPackage.expiry_date,
+          status: updatedPackage.status,
+          extension_count: updatedPackage.extension_count
+        };
+
+        setLocalSelectedPackage(updatedLocalPackage);
+
+        // Aggiorna anche la lista dei pacchetti locali
+        setLocalPackages(prevPackages =>
+          prevPackages.map(pkg =>
+            pkg.id === updatedLocalPackage.id ? updatedLocalPackage : pkg
+          )
+        );
+      }
+
+      // Resetta il flag di data scaduta
+      setIsDateAfterExpiry(false);
+      setPackageExpiryDate(null);
+
+      // Notifica all'utente
+      alert(`Pacchetto #${lessonForm.package_id} esteso con successo fino al ${format(parseISO(updatedPackage.expiry_date), 'd MMMM yyyy', { locale: it })}`);
+
+    } catch (err) {
+      console.error('Error extending package:', err);
+      setError('Errore durante l\'estensione del pacchetto. Riprova più tardi.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // Funzioni helper per formattare date e orari
   const formatDateForAPI = (date) => {
@@ -148,25 +201,33 @@ function AddLessonDialog({
       setError('Seleziona uno studente');
       return false;
     }
+
     if (!lessonForm.hourly_rate || lessonForm.hourly_rate <= 0) {
       setError('Inserisci un compenso orari valido');
       return false;
     }
+
     if (lessonForm.is_package && !lessonForm.package_id) {
       setError('Seleziona un pacchetto');
       return false;
     }
 
-    // Aggiungi questa verifica per la data di scadenza del pacchetto
+    // Verifica la data di scadenza del pacchetto
     if (lessonForm.is_package && lessonForm.package_id) {
       const selectedPkg = localPackages.find(pkg => pkg.id === parseInt(lessonForm.package_id)) ||
         studentPackages.find(pkg => pkg.id === parseInt(lessonForm.package_id));
 
       if (selectedPkg && lessonForm.lesson_date) {
         const expiryDate = parseISO(selectedPkg.expiry_date);
+
+        // Se la data della lezione è oltre la scadenza, imposta il flag e restituisci false
         if (lessonForm.lesson_date > expiryDate) {
-          setError(`Non è possibile inserire lezioni dopo la data di scadenza del pacchetto (${format(expiryDate, 'd MMMM yyyy', { locale: it })}).`);
+          setIsDateAfterExpiry(true);
+          setPackageExpiryDate(selectedPkg.expiry_date);
           return false;
+        } else {
+          setIsDateAfterExpiry(false);
+          setPackageExpiryDate(null);
         }
       }
 
@@ -188,9 +249,9 @@ function AddLessonDialog({
     if (err.response?.status === 409 && err.response?.data?.detail) {
       const detail = err.response.data.detail;
       if (typeof detail === 'object' && detail.message && detail.message.includes('exceeds remaining')) {
-        setError(`La lezione ha una durata maggiore delle ${detail.remaining_hours} ore rimanenti sul pacchetto. Valuta se aprire un nuovo pacchetto.`);
+        setError(`La lezione ha una durata maggiore delle ${detail.remaining_hours} ore rimanenti sul pacchetto. Valuta se far partire un nuovo pacchetto.`);
       } else if (typeof detail === 'string' && detail.includes('exceeds remaining')) {
-        setError(`La lezione ha una durata maggiore delle ore rimanenti sul pacchetto. Valuta se aprire un nuovo pacchetto.`);
+        setError(`La lezione ha una durata maggiore delle ore rimanenti sul pacchetto. Valuta se far partire un nuovo pacchetto.`);
       } else if (typeof detail === 'string' && detail.includes('data della lezione non può essere successiva alla scadenza')) {
         // Aggiungi questo caso specifico
         setError('Non è possibile inserire lezioni dopo la data di scadenza del pacchetto.');
@@ -487,6 +548,10 @@ function AddLessonDialog({
             expiredPackages={expiredPackages}
             recentlyEndedPackages={recentlyEndedPackages}
             students={students}
+            selectedPackage={localSelectedPackage}
+            isDateAfterExpiry={isDateAfterExpiry}
+            expiryDate={packageExpiryDate}
+            onExtendPackage={handleExtendPackage}
           />
 
           <Grid container spacing={3} sx={{ mt: -2 }}>
