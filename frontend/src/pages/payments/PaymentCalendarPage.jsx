@@ -728,7 +728,7 @@ function PaymentCalendarPage() {
   return (
     <Box>
       <Typography variant="h4" gutterBottom mb={3}>
-        Agenda Pagamenti
+        Agenda Incassi
       </Typography>
 
       {/* Month navigation */}
