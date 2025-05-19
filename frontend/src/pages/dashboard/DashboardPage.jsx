@@ -22,7 +22,7 @@ import {
   endOfMonth,
   startOfYear,
   endOfYear,
-  format
+  format,
 } from 'date-fns';
 
 import { it } from 'date-fns/locale';
@@ -30,9 +30,10 @@ import { useNavigate } from 'react-router-dom';
 import { lessonService, studentService, professorService, packageService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
+import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+
 // Importa i componenti modulari
 import DashboardCalendar from '../../components/dashboard/DashboardCalendar';
-import DashboardSummary from '../../components/dashboard/DashboardSummary';
 import AddLessonDialog from '../../components/dashboard/AddLessonDialog';
 import LessonDetailsDialog from '../../components/dashboard/LessonDetailsDialog';
 import DayDetailsDialog from '../../components/dashboard/DayDetailsDialog';
@@ -60,6 +61,38 @@ function DashboardPage() {
   const [formError, setFormError] = useState('');
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [packageLessons, setPackageLessons] = useState({});
+
+  // Aggiungi questa parte all'interno del tuo componente DashboardPage, dopo le altre dichiarazioni useState
+
+  // Stato per le date del periodo selezionato
+  const [periodStartDate, setPeriodStartDate] = useState(null);
+  const [periodEndDate, setPeriodEndDate] = useState(null);
+
+  // Effetto per calcolare le date del periodo quando cambia il periodFilter
+  useEffect(() => {
+    let startDate, endDate;
+
+    switch (periodFilter) {
+      case 'week':
+        startDate = currentWeekStart;
+        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+        break;
+      case 'month':
+        startDate = startOfMonth(new Date());
+        endDate = endOfMonth(new Date());
+        break;
+      case 'year':
+        startDate = startOfYear(new Date());
+        endDate = endOfYear(new Date());
+        break;
+      default:
+        startDate = currentWeekStart;
+        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+    }
+
+    setPeriodStartDate(startDate);
+    setPeriodEndDate(endDate);
+  }, [periodFilter, currentWeekStart]);
 
   // Stato per il form di aggiunta lezione
   const [lessonForm, setLessonForm] = useState({
@@ -429,7 +462,7 @@ function DashboardPage() {
                   €{periodEarnings.toFixed(2)}
                 </Typography>
               </Grid>
-              
+
               {/* Ore svolte */}
               <Grid item xs={12} md={3}>
                 <Typography variant="body2" color="text.secondary">
@@ -439,7 +472,7 @@ function DashboardPage() {
                   {periodLessons.reduce((total, lesson) => total + parseFloat(lesson.duration || 0), 0).toFixed(1)}
                 </Typography>
               </Grid>
-              
+
               {/* Ore lezioni singole */}
               <Grid item xs={12} md={3}>
                 <Typography variant="body2" color="text.secondary">
@@ -450,42 +483,79 @@ function DashboardPage() {
                     .reduce((total, lesson) => total + parseFloat(lesson.duration || 0), 0).toFixed(1)}
                 </Typography>
               </Grid>
-              
+
               {/* Lezioni singole pagate */}
+              {/* Lezioni singole pagate - reso cliccabile */}
               <Grid item xs={12} md={3}>
-                <Typography variant="body2" color="text.secondary">
-                  Lezioni singole saldate
-                </Typography>
-                <Typography variant="h5">
-                  {(() => {
-                    const singleLessons = periodLessons.filter(lesson => !lesson.is_package);
-                    const paidSingleLessons = singleLessons.filter(lesson => lesson.is_paid);
-                    return `${paidSingleLessons.length}/${singleLessons.length}`;
-                  })()}
-                </Typography>
+                <Box
+                  onClick={() => {
+                    // Format dates for URL parameters
+                    const periodFilter = 'custom';
+                    const startDateParam = format(periodStartDate, 'yyyy-MM-dd');
+                    const endDateParam = format(periodEndDate, 'yyyy-MM-dd');
+
+                    // Navigate to lessons page with proper filter parameters
+                    navigate(`/lessons?type=single&time=${periodFilter}&startDate=${startDateParam}&endDate=${endDateParam}&isRange=true&order=asc&orderBy=is_paid&mine=true`);
+                  }}
+                  sx={{
+                    cursor: 'pointer',
+                    borderRadius: 1,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.04)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: 1
+                    }
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    Lezioni singole saldate
+                  </Typography>
+                  <Typography variant="h5" color="text.primary">
+                    {(() => {
+                      const singleLessons = periodLessons.filter(lesson => !lesson.is_package);
+                      const paidSingleLessons = singleLessons.filter(lesson => lesson.is_paid);
+                      return `${paidSingleLessons.length}/${singleLessons.length}`;
+                    })()}
+                  </Typography>
+                </Box>
               </Grid>
             </Grid>
           </Grid>
-          
-          {/* Selettore professore a destra (solo per admin) */}
-          <Grid item xs={12} sm={3}>
-            <DashboardSummary
-              currentWeekLessons={currentWeekLessons}
-              currentWeekEarnings={currentWeekEarnings}
-              currentTab={currentTab}
-              setCurrentTab={setCurrentTab}
-              periodFilter={periodFilter}
-              setPeriodFilter={setPeriodFilter}
-              periodLessons={periodLessons}
-              periodEarnings={periodEarnings}
-              calculateEarnings={calculateEarnings}
-              navigate={navigate}
-              professors={professors}
-              selectedProfessor={selectedProfessor}
-              handleProfessorChange={handleProfessorChange}
-              isAdmin={currentUser?.is_admin}
-              compactMode={true} // Aggiungiamo questa proprietà per visualizzare solo il selettore
-            />
+          <Grid item xs={12} md={3}>
+            {/* Selettore professore a destra (solo per admin) */}
+            {currentUser?.is_admin && (
+              <FormControl fullWidth sx={{ mb: 0 }} variant="outlined">
+                <InputLabel id="select-professor-label">Seleziona Professore</InputLabel>
+                <Select
+                  labelId="select-professor-label"
+                  id="select-professor"
+                  value={selectedProfessor}
+                  onChange={handleProfessorChange}
+                  label="Seleziona Professore"
+                >
+                  {professors
+                    .sort((a, b) => {
+                      // Ordinamento alfabetico per nome
+                      const firstNameA = a.first_name.toLowerCase();
+                      const firstNameB = b.first_name.toLowerCase();
+
+                      // Se i nomi sono uguali, ordina per cognome
+                      if (firstNameA === firstNameB) {
+                        return a.last_name.toLowerCase().localeCompare(b.last_name.toLowerCase());
+                      }
+
+                      return firstNameA.localeCompare(firstNameB);
+                    })
+                    .map(professor => (
+                      <MenuItem key={professor.id} value={professor.id}>
+                        {professor.first_name} {professor.last_name}
+                      </MenuItem>
+                    ))
+                  }
+                </Select>
+              </FormControl>
+            )}
           </Grid>
         </Grid>
       </Paper>
