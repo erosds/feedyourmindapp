@@ -245,7 +245,10 @@ function LessonListPage() {
           case 'lastWeek': {
             const lastWeekStart = subWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1);
             const lastWeekEnd = endOfWeek(lastWeekStart, { weekStartsOn: 1 });
-            return isAfter(lessonDate, lastWeekStart) && isBefore(lessonDate, lastWeekEnd);
+            return (
+              !isBefore(lessonDate, lastWeekStart) &&
+              !isAfter(lessonDate, lastWeekEnd)
+            );
           }
           case 'nextWeek': {
             const nextWeekStart = addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1);
