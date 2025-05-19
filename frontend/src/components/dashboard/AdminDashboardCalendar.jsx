@@ -122,6 +122,7 @@ const ScrollableChipsContainer = ({ children }) => {
         gap: '2px',
         mt: 0,
         mb: 1,
+        minHeight: '80px',
         maxHeight: '80px',
         overflow: 'hidden',
         overflowY: 'auto',
@@ -423,7 +424,7 @@ function AdminDashboardCalendar({
             ) : (
               <Paper
               sx={{
-                height: 150,
+                height: '100%',
                 border: '1px solid',
                 borderColor: 'divider',
                 borderRadius: 1,

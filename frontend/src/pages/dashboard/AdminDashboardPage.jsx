@@ -32,10 +32,11 @@ import { useAuth } from '../../context/AuthContext';
 // Import the modular components
 import ProfessorWeeklyTable from '../../components/dashboard/ProfessorWeeklyTable';
 import AdminDashboardCalendar from '../../components/dashboard/AdminDashboardCalendar';
-import AdminDashboardSummary from '../../components/dashboard/AdminDashboardSummary';
 import AdminDashboardWeekSummary from '../../components/dashboard/AdminDashboardWeekSummary';
 import DayProfessorsDialog from '../../components/dashboard/DayProfessorsDialog';
 import ViewToggleComponent from '../../components/dashboard/ViewToggleComponent';
+import PaymentRemindersCard from '../../components/dashboard/PaymentRemindersCard';
+
 
 function AdminDashboardPage() {
   const { isAdmin } = useAuth();
@@ -63,7 +64,7 @@ function AdminDashboardPage() {
   // Dialog state
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
-  const [professorSchedules, setProfessorSchedules] = useState([]);
+  const [professorSchedules, setProfessorSchedules] = useState([]); 
 
   // Check admin access
   useEffect(() => {
@@ -457,19 +458,8 @@ function AdminDashboardPage() {
 
         {/* Financial summary and stats */}
         <Grid item xs={12} md={6}>
-          <AdminDashboardSummary
-            currentWeekStart={periodStartDate}
-            professorWeeklyData={professorPeriodData}
+          <PaymentRemindersCard
             professors={professors}
-            periodFilter={periodFilter}
-            setPeriodFilter={setPeriodFilter}
-            periodLessons={periodLessons}
-            periodStartDate={periodStartDate}
-            periodEndDate={periodEndDate}
-            currentTab={currentTab}
-            setCurrentTab={setCurrentTab}
-            allPackages={packages}
-            allLessons={lessons}
             onNotesUpdate={fetchProfessors}
           />
         </Grid>
