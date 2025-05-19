@@ -128,10 +128,13 @@ function LessonListPage() {
       updateSearchParams('isRange', 'true');
     } else {
       updateSearchParams('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
-      updateSearchParams('endDate', '');
+      updateSearchParams('endDate', ''); // Assicurati che endDate sia rimosso se non è un range
       updateSearchParams('isRange', 'false');
     }
-  };
+
+    // Imposta anche il filtro time su 'custom'
+    updateSearchParams('time', 'custom');
+  }
 
   // Gestione dei filtri iniziali che arrivano dalla dashboard
   useEffect(() => {
@@ -721,7 +724,7 @@ function LessonListPage() {
                 }
                 endAdornment={
                   timeFilter === 'custom' && (
-                    <InputAdornment position="end">
+                    <InputAdornment position="end" sx={{ mr: 2 }}> {/* Aggiunto mr: 2 per spostare a sinistra */}
                       <Tooltip title="Modifica periodo">
                         <IconButton
                           size="small"
@@ -993,7 +996,22 @@ function LessonListPage() {
         open={dateRangeDialogOpen}
         onClose={() => setDateRangeDialogOpen(false)}
         onApply={(newDateRange) => {
-          handleDateRangeSelected(newDateRange);
+          // Aggiorna lo stato locale
+          setDateRange(newDateRange);
+
+          // Aggiorna i parametri URL
+          if (newDateRange.isRange) {
+            // Se è un intervallo di date, salva entrambe le date
+            updateSearchParams('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
+            updateSearchParams('endDate', format(newDateRange.endDate, 'yyyy-MM-dd'));
+            updateSearchParams('isRange', 'true');
+          } else {
+            // Se è una data singola, salva solo startDate
+            updateSearchParams('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
+            updateSearchParams('endDate', ''); // Rimuovi endDate
+            updateSearchParams('isRange', 'false');
+          }
+
           // Assicurati che timeFilter sia impostato su 'custom'
           if (timeFilter !== 'custom') {
             setTimeFilter('custom');
