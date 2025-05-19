@@ -126,7 +126,6 @@ const ScrollableChipsContainer = ({ children }) => {
         overflow: 'hidden',
         overflowY: 'auto',
         flexGrow: 1,
-        position: 'relative',
         zIndex: 1,
         scrollbarWidth: 'none', // Firefox
         '&::-webkit-scrollbar': { // Chrome/Safari/Edge
@@ -247,7 +246,7 @@ function AdminDashboardCalendar({
         sx={{
           p: 1,
           height: isMobile ? 'auto' : '100%',  // Altezza flessibile su mobile
-          minHeight: isMobile ? 120 : isMonthView ? 80 : 'auto', // Altezza minima variabile in base alla vista
+          minHeight: isMobile ? 120 : isMonthView ? 150 : 'auto', // Altezza minima variabile in base alla vista
           border: '1px solid',
           borderColor: isCurrentDay ? 'primary.main' : 'divider',
           borderRadius: 1,
@@ -263,9 +262,7 @@ function AdminDashboardCalendar({
         {(isMobile || isMonthView) && (
           <Box
             sx={{
-              mb: 1,
               pb: 1,
-              borderBottom: isMonthView ? 'none' : '1px solid',
               borderColor: 'divider',
               display: 'flex',
               justifyContent: 'space-between',
@@ -424,7 +421,16 @@ function AdminDashboardCalendar({
             {day ? (
               <DayComponent day={day} index={index - adjustedFirstDay} isMobile={false} />
             ) : (
-              <Box sx={{ height: '80px' }} /> // Cella vuota
+              <Paper
+              sx={{
+                height: 150,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                boxShadow: 0,
+                backgroundColor: 'inherit'
+              }}
+            />
             )}
           </Grid>
         ))}
