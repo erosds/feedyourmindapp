@@ -38,7 +38,7 @@ import {
 import { lessonService, studentService, professorService } from '../../services/api';
 import {
   format, parseISO, isToday, isThisWeek, isThisMonth, isAfter, isBefore,
-  startOfWeek, endOfWeek, addWeeks, subWeeks
+  startOfWeek, endOfWeek, addWeeks, subWeeks, startOfDay, endOfDay
 } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuth } from '../../context/AuthContext';
@@ -47,6 +47,8 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import { DatePicker } from '@mui/x-date-pickers';
+import DateRangePickerDialog from '../../components/common/DateRangePickerDialog';
+import { CalendarMonth as CalendarIcon } from '@mui/icons-material';
 
 function LessonListPage() {
   const navigate = useNavigate();
@@ -81,6 +83,54 @@ function LessonListPage() {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
+  };
+
+  // Stato per il dialog di selezione date
+  const [dateRangeDialogOpen, setDateRangeDialogOpen] = useState(false);
+
+  // Stato per il range di date (inizializzato dai parametri URL o con valori predefiniti)
+  const [dateRange, setDateRange] = useState(() => {
+    // Legge il range di date dall'URL se esiste
+    const startDateStr = searchParams.get('startDate');
+    const endDateStr = searchParams.get('endDate');
+    const isRange = searchParams.get('isRange') === 'true';
+
+    // Default a oggi se non ci sono date nell'URL
+    const today = new Date();
+
+    return {
+      startDate: startDateStr ? parseISO(startDateStr) : today,
+      endDate: endDateStr ? parseISO(endDateStr) : today,
+      isRange: isRange
+    };
+  });
+
+  // Funzione per formattare le date da visualizzare
+  const formatDateForDisplay = () => {
+    if (timeFilter === 'custom') {
+      if (dateRange.isRange) {
+        return `${format(dateRange.startDate, 'dd/MM/yyyy')} - ${format(dateRange.endDate, 'dd/MM/yyyy')}`;
+      } else {
+        return format(dateRange.startDate, 'dd/MM/yyyy');
+      }
+    }
+    return '';
+  };
+
+  // Gestisce la selezione del range di date
+  const handleDateRangeSelected = (newDateRange) => {
+    setDateRange(newDateRange);
+
+    // Aggiorna l'URL con il nuovo range di date
+    if (newDateRange.isRange) {
+      updateSearchParams('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
+      updateSearchParams('endDate', format(newDateRange.endDate, 'yyyy-MM-dd'));
+      updateSearchParams('isRange', 'true');
+    } else {
+      updateSearchParams('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
+      updateSearchParams('endDate', '');
+      updateSearchParams('isRange', 'false');
+    }
   };
 
   // Gestione dei filtri iniziali che arrivano dalla dashboard
@@ -242,21 +292,20 @@ function LessonListPage() {
             return isToday(lessonDate);
           case 'week':
             return isThisWeek(lessonDate, { weekStartsOn: 1 });
-          case 'lastWeek': {
-            const lastWeekStart = subWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1);
-            const lastWeekEnd = endOfWeek(lastWeekStart, { weekStartsOn: 1 });
-            return (
-              !isBefore(lessonDate, lastWeekStart) &&
-              !isAfter(lessonDate, lastWeekEnd)
-            );
+          case 'custom': {
+            // Per date personalizzate
+            if (dateRange.isRange) {
+              // Per un range, verifica se la lezione è tra le date di inizio e fine
+              const startOfRange = startOfDay(dateRange.startDate);
+              const endOfRange = endOfDay(dateRange.endDate);
+              return isAfter(lessonDate, startOfRange) && isBefore(lessonDate, endOfRange);
+            } else {
+              // Per un singolo giorno, verifica se la lezione è in quel giorno
+              const startOfSelected = startOfDay(dateRange.startDate);
+              const endOfSelected = endOfDay(dateRange.startDate);
+              return isAfter(lessonDate, startOfSelected) && isBefore(lessonDate, endOfSelected);
+            }
           }
-          case 'nextWeek': {
-            const nextWeekStart = addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), 1);
-            const nextWeekEnd = endOfWeek(nextWeekStart, { weekStartsOn: 1 });
-            return isAfter(lessonDate, nextWeekStart) && isBefore(lessonDate, nextWeekEnd);
-          }
-          case 'month':
-            return isThisMonth(lessonDate);
           default:
             return true;
         }
@@ -351,6 +400,16 @@ function LessonListPage() {
     const value = event.target.value;
     setTimeFilter(value);
     updateSearchParams('time', value);
+
+    // Se si seleziona "custom", apri il dialog di selezione date
+    if (value === 'custom') {
+      setDateRangeDialogOpen(true);
+    } else {
+      // Rimuovi i parametri di data personalizzati dall'URL se non si usa "custom"
+      updateSearchParams('startDate', '');
+      updateSearchParams('endDate', '');
+      updateSearchParams('isRange', '');
+    }
   };
 
   const handlePaymentFilterChange = (event) => {
@@ -389,6 +448,27 @@ function LessonListPage() {
           studentsMap[student.id] = `${student.first_name} ${student.last_name}`;
         });
         setStudents(studentsMap);
+
+        // Aggiorna il range di date dall'URL se presente
+        const startDateStr = searchParams.get('startDate');
+        const endDateStr = searchParams.get('endDate');
+        const isRange = searchParams.get('isRange') === 'true';
+
+        if (startDateStr) {
+          const startDate = parseISO(startDateStr);
+          const endDate = endDateStr ? parseISO(endDateStr) : startDate;
+
+          setDateRange({
+            startDate,
+            endDate,
+            isRange
+          });
+
+          // Assicurati che timeFilter sia impostato su custom se ci sono date presenti
+          if (searchParams.get('time') !== 'custom') {
+            setTimeFilter('custom');
+          }
+        }
 
         // Carica i professori se l'utente è admin
         if (isAdmin()) {
@@ -621,13 +701,34 @@ function LessonListPage() {
                     <TodayIcon />
                   </InputAdornment>
                 }
+                endAdornment={
+                  timeFilter === 'custom' && (
+                    <InputAdornment position="end">
+                      <Tooltip title="Modifica periodo">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDateRangeDialogOpen(true);
+                          }}
+                          edge="end"
+                        >
+                          <CalendarIcon fontSize="small"/>
+                        </IconButton>
+                      </Tooltip>
+                    </InputAdornment>
+                  )
+                }
               >
                 <MenuItem value="all">Tutte le date</MenuItem>
                 <MenuItem value="today">Oggi</MenuItem>
-                <MenuItem value="lastWeek">Settimana scorsa</MenuItem>
                 <MenuItem value="week">Questa settimana</MenuItem>
-                <MenuItem value="nextWeek">Settimana prossima</MenuItem>
-                <MenuItem value="month">Questo mese</MenuItem>
+                <MenuItem value="custom">
+                  {timeFilter === 'custom' && dateRange ?
+                    formatDateForDisplay() :
+                    'Personalizzato...'
+                  }
+                </MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -869,6 +970,20 @@ function LessonListPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Date Range Picker Dialog */}
+      <DateRangePickerDialog
+        open={dateRangeDialogOpen}
+        onClose={() => setDateRangeDialogOpen(false)}
+        onApply={(newDateRange) => {
+          handleDateRangeSelected(newDateRange);
+          // Assicurati che timeFilter sia impostato su 'custom'
+          if (timeFilter !== 'custom') {
+            setTimeFilter('custom');
+            updateSearchParams('time', 'custom');
+          }
+        }}
+        initialDateRange={dateRange}
+      />
     </Box>
   );
 }
