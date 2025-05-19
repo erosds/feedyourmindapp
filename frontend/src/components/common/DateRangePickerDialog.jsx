@@ -6,11 +6,14 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControlLabel,
-  Switch,
   Box,
   Typography,
-  Divider
+  Divider,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
+  FormLabel
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers';
 import { format } from 'date-fns';
@@ -18,6 +21,7 @@ import { it } from 'date-fns/locale';
 
 /**
  * A dialog that allows the user to select either a single date or a date range
+ * using mutually exclusive radio buttons instead of a toggle switch
  */
 function DateRangePickerDialog({ 
   open, 
@@ -34,12 +38,13 @@ function DateRangePickerDialog({
   const [startDate, setStartDate] = useState(initialDateRange.startDate);
   const [endDate, setEndDate] = useState(initialDateRange.endDate);
 
-  // Handle switch change for single day vs range
-  const handleSwitchChange = (event) => {
-    setIsRange(event.target.checked);
+  // Handle radio button change for single day vs range
+  const handleModeChange = (event) => {
+    const newValue = event.target.value === 'range';
+    setIsRange(newValue);
     
     // If switching to single day mode, set endDate same as startDate
-    if (!event.target.checked) {
+    if (!newValue) {
       setEndDate(startDate);
     }
   };
@@ -68,20 +73,23 @@ function DateRangePickerDialog({
     >
       <DialogTitle>Seleziona periodo</DialogTitle>
       <DialogContent>
-        <Box sx={{ mb: 2, mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={isRange}
-                onChange={handleSwitchChange}
-                color="primary"
-              />
-            }
-            label={isRange ? "Intervallo di date" : "Giorno singolo"}
-          />
+        <Box sx={{ mb: 2, mt: 1 }}>
+          <FormControl>
+            <FormLabel id="date-selection-mode">Modalità di selezione</FormLabel>
+            <RadioGroup
+              row
+              aria-labelledby="date-selection-mode"
+              name="date-selection-mode"
+              value={isRange ? 'range' : 'single'}
+              onChange={handleModeChange}
+            >
+              <FormControlLabel value="single" control={<Radio />} label="Giorno singolo" />
+              <FormControlLabel value="range" control={<Radio />} label="Intervallo di date" />
+            </RadioGroup>
+          </FormControl>
           
           {isRange && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               {format(startDate, 'dd/MM/yyyy')} - {format(endDate, 'dd/MM/yyyy')}
             </Typography>
           )}
