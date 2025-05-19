@@ -1,4 +1,4 @@
-// src/components/dashboard/AdminDashboardCalendar.jsx
+// Modifiche necessarie per AdminDashboardCalendar.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
@@ -17,7 +17,11 @@ import {
   eachDayOfInterval,
   isToday,
   isEqual,
-  parseISO
+  parseISO,
+  startOfMonth,
+  endOfMonth,
+  getDay,
+  getDaysInMonth,
 } from 'date-fns';
 import { it } from 'date-fns/locale';
 import ViewTimelineIcon from '@mui/icons-material/ViewTimeline';
@@ -153,12 +157,27 @@ function AdminDashboardCalendar({
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
+  // Determina se visualizzare la vista mensile o settimanale
+  const isMonthView = currentWeekStart && currentWeekStart.getDate() === 1;
 
-  // Ottieni i giorni della settimana corrente (da lunedì a domenica)
-  const daysOfWeek = eachDayOfInterval({
-    start: currentWeekStart,
-    end: endOfWeek(currentWeekStart, { weekStartsOn: 1 })
-  });
+  // Genera i giorni appropriati in base alla vista corrente
+  const getDaysToDisplay = () => {
+    if (isMonthView) {
+      // Vista mensile: tutti i giorni del mese
+      const monthStart = currentWeekStart;
+      const monthEnd = endOfMonth(monthStart);
+      return eachDayOfInterval({ start: monthStart, end: monthEnd });
+    } else {
+      // Vista settimanale: lunedì a domenica
+      return eachDayOfInterval({
+        start: currentWeekStart,
+        end: endOfWeek(currentWeekStart, { weekStartsOn: 1 })
+      });
+    }
+  };
+
+  const daysOfPeriod = getDaysToDisplay();
 
   // Funzione per formattare i dati dei professori per un determinato giorno
   const getProfessorChipsForDay = (day) => {
@@ -228,7 +247,7 @@ function AdminDashboardCalendar({
         sx={{
           p: 1,
           height: isMobile ? 'auto' : '100%',  // Altezza flessibile su mobile
-          minHeight: isMobile ? 120 : 'auto', // Altezza minima per garantire consistenza
+          minHeight: isMobile ? 120 : isMonthView ? 80 : 'auto', // Altezza minima variabile in base alla vista
           border: '1px solid',
           borderColor: isCurrentDay ? 'primary.main' : 'divider',
           borderRadius: 1,
@@ -240,8 +259,8 @@ function AdminDashboardCalendar({
           mb: isMobile ? 2 : 0, // Margine inferiore solo su mobile
         }}
       >
-        {/* Intestazione del giorno su mobile */}
-        {isMobile && (
+        {/* Intestazione del giorno su mobile o vista mensile */}
+        {(isMobile || isMonthView) && (
           <Box
             sx={{
               mb: 1,
@@ -258,15 +277,15 @@ function AdminDashboardCalendar({
               sx={{
                 fontWeight: isCurrentDay ? 'bold' : 'normal',
                 color: isCurrentDay ? 'primary.main' : 'inherit',
+                fontSize: isMonthView ? '0.85rem' : 'inherit',
               }}
             >
-              {weekdays[index]} {format(day, 'd')}
+              {isMonthView ? format(day, 'd') : `${weekdays[index]} ${format(day, 'd')}`}
             </Typography>
             {isCurrentDay && (
               <Chip
                 label="Oggi"
                 size="small"
-
                 color="primary"
                 variant="outlined"
                 sx={{ height: 20 }}
@@ -360,42 +379,95 @@ function AdminDashboardCalendar({
     );
   };
 
+  // Griglia di giorni per layout desktop nella vista mensile
+  const renderMonthGrid = () => {
+    // Determina il giorno della settimana del primo giorno del mese (0 = domenica, 1 = lunedì, ..., 6 = sabato)
+    const firstDayOfMonth = getDay(currentWeekStart);
+    
+    // Adatta il valore per iniziare dal lunedì (0 = lunedì, ..., 6 = domenica)
+    const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+    
+    // Crea la griglia con celle vuote all'inizio per allineare i giorni correttamente
+    const emptyDays = Array(adjustedFirstDay).fill(null);
+    const allDaysWithEmpty = [...emptyDays, ...daysOfPeriod];
+    
+    return (
+      <Grid container spacing={1}>
+        {/* Intestazione con i giorni della settimana */}
+        {weekdays.map((day, index) => (
+          <Grid item xs={12 / 7} key={`weekday-${index}`}>
+            <Paper
+              elevation={0}
+              sx={{
+                bgcolor: 'primary.light',
+                color: 'primary.contrastText',
+                fontWeight: 'bold',
+                textAlign: 'center',
+                borderRadius: 1,
+              }}
+            >
+              {day}
+            </Paper>
+          </Grid>
+        ))}
+        
+        {/* Celle dei giorni */}
+        {allDaysWithEmpty.map((day, index) => (
+          <Grid item xs={12 / 7} key={`day-${index}`}>
+            {day ? (
+              <DayComponent day={day} index={index - adjustedFirstDay} isMobile={false} />
+            ) : (
+              <Box sx={{ height: '80px' }} /> // Cella vuota
+            )}
+          </Grid>
+        ))}
+      </Grid>
+    );
+  };
+
   return (
     <Card sx={{ mt: 0, p: 2, mb: 0 }}>
-      {/* Layout Desktop */}
       {!isMobile && (
-        <Grid container spacing={1}>
-          {/* Intestazione dei giorni della settimana */}
-          {daysOfWeek.map((day, index) => (
-            <Grid item xs={12 / 7} key={`header-${index}`}>
-              <Paper
-                elevation={0}
-                sx={{
-                  bgcolor: 'primary.light',
-                  color: 'primary.contrastText',
-                  fontWeight: 'bold',
-                  textAlign: 'center',
-                  borderRadius: 1,
-                }}
-              >
-                {format(day, 'EEE d', { locale: it })}
-              </Paper>
-            </Grid>
-          ))}
+        <>
+          {isMonthView ? (
+            // Vista mensile desktop
+            renderMonthGrid()
+          ) : (
+            // Vista settimanale desktop
+            <Grid container spacing={1}>
+              {/* Intestazione dei giorni della settimana */}
+              {daysOfPeriod.map((day, index) => (
+                <Grid item xs={12 / 7} key={`header-${index}`}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      bgcolor: 'primary.light',
+                      color: 'primary.contrastText',
+                      fontWeight: 'bold',
+                      textAlign: 'center',
+                      borderRadius: 1,
+                    }}
+                  >
+                    {format(day, 'EEE d', { locale: it })}
+                  </Paper>
+                </Grid>
+              ))}
 
-          {/* Celle dei giorni con professori - Layout desktop */}
-          {daysOfWeek.map((day, index) => (
-            <Grid item xs={12 / 7} key={`day-${index}`}>
-              <DayComponent day={day} index={index} isMobile={false} />
+              {/* Celle dei giorni con professori - Layout desktop */}
+              {daysOfPeriod.map((day, index) => (
+                <Grid item xs={12 / 7} key={`day-${index}`}>
+                  <DayComponent day={day} index={index} isMobile={false} />
+                </Grid>
+              ))}
             </Grid>
-          ))}
-        </Grid>
+          )}
+        </>
       )}
 
       {/* Layout Mobile - giorni in verticale */}
       {isMobile && (
         <Box>
-          {daysOfWeek.map((day, index) => (
+          {daysOfPeriod.map((day, index) => (
             <Box key={`day-mobile-${index}`} sx={{ mb: 2 }}>
               <DayComponent day={day} index={index} isMobile={true} />
             </Box>

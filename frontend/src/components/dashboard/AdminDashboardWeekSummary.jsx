@@ -1,14 +1,13 @@
-// src/components/dashboard/AdminDashboardWeekSummary.jsx
+// Modifiche a AdminDashboardWeekSummary.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Grid,
   Paper,
   Typography,
-  Box,  // Add this import
+  Box,
 } from '@mui/material';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom'; // Add this import
-import { mt } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 
 function AdminDashboardWeekSummary({
   currentWeekStart,
@@ -17,25 +16,24 @@ function AdminDashboardWeekSummary({
   allPackages = [],
   professorWeeklyData = []
 }) {
-  const navigate = useNavigate(); // Add this line
-  const [weeklyStats, setWeeklyStats] = useState({
+  const navigate = useNavigate();
+  const [periodStats, setPeriodStats] = useState({
     income: 0,
     payments: 0,
     profit: 0,
     pendingAmount: 0,
-    // Nuovi campi
     lessonsCount: { total: 0, paid: 0 },
     packagesCount: { expiring: 0, paid: 0 }
   });
 
   useEffect(() => {
-    calculateWeeklyStats();
+    calculatePeriodStats();
   }, [currentWeekStart, weekEnd, allLessons, allPackages, professorWeeklyData]);
 
-  const calculateWeeklyStats = () => {
+  const calculatePeriodStats = () => {
     // Skip if no data is available
     if (!allLessons.length && !allPackages.length) {
-      setWeeklyStats({
+      setPeriodStats({
         income: 0,
         payments: 0,
         profit: 0,
@@ -47,41 +45,41 @@ function AdminDashboardWeekSummary({
     }
 
     // Format dates for comparison
-    const weekStartStr = format(currentWeekStart, 'yyyy-MM-dd');
-    const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
+    const periodStartStr = format(currentWeekStart, 'yyyy-MM-dd');
+    const periodEndStr = format(weekEnd, 'yyyy-MM-dd');
 
-    // INCOME: Calculate income from lessons and packages that were paid within the week
+    // INCOME: Calculate income from lessons and packages that were paid within the period
     const paidLessons = allLessons.filter(lesson =>
       lesson.is_paid &&
       lesson.payment_date &&
       !lesson.is_package &&
-      lesson.payment_date >= weekStartStr &&
-      lesson.payment_date <= weekEndStr
+      lesson.payment_date >= periodStartStr &&
+      lesson.payment_date <= periodEndStr
     );
 
     const paidPackages = allPackages.filter(pkg =>
       pkg.is_paid &&
       pkg.payment_date &&
-      pkg.payment_date >= weekStartStr &&
-      pkg.payment_date <= weekEndStr
+      pkg.payment_date >= periodStartStr &&
+      pkg.payment_date <= periodEndStr
     );
 
     const lessonIncome = paidLessons.reduce((sum, lesson) => sum + parseFloat(lesson.price || 0), 0);
     const packageIncome = paidPackages.reduce((sum, pkg) => sum + parseFloat(pkg.package_cost || 0), 0);
     const totalIncome = lessonIncome + packageIncome;
 
-    // PAYMENTS: Get total payments to professors for the week
+    // PAYMENTS: Get total payments to professors for the period
     const totalPayments = professorWeeklyData.reduce(
       (sum, prof) => sum + prof.totalPayment,
       0
     );
 
-    // PENDING PAYMENTS: Calculate unpaid lessons from this week
+    // PENDING PAYMENTS: Calculate unpaid lessons from this period
     const unpaidLessons = allLessons.filter(lesson =>
       !lesson.is_paid &&
       !lesson.is_package &&
-      lesson.lesson_date >= weekStartStr &&
-      lesson.lesson_date <= weekEndStr
+      lesson.lesson_date >= periodStartStr &&
+      lesson.lesson_date <= periodEndStr
     );
 
     const unpaidAmount = unpaidLessons.reduce((sum, lesson) => {
@@ -90,11 +88,11 @@ function AdminDashboardWeekSummary({
       return sum + price;
     }, 0);
 
-    // Expired but unpaid packages from this week
+    // Expired but unpaid packages from this period
     const expiredUnpaidPackages = allPackages.filter(pkg =>
       !pkg.is_paid &&
-      pkg.expiry_date >= weekStartStr &&
-      pkg.expiry_date <= weekEndStr
+      pkg.expiry_date >= periodStartStr &&
+      pkg.expiry_date <= periodEndStr
     );
 
     const unpaidPackagesAmount = expiredUnpaidPackages.reduce(
@@ -104,32 +102,32 @@ function AdminDashboardWeekSummary({
 
     const totalPendingAmount = unpaidAmount + unpaidPackagesAmount;
 
-    // NUOVO: Calcolo statistiche su lezioni della settimana 
-    const weekLessons = allLessons.filter(lesson =>
-      lesson.lesson_date >= weekStartStr &&
-      lesson.lesson_date <= weekEndStr &&
+    // Calcolo statistiche su lezioni del periodo
+    const periodLessons = allLessons.filter(lesson =>
+      lesson.lesson_date >= periodStartStr &&
+      lesson.lesson_date <= periodEndStr &&
       !lesson.is_package // Solo lezioni singole
     );
 
-    const weekLessonsPaid = weekLessons.filter(lesson => lesson.is_paid);
+    const periodLessonsPaid = periodLessons.filter(lesson => lesson.is_paid);
 
-    // NUOVO: Calcolo statistiche su pacchetti in scadenza questa settimana
+    // Calcolo statistiche su pacchetti in scadenza in questo periodo
     const expiringPackages = allPackages.filter(pkg =>
-      pkg.expiry_date >= weekStartStr &&
-      pkg.expiry_date <= weekEndStr
+      pkg.expiry_date >= periodStartStr &&
+      pkg.expiry_date <= periodEndStr
     );
 
     const paidExpiringPackages = expiringPackages.filter(pkg => pkg.is_paid);
 
     // Update state with calculated values
-    setWeeklyStats({
+    setPeriodStats({
       income: totalIncome,
       payments: totalPayments,
       profit: totalIncome - totalPayments,
       pendingAmount: totalPendingAmount,
       lessonsCount: {
-        total: weekLessons.length,
-        paid: weekLessonsPaid.length
+        total: periodLessons.length,
+        paid: periodLessonsPaid.length
       },
       packagesCount: {
         expiring: expiringPackages.length,
@@ -138,7 +136,7 @@ function AdminDashboardWeekSummary({
     });
   };
 
-  const navigateToWeekLessons = () => {
+  const navigateToPeriodLessons = () => {
     // Format dates for URL parameters
     const startDateParam = format(currentWeekStart, 'yyyy-MM-dd');
     const endDateParam = format(weekEnd, 'yyyy-MM-dd');
@@ -147,7 +145,7 @@ function AdminDashboardWeekSummary({
     navigate(`/lessons?type=single&time=custom&startDate=${startDateParam}&endDate=${endDateParam}&isRange=true&order=asc&orderBy=is_paid`);
   };
 
-  const navigateToWeekExpiringPackages = () => {
+  const navigateToPeriodExpiringPackages = () => {
     // Format dates for URL parameters
     const startDateParam = format(currentWeekStart, 'yyyy-MM-dd');
     const endDateParam = format(weekEnd, 'yyyy-MM-dd');
@@ -165,14 +163,14 @@ function AdminDashboardWeekSummary({
             Incasso
           </Typography>
           <Typography variant="h5" color="success.main" fontWeight="bold">
-            €{weeklyStats.income.toFixed(2)}
+            €{periodStats.income.toFixed(2)}
           </Typography>
         </Grid>
 
-        {/* NUOVO: Statistiche lezioni settimana - Make this clickable */}
+        {/* Statistiche lezioni periodo - Make this clickable */}
         <Grid item xs={12} sm={6} md={2}>
           <Box
-            onClick={navigateToWeekLessons}
+            onClick={navigateToPeriodLessons}
             sx={{
               cursor: 'pointer',
               borderRadius: 1,
@@ -188,15 +186,15 @@ function AdminDashboardWeekSummary({
               Lezioni singole
             </Typography>
             <Typography variant="h5" color="text.primary">
-              {weeklyStats.lessonsCount.paid}/{weeklyStats.lessonsCount.total}
+              {periodStats.lessonsCount.paid}/{periodStats.lessonsCount.total}
             </Typography>
           </Box>
         </Grid>
 
-        {/* NUOVO: Statistiche pacchetti in scadenza */}
+        {/* Statistiche pacchetti in scadenza */}
         <Grid item xs={12} sm={6} md={2.5}>
           <Box
-            onClick={navigateToWeekExpiringPackages}
+            onClick={navigateToPeriodExpiringPackages}
             sx={{
               cursor: 'pointer',
               borderRadius: 1,
@@ -212,7 +210,7 @@ function AdminDashboardWeekSummary({
               Pacchetti in scadenza
             </Typography>
             <Typography variant="h5" color="text.primary">
-              {weeklyStats.packagesCount.paid}/{weeklyStats.packagesCount.expiring}
+              {periodStats.packagesCount.paid}/{periodStats.packagesCount.expiring}
             </Typography>
           </Box>
         </Grid>
@@ -223,7 +221,7 @@ function AdminDashboardWeekSummary({
             Da incassare
           </Typography>
           <Typography variant="h5" color="text.primary">
-            €{weeklyStats.pendingAmount.toFixed(2)}
+            €{periodStats.pendingAmount.toFixed(2)}
           </Typography>
         </Grid>
 
@@ -233,7 +231,7 @@ function AdminDashboardWeekSummary({
             Pagamenti
           </Typography>
           <Typography variant="h5" color="text.primary">
-            €{weeklyStats.payments.toFixed(2)}
+            €{periodStats.payments.toFixed(2)}
           </Typography>
         </Grid>
 
@@ -247,7 +245,7 @@ function AdminDashboardWeekSummary({
             color="primary.main"
             fontWeight="bold"
           >
-            €{weeklyStats.profit.toFixed(2)}
+            €{periodStats.profit.toFixed(2)}
           </Typography>
         </Grid>
 

@@ -1,4 +1,4 @@
-// src/components/dashboard/ProfessorWeeklyTable.jsx
+// Modifiche a ProfessorWeeklyTable.jsx
 import React from 'react';
 import {
   Box,
@@ -25,6 +25,14 @@ function ProfessorWeeklyTable({
   totalProfessorPayments,
   handleProfessorClick
 }) {
+  // Determina se siamo in vista mensile
+  const isMonthView = currentWeekStart && endOfWeek && 
+                     (endOfWeek.getMonth() === currentWeekStart.getMonth() && 
+                      endOfWeek.getDate() > 28);
+                      
+  // Titolo dinamico in base alla vista
+  const tableTitle = isMonthView ? "Riepilogo Mese Selezionato" : "Riepilogo Settimana Selezionata";
+
   // Ordina i professori alfabeticamente per nome e poi per cognome
   const sortedProfessors = [...professorWeeklyData].sort((a, b) => {
     // Prima confronta per nome
@@ -35,7 +43,7 @@ function ProfessorWeeklyTable({
 
   // Calcola il totale delle ore
   const totalHours = professorWeeklyData.reduce((total, prof) => {
-    // Prendi le ore dalle lezioni settimanali del professore
+    // Prendi le ore dalle lezioni del periodo del professore
     const professorsHours = prof.weeklyLessons.reduce((sum, lesson) => 
       sum + parseFloat(lesson.duration), 0);
     return total + professorsHours;
@@ -45,7 +53,7 @@ function ProfessorWeeklyTable({
     <Paper sx={{ p: 2, height: '100%', mb: 2 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6">
-          Riepilogo Settimana Selezionata
+          {tableTitle}
         </Typography>
         <Box display="flex" alignItems="center">
         </Box>
@@ -53,7 +61,7 @@ function ProfessorWeeklyTable({
 
       {sortedProfessors.length === 0 ? (
         <Typography align="center" color="text.secondary" sx={{ py: 3 }}>
-          Nessun professore attivo questa settimana
+          Nessun professore attivo in {isMonthView ? "questo mese" : "questa settimana"}
         </Typography>
       ) : (
         <TableContainer sx={{ mb: 2 }}>

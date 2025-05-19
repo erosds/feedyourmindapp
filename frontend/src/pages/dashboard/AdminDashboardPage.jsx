@@ -1,3 +1,4 @@
+// Modifiche a AdminDashboardPage.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -19,8 +20,8 @@ import {
   addMinutes,
   startOfMonth,
   endOfMonth,
-  startOfYear,
-  endOfYear,
+  addMonths,
+  subMonths,
   format,
 } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -32,8 +33,9 @@ import { useAuth } from '../../context/AuthContext';
 import ProfessorWeeklyTable from '../../components/dashboard/ProfessorWeeklyTable';
 import AdminDashboardCalendar from '../../components/dashboard/AdminDashboardCalendar';
 import AdminDashboardSummary from '../../components/dashboard/AdminDashboardSummary';
-import AdminDashboardWeekSummary from '../../components/dashboard/AdminDashboardWeekSummary'; // New import
+import AdminDashboardWeekSummary from '../../components/dashboard/AdminDashboardWeekSummary';
 import DayProfessorsDialog from '../../components/dashboard/DayProfessorsDialog';
+import ViewToggleComponent from '../../components/dashboard/ViewToggleComponent';
 
 function AdminDashboardPage() {
   const { isAdmin } = useAuth();
@@ -46,8 +48,13 @@ function AdminDashboardPage() {
   const [packages, setPackages] = useState([]);
   const [professors, setProfessors] = useState([]);
 
+  // View mode state (week or month)
+  const [viewMode, setViewMode] = useState('week');
+
   // Week and period selection state
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  // Month selection state
+  const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [periodFilter, setPeriodFilter] = useState('week');
   const [currentTab, setCurrentTab] = useState(0);
   const [periodStartDate, setPeriodStartDate] = useState(null);
@@ -92,37 +99,16 @@ function AdminDashboardPage() {
     fetchAllData();
   }, []);
 
-  // Update period dates when filter or week changes
+  // Update period dates when filter or period changes
   useEffect(() => {
-    let startDate, endDate;
-
-    switch (periodFilter) {
-      case 'week':
-        startDate = currentWeekStart;
-        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
-        break;
-      case 'month':
-        startDate = startOfMonth(new Date());
-        endDate = endOfMonth(new Date());
-        break;
-      case 'lastMonth':
-        const lastMonth = new Date();
-        lastMonth.setMonth(lastMonth.getMonth() - 1);
-        startDate = startOfMonth(lastMonth);
-        endDate = endOfMonth(lastMonth);
-        break;
-      case 'year':
-        startDate = startOfYear(new Date());
-        endDate = endOfYear(new Date());
-        break;
-      default:
-        startDate = currentWeekStart;
-        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+    if (viewMode === 'week') {
+      setPeriodStartDate(currentWeekStart);
+      setPeriodEndDate(endOfWeek(currentWeekStart, { weekStartsOn: 1 }));
+    } else if (viewMode === 'month') {
+      setPeriodStartDate(currentMonth);
+      setPeriodEndDate(endOfMonth(currentMonth));
     }
-
-    setPeriodStartDate(startDate);
-    setPeriodEndDate(endDate);
-  }, [periodFilter, currentWeekStart]);
+  }, [viewMode, currentWeekStart, currentMonth, periodFilter]);
 
   // Function to fetch professors (used for updates)
   const fetchProfessors = async () => {
@@ -142,6 +128,17 @@ function AdminDashboardPage() {
       setCurrentWeekStart(subWeeks(currentWeekStart, 1));
     } else if (direction === 'reset') {
       setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    }
+  };
+
+  // Month navigation handlers
+  const handleChangeMonth = (direction) => {
+    if (direction === 'next') {
+      setCurrentMonth(addMonths(currentMonth, 1));
+    } else if (direction === 'prev') {
+      setCurrentMonth(subMonths(currentMonth, 1));
+    } else if (direction === 'reset') {
+      setCurrentMonth(startOfMonth(new Date()));
     }
   };
 
@@ -271,14 +268,14 @@ function AdminDashboardPage() {
     });
   };
 
-  // Weekly lessons for professors table
-  const getCurrentWeekLessons = () => {
+  // Weekly or monthly lessons for professors table
+  const getCurrentPeriodLessons = () => {
     return lessons.filter(lesson => {
       try {
         const lessonDate = parseISO(lesson.lesson_date);
         return isWithinInterval(lessonDate, {
-          start: currentWeekStart,
-          end: endOfWeek(currentWeekStart, { weekStartsOn: 1 }),
+          start: periodStartDate,
+          end: periodEndDate,
         });
       } catch (err) {
         return false;
@@ -287,14 +284,16 @@ function AdminDashboardPage() {
   };
 
   // Computed values
-  const currentWeekLessons = getCurrentWeekLessons();
+  const currentPeriodLessons = getCurrentPeriodLessons();
   const periodLessons = getLessonsForPeriod();
-  const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+  const periodEnd = viewMode === 'week' ?
+    endOfWeek(currentWeekStart, { weekStartsOn: 1 }) :
+    endOfMonth(currentMonth);
 
-  // Calculate weekly data for professors
-  const professorWeeklyData = professors.map(professor => {
-    // Get lessons for this professor in current week
-    const professorLessons = currentWeekLessons.filter(
+  // Calculate weekly/monthly data for professors
+  const professorPeriodData = professors.map(professor => {
+    // Get lessons for this professor in current period
+    const professorLessons = currentPeriodLessons.filter(
       lesson => lesson.professor_id === professor.id
     );
 
@@ -326,11 +325,20 @@ function AdminDashboardPage() {
     };
   }).filter(Boolean); // Remove null entries (professors with no lessons)
 
-  // Total payments for all professors this week
-  const totalProfessorPayments = professorWeeklyData.reduce(
+  // Total payments for all professors this period
+  const totalProfessorPayments = professorPeriodData.reduce(
     (sum, prof) => sum + prof.totalPayment,
     0
   );
+
+  // Format current period for display
+  const formatPeriodHeader = () => {
+    if (viewMode === 'week') {
+      return `${format(currentWeekStart, "d MMMM yyyy", { locale: it })} - ${format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}`;
+    } else {
+      return format(currentMonth, "MMMM yyyy", { locale: it });
+    }
+  };
 
   // Loading and error states
   if (loading) {
@@ -349,13 +357,22 @@ function AdminDashboardPage() {
     );
   }
 
+  // Handle period change
+  const handlePeriodChange = (direction) => {
+    if (viewMode === 'week') {
+      handleChangeWeek(direction);
+    } else {
+      handleChangeMonth(direction);
+    }
+  };
+
   return (
     <Box>
       <Typography variant="h4" gutterBottom mb={3}>
         Dashboard Amministrazione
       </Typography>
 
-      {/* Week selector header */}
+      {/* Week/Month selector header */}
       <Card sx={{ mb: 1, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
         <Box
           sx={{
@@ -366,56 +383,59 @@ function AdminDashboardPage() {
             p: 2
           }}
         >
-          <Typography
-            variant="subtitle1"
-            sx={{
-              fontWeight: 'bold',
-              color: 'primary.contrastText',
-              fontSize: '1.2rem',
-              mb: { xs: 2, sm: 0 }
-            }}
-          >
-            {format(currentWeekStart, "d MMMM yyyy", { locale: it })} -
-            {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), " d MMMM yyyy", { locale: it })}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 2, sm: 0 } }}>
+            <ViewToggleComponent viewMode={viewMode} setViewMode={setViewMode} />
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 'bold',
+                color: 'primary.contrastText',
+                fontSize: '1.2rem'
+              }}
+            >
+              {formatPeriodHeader()}
+            </Typography>
+          </Box>
 
-          <ButtonGroup size="small" sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}>
-            <Button
-              onClick={() => handleChangeWeek('prev')}
-              sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
-            >
-              Precedente
-            </Button>
-            <Button
-              onClick={() => handleChangeWeek('reset')}
-              sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
-            >
-              Corrente
-            </Button>
-            <Button
-              onClick={() => handleChangeWeek('next')}
-              sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
-            >
-              Successiva
-            </Button>
-          </ButtonGroup>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <ButtonGroup size="small" sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}>
+              <Button
+                onClick={() => handlePeriodChange('prev')}
+                sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+              >
+                Precedente
+              </Button>
+              <Button
+                onClick={() => handlePeriodChange('reset')}
+                sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+              >
+                Corrente
+              </Button>
+              <Button
+                onClick={() => handlePeriodChange('next')}
+                sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+              >
+                Successiva
+              </Button>
+            </ButtonGroup>
+          </Box>
         </Box>
       </Card>
 
-      {/* New Weekly Financial Summary Component */}
+      {/* Weekly/Monthly Financial Summary Component */}
       <AdminDashboardWeekSummary
-        currentWeekStart={currentWeekStart}
-        weekEnd={weekEnd}
+        currentWeekStart={periodStartDate}
+        weekEnd={periodEnd}
         allLessons={lessons}
         allPackages={packages}
-        professorWeeklyData={professorWeeklyData}
+        professorWeeklyData={professorPeriodData}
       />
 
       <Grid container spacing={1}>
         {/* Calendar showing professors for each day */}
         <Grid item xs={12}>
           <AdminDashboardCalendar
-            currentWeekStart={currentWeekStart}
+            currentWeekStart={viewMode === 'week' ? currentWeekStart : currentMonth}
             getProfessorsForDay={getProfessorsForDay}
             handleProfessorClick={handleProfessorClick}
             handleDayClick={handleDayClick}
@@ -423,13 +443,13 @@ function AdminDashboardPage() {
           />
         </Grid>
 
-        {/* Weekly professors summary table */}
+        {/* Weekly/Monthly professors summary table */}
         <Grid item xs={12} md={6}>
           <ProfessorWeeklyTable
-            currentWeekStart={currentWeekStart}
-            endOfWeek={endOfWeek}
+            currentWeekStart={periodStartDate}
+            endOfWeek={periodEnd}
             navigateToManageProfessors={navigateToManageProfessors}
-            professorWeeklyData={professorWeeklyData}
+            professorWeeklyData={professorPeriodData}
             totalProfessorPayments={totalProfessorPayments}
             handleProfessorClick={handleProfessorClick}
           />
@@ -438,8 +458,8 @@ function AdminDashboardPage() {
         {/* Financial summary and stats */}
         <Grid item xs={12} md={6}>
           <AdminDashboardSummary
-            currentWeekStart={currentWeekStart}
-            professorWeeklyData={professorWeeklyData}
+            currentWeekStart={periodStartDate}
+            professorWeeklyData={professorPeriodData}
             professors={professors}
             periodFilter={periodFilter}
             setPeriodFilter={setPeriodFilter}
