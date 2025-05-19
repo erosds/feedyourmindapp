@@ -252,7 +252,7 @@ function AdminDashboardSummary({
       <Card>
         <CardContent>
           <Typography variant="h6" mb={3} gutterBottom>
-            Riepilogo da incassare
+            Collegamenti Rapidi
           </Typography>
 
           <Grid container spacing={2}>
