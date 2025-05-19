@@ -11,8 +11,6 @@ import {
   MenuItem,
   Paper,
   Select,
-  Tab,
-  Tabs,
   Typography,
 } from '@mui/material';
 import { activityService } from '../../services/api';
@@ -29,12 +27,11 @@ function ActivityLogPage() {
   const [error, setError] = useState(null);
   const [usersActivity, setUsersActivity] = useState([]);
   const [timeRange, setTimeRange] = useState(30); // Default: 30 giorni
-  const [currentTab, setCurrentTab] = useState(0);
-
-  // Aggiungi questo stato all'inizio del componente
+  
+  // Stato per ordinamento
   const [sortOrder, setSortOrder] = useState('recent'); // 'recent' o 'alphabetical'
 
-  // Aggiungi questa funzione per gestire l'ordinamento
+  // Funzione per ordinare gli utenti
   const getSortedUsers = () => {
     if (sortOrder === 'alphabetical') {
       return [...usersActivity].sort((a, b) =>
@@ -66,7 +63,7 @@ function ActivityLogPage() {
 
         // Carica i dati aggregati per utente
         const response = await activityService.getUsersActivity({
-          limit_per_user: 3, // Mostra le 10 attività più recenti per ogni utente
+          limit_per_user: 3, // Mostra le 3 attività più recenti per ogni utente
           days: timeRange,  // Ultimi X giorni
         });
 
@@ -87,17 +84,8 @@ function ActivityLogPage() {
     setTimeRange(event.target.value);
   };
 
-  // Handler per il cambio di tab
-  const handleTabChange = (event, newValue) => {
-    setCurrentTab(newValue);
-  };
-
-  // Ordina gli utenti per numero di attività (decrescente)
+  // Ottieni tutti gli utenti attivi
   const activeUsers = getSortedUsers().filter(user => user.activities_count > 0);
-
-
-  // Filtra gli utenti inattivi (nessuna attività nel periodo)
-  const inactiveUsers = usersActivity.filter(user => user.activities_count === 0);
 
   if (loading) {
     return (
@@ -132,21 +120,6 @@ function ActivityLogPage() {
             width: '100%'
           }}
         >
-          <Tabs
-            value={currentTab}
-            onChange={handleTabChange}
-            indicatorColor="primary"
-            textColor="primary"
-            sx={{
-              mb: { xs: 2, sm: 0 },
-              width: { xs: '100%', sm: 'auto' }
-            }}
-            variant="fullWidth"
-          >
-            <Tab label="Utenti attivi" />
-            <Tab label="Utenti inattivi" />
-          </Tabs>
-
           <Box sx={{
             display: 'flex',
             flexDirection: { xs: 'column', sm: 'row' },
@@ -194,56 +167,27 @@ function ActivityLogPage() {
 
         <Divider sx={{ mb: 3 }} />
 
-        {currentTab === 0 ? (
-          <Grid container spacing={2}>
-            {activeUsers.length > 0 ? (
-              activeUsers.map((userData) => (
-                <Grid item xs={12} key={userData.professor_id}>
-                  <ActivitySummaryCard
-                    activityData={userData}
-                    maxItems={3}
-                    showViewAll={true}
-                  />
-                </Grid>
-              ))
-            ) : (
-              <Grid item xs={12}>
-                <Box py={4} textAlign="center">
-                  <Typography variant="body1" color="text.secondary">
-                    Nessun utente attivo nel periodo selezionato
-                  </Typography>
-                </Box>
+        <Grid container spacing={2}>
+          {activeUsers.length > 0 ? (
+            activeUsers.map((userData) => (
+              <Grid item xs={12} key={userData.professor_id}>
+                <ActivitySummaryCard
+                  activityData={userData}
+                  maxItems={3}
+                  showViewAll={true}
+                />
               </Grid>
-            )}
-          </Grid>
-        ) : (
-          <Box>
-            {inactiveUsers.length > 0 ? (
-              <Grid container spacing={2}>
-                {inactiveUsers.map((userData) => (
-                  <Grid item xs={12} sm={6} md={3} key={userData.professor_id}>
-                    <Card sx={{ p: 2 }}>
-                      <Box display="flex" alignItems="center" mb={1}>
-                        <Typography variant="body1" fontWeight="medium">
-                          {userData.professor_name}
-                        </Typography>
-                      </Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Nessuna attività negli ultimi {timeRange} giorni
-                      </Typography>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            ) : (
+            ))
+          ) : (
+            <Grid item xs={12}>
               <Box py={4} textAlign="center">
                 <Typography variant="body1" color="text.secondary">
-                  Tutti gli utenti hanno avuto attività nel periodo selezionato
+                  Nessuna attività registrata nel periodo selezionato
                 </Typography>
               </Box>
-            )}
-          </Box>
-        )}
+            </Grid>
+          )}
+        </Grid>
       </Paper>
     </Box>
   );
