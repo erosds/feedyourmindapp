@@ -172,14 +172,21 @@ function PackageListPage() {
   };
 
   // State for sorting
-  const [order, setOrder] = useState('desc');
-  const [orderBy, setOrderBy] = useState('id');
+  const [order, setOrder] = useState(searchParams.get('order') || 'desc');
+  const [orderBy, setOrderBy] = useState(searchParams.get('orderBy') || 'id');
 
   // Function to handle sort request
   const handleRequestSort = (property) => {
     const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
+    const newOrder = isAsc ? 'desc' : 'asc';
+    setOrder(newOrder);
     setOrderBy(property);
+
+    // Aggiorna i parametri URL
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('order', newOrder);
+    newParams.set('orderBy', property);
+    setSearchParams(newParams);
   };
 
   // Aggiungi queste funzioni nel componente

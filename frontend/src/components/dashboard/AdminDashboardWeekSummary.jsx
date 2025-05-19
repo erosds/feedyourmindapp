@@ -144,7 +144,7 @@ function AdminDashboardWeekSummary({
     const endDateParam = format(weekEnd, 'yyyy-MM-dd');
 
     // Navigate to lessons page with date filter parameters
-    navigate(`/lessons?type=single&time=custom&startDate=${startDateParam}&endDate=${endDateParam}&isRange=true`);
+    navigate(`/lessons?type=single&time=custom&startDate=${startDateParam}&endDate=${endDateParam}&isRange=true&order=asc&orderBy=is_paid`);
   };
 
   const navigateToWeekExpiringPackages = () => {
@@ -153,7 +153,7 @@ function AdminDashboardWeekSummary({
     const endDateParam = format(weekEnd, 'yyyy-MM-dd');
 
     // Navigate to packages page with expiry date filter parameters
-    navigate(`/packages?expiry=custom&startDate=${startDateParam}&endDate=${endDateParam}&isRange=true`);
+    navigate(`/packages?expiry=custom&startDate=${startDateParam}&endDate=${endDateParam}&isRange=true&order=desc&orderBy=is_paid`);
   };
 
   return (

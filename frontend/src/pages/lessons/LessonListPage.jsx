@@ -99,8 +99,8 @@ function LessonListPage() {
   });
 
   // Sort states
-  const [order, setOrder] = useState('desc');
-  const [orderBy, setOrderBy] = useState('id');
+  const [order, setOrder] = useState(searchParams.get('order') || 'desc');
+  const [orderBy, setOrderBy] = useState(searchParams.get('orderBy') || 'id');
 
   // Aggiungi questo nuovo stato dopo gli altri stati di filtro
   const [lessonTypeFilter, setLessonTypeFilter] = useState(searchParams.get('type') || 'all');
@@ -340,8 +340,15 @@ function LessonListPage() {
   // Event handlers
   const handleRequestSort = (property) => {
     const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
+    const newOrder = isAsc ? 'desc' : 'asc';
+    setOrder(newOrder);
     setOrderBy(property);
+
+    // Aggiorna i parametri URL
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('order', newOrder);
+    newParams.set('orderBy', property);
+    setSearchParams(newParams);
   };
 
   const handleChangePage = (event, newPage) => {
