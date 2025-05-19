@@ -157,7 +157,7 @@ function AdminDashboardCalendar({
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+
   // Determina se visualizzare la vista mensile o settimanale
   const isMonthView = currentWeekStart && currentWeekStart.getDate() === 1;
 
@@ -265,7 +265,7 @@ function AdminDashboardCalendar({
             sx={{
               mb: 1,
               pb: 1,
-              borderBottom: '1px solid',
+              borderBottom: isMonthView ? 'none' : '1px solid',
               borderColor: 'divider',
               display: 'flex',
               justifyContent: 'space-between',
@@ -280,17 +280,24 @@ function AdminDashboardCalendar({
                 fontSize: isMonthView ? '0.85rem' : 'inherit',
               }}
             >
-              {isMonthView ? format(day, 'd') : `${weekdays[index]} ${format(day, 'd')}`}
+              {isMonthView ? (
+                // Per la vista mensile, mostra solo il numero in alto a destra
+                <Box sx={{
+                  fontWeight: isCurrentDay ? 'bold' : 'normal',
+                  textAlign: 'right',
+                  color: isCurrentDay ? 'primary.main' : 'text.primary',
+                  position: 'absolute',
+                  top: 2,
+                  right: 4,
+                  fontSize: '0.9rem'
+                }}>
+                  {format(day, 'd')}
+                </Box>
+              ) : (
+                // Per la vista settimanale, mantieni il formato originale
+                `${weekdays[index]} ${format(day, 'd')}`
+              )}
             </Typography>
-            {isCurrentDay && (
-              <Chip
-                label="Oggi"
-                size="small"
-                color="primary"
-                variant="outlined"
-                sx={{ height: 20 }}
-              />
-            )}
           </Box>
         )}
 
@@ -383,14 +390,14 @@ function AdminDashboardCalendar({
   const renderMonthGrid = () => {
     // Determina il giorno della settimana del primo giorno del mese (0 = domenica, 1 = lunedì, ..., 6 = sabato)
     const firstDayOfMonth = getDay(currentWeekStart);
-    
+
     // Adatta il valore per iniziare dal lunedì (0 = lunedì, ..., 6 = domenica)
     const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
-    
+
     // Crea la griglia con celle vuote all'inizio per allineare i giorni correttamente
     const emptyDays = Array(adjustedFirstDay).fill(null);
     const allDaysWithEmpty = [...emptyDays, ...daysOfPeriod];
-    
+
     return (
       <Grid container spacing={1}>
         {/* Intestazione con i giorni della settimana */}
@@ -410,7 +417,7 @@ function AdminDashboardCalendar({
             </Paper>
           </Grid>
         ))}
-        
+
         {/* Celle dei giorni */}
         {allDaysWithEmpty.map((day, index) => (
           <Grid item xs={12 / 7} key={`day-${index}`}>

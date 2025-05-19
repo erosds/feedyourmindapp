@@ -1060,7 +1060,7 @@ function PaymentCalendarPage() {
                           position: 'absolute',
                           top: 2,
                           right: 4,
-                          fontSize: '0.8rem'
+                          fontSize: '0.9rem'
                         }}
                       >
                         {format(day, 'd')}
@@ -1133,7 +1133,7 @@ function PaymentCalendarPage() {
                               fontSize: '0.7rem',
                               mb: 1,
                               lineHeight: 1,
-                              mt: hasPayments ? 0 : 1 // mantieni il margine se non ci sono pagamenti
+                              mt: hasPayments ? 0 : 1.5 // mantieni il margine se non ci sono pagamenti
                             }}
                           >
                             {/* Mostra sempre le informazioni sui pagamenti, in grassetto solo se viewMode === 'payments' */}
