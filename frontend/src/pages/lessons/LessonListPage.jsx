@@ -37,8 +37,8 @@ import {
 } from '@mui/icons-material';
 import { lessonService, studentService, professorService } from '../../services/api';
 import {
-  format, parseISO, isToday, isThisWeek, isThisMonth, isAfter, isBefore,
-  startOfWeek, endOfWeek, addWeeks, subWeeks, startOfDay, endOfDay
+  format, parseISO, isToday, isThisWeek, isThisMonth, isAfter, isBefore, isEqual,
+  startOfWeek, endOfWeek, addWeeks, subWeeks, startOfDay, endOfDay, isWithinInterval
 } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuth } from '../../context/AuthContext';
@@ -295,15 +295,15 @@ function LessonListPage() {
           case 'custom': {
             // Per date personalizzate
             if (dateRange.isRange) {
-              // Per un range, verifica se la lezione è tra le date di inizio e fine
-              const startOfRange = startOfDay(dateRange.startDate);
-              const endOfRange = endOfDay(dateRange.endDate);
-              return isAfter(lessonDate, startOfRange) && isBefore(lessonDate, endOfRange);
+              return isWithinInterval(lessonDate, {
+                start: startOfDay(dateRange.startDate),
+                end: endOfDay(dateRange.endDate)
+              });
             } else {
-              // Per un singolo giorno, verifica se la lezione è in quel giorno
-              const startOfSelected = startOfDay(dateRange.startDate);
-              const endOfSelected = endOfDay(dateRange.startDate);
-              return isAfter(lessonDate, startOfSelected) && isBefore(lessonDate, endOfSelected);
+              return isWithinInterval(lessonDate, {
+                start: startOfDay(dateRange.startDate),
+                end: endOfDay(dateRange.startDate)
+              });
             }
           }
           default:
@@ -347,7 +347,7 @@ function LessonListPage() {
     if (newPage !== page) {
       setPage(newPage);
     }
-  }, [searchTerm, lessons, students, professors, timeFilter, paymentFilter, order, orderBy]);
+  }, [searchTerm, lessons, students, professors, timeFilter, paymentFilter, order, orderBy, dateRange]);
 
   // Aggiorna i gestori degli eventi per modificare anche l'URL
   const handleChangePage = (event, newPage) => {
@@ -398,17 +398,38 @@ function LessonListPage() {
 
   const handleTimeFilterChange = (event) => {
     const value = event.target.value;
-    setTimeFilter(value);
-    updateSearchParams('time', value);
 
     // Se si seleziona "custom", apri il dialog di selezione date
     if (value === 'custom') {
+      setTimeFilter(value);
       setDateRangeDialogOpen(true);
+      updateSearchParams('time', value);
     } else {
       // Rimuovi i parametri di data personalizzati dall'URL se non si usa "custom"
-      updateSearchParams('startDate', '');
-      updateSearchParams('endDate', '');
-      updateSearchParams('isRange', '');
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('startDate');
+      newParams.delete('endDate');
+      newParams.delete('isRange');
+
+      // Aggiungi il nuovo valore per time, ma solo se non è 'all'
+      if (value !== 'all') {
+        newParams.set('time', value);
+      } else {
+        newParams.delete('time');
+      }
+
+      // Imposta i nuovi parametri URL
+      setSearchParams(newParams);
+
+      // Aggiorna lo stato del filtro dopo aver pulito i parametri
+      setTimeFilter(value);
+
+      // Reset anche dello stato locale dateRange quando si passa a filtri non personalizzati
+      setDateRange({
+        startDate: new Date(),
+        endDate: new Date(),
+        isRange: false
+      });
     }
   };
 
@@ -465,7 +486,7 @@ function LessonListPage() {
           });
 
           // Assicurati che timeFilter sia impostato su custom se ci sono date presenti
-          if (searchParams.get('time') !== 'custom') {
+          if (timeFilter !== 'custom') {
             setTimeFilter('custom');
           }
         }
@@ -512,7 +533,6 @@ function LessonListPage() {
       state: { returnUrl: `${location.pathname}${location.search}` }
     });
   };
-
 
   const handleEditLesson = (id, event) => {
     event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
@@ -589,8 +609,6 @@ function LessonListPage() {
       setPaymentDialogOpen(true);
     }
   };
-
-
 
   const handleDeleteLesson = async (id, event) => {
     event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
@@ -713,7 +731,7 @@ function LessonListPage() {
                           }}
                           edge="end"
                         >
-                          <CalendarIcon fontSize="small"/>
+                          <CalendarIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     </InputAdornment>
