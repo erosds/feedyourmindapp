@@ -484,11 +484,16 @@ function PaymentCalendarPage() {
         );
 
         // Filtra anche i pacchetti in scadenza questa settimana (ancora attivi)
-        const expiringPackagesData = packagesResponse.data.filter(pkg =>
-          !pkg.is_paid &&
-          pkg.status === 'in_progress' &&
-          isPackageExpiring(pkg)
-        );
+        const expiringPackagesData = packagesResponse.data.filter(pkg => {
+          const expiryDate = parseISO(pkg.expiry_date);
+          return (
+            !pkg.is_paid &&
+            pkg.status === 'in_progress' &&
+            isPackageExpiring(pkg) &&
+            expiryDate >= monthStart && expiryDate <= monthEnd
+          );
+        });
+
 
         // Formatta i pacchetti scaduti
         const formattedExpiredPackages = [

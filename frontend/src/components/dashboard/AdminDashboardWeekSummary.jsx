@@ -167,54 +167,6 @@ function AdminDashboardWeekSummary({
           </Typography>
         </Grid>
 
-        {/* Statistiche lezioni periodo - Make this clickable */}
-        <Grid item xs={12} sm={6} md={2}>
-          <Box
-            onClick={navigateToPeriodLessons}
-            sx={{
-              cursor: 'pointer',
-              borderRadius: 1,
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                backgroundColor: 'rgba(0,0,0,0.04)',
-                transform: 'translateY(-2px)',
-                boxShadow: 1
-              }
-            }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              Lezioni singole
-            </Typography>
-            <Typography variant="h5" color="text.primary">
-              {periodStats.lessonsCount.paid}/{periodStats.lessonsCount.total}
-            </Typography>
-          </Box>
-        </Grid>
-
-        {/* Statistiche pacchetti in scadenza */}
-        <Grid item xs={12} sm={6} md={2.5}>
-          <Box
-            onClick={navigateToPeriodExpiringPackages}
-            sx={{
-              cursor: 'pointer',
-              borderRadius: 1,
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                backgroundColor: 'rgba(0,0,0,0.04)',
-                transform: 'translateY(-2px)',
-                boxShadow: 1
-              }
-            }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              Pacchetti in scadenza
-            </Typography>
-            <Typography variant="h5" color="text.primary">
-              {periodStats.packagesCount.paid}/{periodStats.packagesCount.expiring}
-            </Typography>
-          </Box>
-        </Grid>
-
         {/* Pending Payments */}
         <Grid item xs={12} sm={6} md={2}>
           <Typography variant="body2" color="text.secondary">
@@ -242,11 +194,58 @@ function AdminDashboardWeekSummary({
           </Typography>
           <Typography
             variant="h5"
-            color="primary.main"
-            fontWeight="bold"
+            color="text.primary"
           >
             €{periodStats.profit.toFixed(2)}
           </Typography>
+        </Grid>
+
+        {/* Statistiche lezioni periodo - Make this clickable */}
+        <Grid item xs={12} sm={6} md={2}>
+          <Box
+            onClick={navigateToPeriodLessons}
+            sx={{
+              cursor: 'pointer',
+              borderRadius: 1,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.04)',
+                transform: 'translateY(-2px)',
+                boxShadow: 1
+              }
+            }}
+          >
+            <Typography variant="body2" color="primary.main">
+              Lezioni singole
+            </Typography>
+            <Typography variant="h5" color="text.primary">
+              {periodStats.lessonsCount.paid}/{periodStats.lessonsCount.total}
+            </Typography>
+          </Box>
+        </Grid>
+
+        {/* Statistiche pacchetti in scadenza */}
+        <Grid item xs={12} sm={6} md={2.5}>
+          <Box
+            onClick={navigateToPeriodExpiringPackages}
+            sx={{
+              cursor: 'pointer',
+              borderRadius: 1,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.04)',
+                transform: 'translateY(-2px)',
+                boxShadow: 1
+              }
+            }}
+          >
+            <Typography variant="body2" color="primary.main">
+              Pacchetti in scadenza
+            </Typography>
+            <Typography variant="h5" color="text.primary">
+              {periodStats.packagesCount.paid}/{periodStats.packagesCount.expiring}
+            </Typography>
+          </Box>
         </Grid>
 
       </Grid>
