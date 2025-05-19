@@ -184,7 +184,7 @@ function AdminDashboardWeekSummary({
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              Lezioni saldate
+              Lezioni (saldate/totali)
             </Typography>
             <Typography variant="h5" color="text.primary">
               {weeklyStats.lessonsCount.paid}/{weeklyStats.lessonsCount.total}
@@ -208,7 +208,7 @@ function AdminDashboardWeekSummary({
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              Pacchetti saldati
+              Pacchetti (saldati/in scadenza)
             </Typography>
             <Typography variant="h5" color="text.primary">
               {weeklyStats.packagesCount.paid}/{weeklyStats.packagesCount.expiring}
