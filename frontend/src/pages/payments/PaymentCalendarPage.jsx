@@ -181,6 +181,24 @@ function PaymentCalendarPage() {
     return professors[professorId] || `Professore #${professorId}`;
   };
 
+  const isPackageExpiring = (pkg) => {
+    const expiryDate = parseISO(pkg.expiry_date);
+
+    // Ottieni il lunedì della settimana corrente
+    const today = new Date();
+    const dayOfWeek = today.getDay() || 7; // 0 per domenica, trasformato in 7
+    const mondayThisWeek = new Date(today);
+    mondayThisWeek.setDate(today.getDate() - dayOfWeek + 1); // Lunedì della settimana corrente
+    mondayThisWeek.setHours(0, 0, 0, 0); // Inizio della giornata
+
+    // Ottieni il lunedì della settimana prossima (7 giorni dopo)
+    const mondayNextWeek = new Date(mondayThisWeek);
+    mondayNextWeek.setDate(mondayThisWeek.getDate() + 7);
+
+    // Controlla se scade tra lunedì di questa settimana e lunedì della prossima
+    return expiryDate > mondayThisWeek && expiryDate <= mondayNextWeek;
+  };
+
   // Modifica questo useEffect
   useEffect(() => {
     const fetchData = async () => {
@@ -461,17 +479,37 @@ function PaymentCalendarPage() {
           pkg.expiry_date <= endDateStr
         );
 
+        // Filtra anche i pacchetti in scadenza questa settimana (ancora attivi)
+        const expiringPackagesData = packagesResponse.data.filter(pkg =>
+          !pkg.is_paid &&
+          pkg.status === 'in_progress' &&
+          isPackageExpiring(pkg)
+        );
+
         // Formatta i pacchetti scaduti
-        const formattedExpiredPackages = expiredPackagesData.map(pkg => ({
-          id: `expired-${pkg.id}`,
-          type: 'expired-package',
-          typeId: pkg.id,
-          date: pkg.expiry_date,
-          student_id: pkg.student_ids?.[0] || null,
-          amount: parseFloat(pkg.package_cost || 0),
-          hours: parseFloat(pkg.total_hours || 0),
-          studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
-        }));
+        const formattedExpiredPackages = [
+          ...expiredPackagesData.map(pkg => ({
+            id: `expired-${pkg.id}`,
+            type: 'expired-package',
+            typeId: pkg.id,
+            date: pkg.expiry_date,
+            student_id: pkg.student_ids?.[0] || null,
+            amount: parseFloat(pkg.package_cost || 0),
+            hours: parseFloat(pkg.total_hours || 0),
+            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+          })),
+          // Aggiungi anche i pacchetti in scadenza, trattandoli come expired-package
+          ...expiringPackagesData.map(pkg => ({
+            id: `expiring-${pkg.id}`,
+            type: 'expired-package', // Usa lo stesso tipo per trattarli allo stesso modo
+            typeId: pkg.id,
+            date: pkg.expiry_date,
+            student_id: pkg.student_ids?.[0] || null,
+            amount: parseFloat(pkg.package_cost || 0),
+            hours: parseFloat(pkg.total_hours || 0),
+            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+          }))
+        ];
 
         setExpiredPackages(formattedExpiredPackages);
 
