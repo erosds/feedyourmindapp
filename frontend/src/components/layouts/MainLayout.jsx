@@ -81,8 +81,8 @@ function MainLayout() {
 
   if (isAdmin()) {
     menuItems = [
-      { text: 'Dashboard Admin', icon: <GridViewIcon />, path: '/admin-dashboard' },
       { text: 'Agenda Incassi', icon: <DateRangeIcon />, path: '/payments/calendar' }, // Aggiungi questa riga
+      { text: 'Dashboard Admin', icon: <GridViewIcon />, path: '/admin-dashboard' },
       { text: 'Dashboard Personale', icon: <DashboardIcon />, path: '/dashboard' },
       { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
