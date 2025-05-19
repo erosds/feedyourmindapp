@@ -1,15 +1,11 @@
 // src/components/dashboard/AdminDashboardWeekSummary.jsx
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
   Grid,
   Paper,
   Typography,
-  Divider,
-  Tooltip
 } from '@mui/material';
-import { parseISO, isWithinInterval, format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { format } from 'date-fns';
 
 function AdminDashboardWeekSummary({
   currentWeekStart,
@@ -138,13 +134,6 @@ function AdminDashboardWeekSummary({
     });
   };
 
-  // Funzione per creare testo tooltip per rapporti
-  const getRatioTooltip = (paid, total, type) => {
-    if (total === 0) return `Nessun ${type} questa settimana`;
-    const percentage = Math.round((paid / total) * 100);
-    return `${paid} ${type} pagati su ${total} (${percentage}%)`;
-  };
-
   return (
     <Paper sx={{ p: 2, mb: 1 }}>
       <Grid container spacing={2}>
@@ -163,11 +152,9 @@ function AdminDashboardWeekSummary({
           <Typography variant="body2" color="text.secondary">
             Lezioni saldate
           </Typography>
-          <Tooltip title={getRatioTooltip(weeklyStats.lessonsCount.paid, weeklyStats.lessonsCount.total, "lezioni")} arrow>
             <Typography variant="h5" color="text.primary">
               {weeklyStats.lessonsCount.paid}/{weeklyStats.lessonsCount.total}
             </Typography>
-          </Tooltip>
         </Grid>
 
         {/* NUOVO: Statistiche pacchetti in scadenza */}
@@ -175,11 +162,9 @@ function AdminDashboardWeekSummary({
           <Typography variant="body2" color="text.secondary">
             Pacchetti saldati
           </Typography>
-          <Tooltip title={getRatioTooltip(weeklyStats.packagesCount.paid, weeklyStats.packagesCount.expiring, "pacchetti")} arrow>
             <Typography variant="h5" color="text.primary">
               {weeklyStats.packagesCount.paid}/{weeklyStats.packagesCount.expiring}
             </Typography>
-          </Tooltip>
         </Grid>
 
         {/* Pending Payments */}
