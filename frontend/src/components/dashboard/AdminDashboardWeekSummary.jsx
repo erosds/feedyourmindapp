@@ -146,6 +146,15 @@ function AdminDashboardWeekSummary({
     navigate(`/lessons?time=custom&startDate=${startDateParam}&endDate=${endDateParam}&isRange=true`);
   };
 
+  const navigateToWeekExpiringPackages = () => {
+    // Format dates for URL parameters
+    const startDateParam = format(currentWeekStart, 'yyyy-MM-dd');
+    const endDateParam = format(weekEnd, 'yyyy-MM-dd');
+
+    // Navigate to packages page with expiry date filter parameters
+    navigate(`/packages?expiry=custom&startDate=${startDateParam}&endDate=${endDateParam}&isRange=true`);
+  };
+
   return (
     <Paper sx={{ p: 2, mb: 1 }}>
       <Grid container spacing={2}>
@@ -185,12 +194,26 @@ function AdminDashboardWeekSummary({
 
         {/* NUOVO: Statistiche pacchetti in scadenza */}
         <Grid item xs={12} sm={6} md={2}>
-          <Typography variant="body2" color="text.secondary">
-            Pacchetti saldati
-          </Typography>
-          <Typography variant="h5" color="text.primary">
-            {weeklyStats.packagesCount.paid}/{weeklyStats.packagesCount.expiring}
-          </Typography>
+          <Box
+            onClick={navigateToWeekExpiringPackages}
+            sx={{
+              cursor: 'pointer',
+              borderRadius: 1,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.04)',
+                transform: 'translateY(-2px)',
+                boxShadow: 1
+              }
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Pacchetti saldati
+            </Typography>
+            <Typography variant="h5" color="text.primary">
+              {weeklyStats.packagesCount.paid}/{weeklyStats.packagesCount.expiring}
+            </Typography>
+          </Box>
         </Grid>
 
         {/* Pending Payments */}
