@@ -16,7 +16,6 @@ import {
   TablePagination,
   TableRow,
   TextField,
-  Tooltip,
   Typography,
   FormControlLabel,
   Switch,
@@ -26,6 +25,11 @@ import {
   FormControl,
   InputLabel,
   Grid,
+  Tooltip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -33,37 +37,36 @@ import {
   Search as SearchIcon,
   Today as TodayIcon,
   Payment as PaymentIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  CalendarMonth as CalendarIcon,
 } from '@mui/icons-material';
 import { lessonService, studentService, professorService } from '../../services/api';
 import {
-  format, parseISO, isToday, isThisWeek, isThisMonth, isAfter, isBefore, isEqual,
-  startOfWeek, endOfWeek, addWeeks, subWeeks, startOfDay, endOfDay, isWithinInterval
+  format, parseISO, isToday, isThisWeek, isWithinInterval,
+  startOfDay, endOfDay,
 } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuth } from '../../context/AuthContext';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
 import { DatePicker } from '@mui/x-date-pickers';
 import DateRangePickerDialog from '../../components/common/DateRangePickerDialog';
-import { CalendarMonth as CalendarIcon } from '@mui/icons-material';
 
 function LessonListPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser, isAdmin } = useAuth();
+
+  // Main data states
   const [lessons, setLessons] = useState([]);
   const [students, setStudents] = useState({});
   const [professors, setProfessors] = useState({});
+  const [filteredLessons, setFilteredLessons] = useState([]);
+
+  // UI states
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
-  const [filteredLessons, setFilteredLessons] = useState([]);
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [selectedLesson, setSelectedLesson] = useState(null);
-  const [paymentDate, setPaymentDate] = useState(new Date());
+
+  // Filter states
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(parseInt(searchParams.get('page') || '0', 10));
   const [rowsPerPage, setRowsPerPage] = useState(parseInt(searchParams.get('rows') || '10', 10));
@@ -74,143 +77,32 @@ function LessonListPage() {
     searchParams.get('mine') === 'true' || (!isAdmin())
   );
 
-  // Stato per l'ordinamento
-  const [order, setOrder] = useState('desc');
-  const [orderBy, setOrderBy] = useState('id');
+  // Payment dialog states
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState(null);
+  const [paymentDate, setPaymentDate] = useState(new Date());
 
-  // Funzione per gestire la richiesta di cambio dell'ordinamento
-  const handleRequestSort = (property) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
-    setOrderBy(property);
-  };
-
-  // Stato per il dialog di selezione date
+  // Custom date filter states
   const [dateRangeDialogOpen, setDateRangeDialogOpen] = useState(false);
-
-  // Stato per il range di date (inizializzato dai parametri URL o con valori predefiniti)
   const [dateRange, setDateRange] = useState(() => {
-    // Legge il range di date dall'URL se esiste
     const startDateStr = searchParams.get('startDate');
     const endDateStr = searchParams.get('endDate');
     const isRange = searchParams.get('isRange') === 'true';
 
-    // Default a oggi se non ci sono date nell'URL
-    const today = new Date();
-
     return {
-      startDate: startDateStr ? parseISO(startDateStr) : today,
-      endDate: endDateStr ? parseISO(endDateStr) : today,
+      startDate: startDateStr ? parseISO(startDateStr) : new Date(),
+      endDate: endDateStr ? parseISO(endDateStr) : new Date(),
       isRange: isRange
     };
   });
 
-  // Funzione per formattare le date da visualizzare
-  const formatDateForDisplay = () => {
-    if (timeFilter === 'custom') {
-      if (dateRange.isRange) {
-        return `${format(dateRange.startDate, 'dd/MM/yyyy')} - ${format(dateRange.endDate, 'dd/MM/yyyy')}`;
-      } else {
-        return format(dateRange.startDate, 'dd/MM/yyyy');
-      }
-    }
-    return '';
-  };
+  // Sort states
+  const [order, setOrder] = useState('desc');
+  const [orderBy, setOrderBy] = useState('id');
 
-  // Gestisce la selezione del range di date
-  const handleDateRangeSelected = (newDateRange) => {
-    setDateRange(newDateRange);
-
-    // Aggiorna l'URL con il nuovo range di date
-    if (newDateRange.isRange) {
-      updateSearchParams('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
-      updateSearchParams('endDate', format(newDateRange.endDate, 'yyyy-MM-dd'));
-      updateSearchParams('isRange', 'true');
-    } else {
-      updateSearchParams('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
-      updateSearchParams('endDate', ''); // Assicurati che endDate sia rimosso se non è un range
-      updateSearchParams('isRange', 'false');
-    }
-
-    // Imposta anche il filtro time su 'custom'
-    updateSearchParams('time', 'custom');
-  }
-
-  // Gestione dei filtri iniziali che arrivano dalla dashboard
-  useEffect(() => {
-    if (location.state) {
-      // Se c'è un filtro iniziale impostato dalla dashboard, applicalo
-      if (location.state.initialFilter === 'unpaid') {
-        // Imposta il filtro per le lezioni non pagate
-        setPaymentFilter('unpaid');
-      }
-    }
-  }, [location.state]);
-
-  // Funzione helper per l'ordinamento stabile
-  const descendingComparator = (a, b, orderBy) => {
-    // Casi speciali per i formati di data e ora
-    if (orderBy === 'lesson_date') {
-      return new Date(b.lesson_date) - new Date(a.lesson_date);
-    }
-    if (orderBy === 'start_time') {
-      // Per gli orari, convertire a minuti per facilitare il confronto
-      const timeA = a.start_time ? a.start_time.substring(0, 5).split(':') : ['00', '00'];
-      const timeB = b.start_time ? b.start_time.substring(0, 5).split(':') : ['00', '00'];
-      const minutesA = parseInt(timeA[0]) * 60 + parseInt(timeA[1]);
-      const minutesB = parseInt(timeB[0]) * 60 + parseInt(timeB[1]);
-      return minutesB - minutesA;
-    }
-    // Per i campi numerici
-    if (orderBy === 'duration' || orderBy === 'hourly_rate' || orderBy === 'total_payment') {
-      return parseFloat(b[orderBy]) - parseFloat(a[orderBy]);
-    }
-    // Per i campi stringa nel caso di professor_id e student_id, usa il nome mappato
-    if (orderBy === 'professor_id') {
-      return (professors[b.professor_id] || '').localeCompare(professors[a.professor_id] || '');
-    }
-    if (orderBy === 'student_id') {
-      return (students[b.student_id] || '').localeCompare(students[a.student_id] || '');
-    }
-    // Per il campo is_package
-    if (orderBy === 'is_package') {
-      return (b.is_package === a.is_package) ? 0 : b.is_package ? -1 : 1;
-    }
-    // Per il campo is_paid
-    if (orderBy === 'is_paid') {
-      return (b.is_paid === a.is_paid) ? 0 : b.is_paid ? -1 : 1;
-    }
-    // Per altri campi
-    if (b[orderBy] < a[orderBy]) {
-      return -1;
-    }
-    if (b[orderBy] > a[orderBy]) {
-      return 1;
-    }
-    return 0;
-  };
-
-  const getComparator = (order, orderBy) => {
-    return order === 'desc'
-      ? (a, b) => descendingComparator(a, b, orderBy)
-      : (a, b) => -descendingComparator(a, b, orderBy);
-  };
-
-  // Funzione per ordinare in modo stabile
-  const stableSort = (array, comparator) => {
-    const stabilizedThis = array.map((el, index) => [el, index]);
-    stabilizedThis.sort((a, b) => {
-      const order = comparator(a[0], b[0]);
-      if (order !== 0) return order;
-      return a[1] - b[1];
-    });
-    return stabilizedThis.map((el) => el[0]);
-  };
-
-  // Funzione per aggiornare le lezioni
+  // Fetch lessons based on filters
   const fetchLessons = async () => {
     try {
-      // Carica tutte le lezioni o solo quelle del professore corrente
       let lessonsData;
       if (isAdmin() && !showOnlyMine) {
         const lessonsResponse = await lessonService.getAll();
@@ -226,17 +118,18 @@ function LessonListPage() {
     }
   };
 
+  // Load initial data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Carica le lezioni
+        // Load lessons
         const lessonsData = await fetchLessons();
         setLessons(lessonsData);
         setFilteredLessons(lessonsData);
 
-        // Carica tutti gli studenti per mostrare i loro nomi
+        // Load students
         const studentsResponse = await studentService.getAll();
         const studentsMap = {};
         studentsResponse.data.forEach(student => {
@@ -244,7 +137,7 @@ function LessonListPage() {
         });
         setStudents(studentsMap);
 
-        // Carica tutti i professori per mostrare i loro nomi
+        // Load professors
         if (isAdmin()) {
           const professorsResponse = await professorService.getAll();
           const professorsMap = {};
@@ -253,7 +146,6 @@ function LessonListPage() {
           });
           setProfessors(professorsMap);
         } else {
-          // Se non è admin, aggiungi solo il professore corrente
           setProfessors({
             [currentUser.id]: `${currentUser.first_name} ${currentUser.last_name}`
           });
@@ -269,10 +161,11 @@ function LessonListPage() {
     fetchData();
   }, [currentUser, isAdmin, showOnlyMine]);
 
+  // Apply filters
   useEffect(() => {
     let filtered = [...lessons];
 
-    // Filtra per termine di ricerca (nome studente o professore)
+    // Filter by search term
     if (searchTerm.trim() !== '') {
       const lowercaseSearch = searchTerm.toLowerCase();
       filtered = filtered.filter((lesson) => {
@@ -285,7 +178,7 @@ function LessonListPage() {
       });
     }
 
-    // Filtra per periodo di tempo
+    // Filter by time period
     if (timeFilter !== 'all') {
       filtered = filtered.filter(lesson => {
         const lessonDate = parseISO(lesson.lesson_date);
@@ -296,7 +189,6 @@ function LessonListPage() {
           case 'week':
             return isThisWeek(lessonDate, { weekStartsOn: 1 });
           case 'custom': {
-            // Per date personalizzate
             if (dateRange.isRange) {
               return isWithinInterval(lessonDate, {
                 start: startOfDay(dateRange.startDate),
@@ -315,7 +207,7 @@ function LessonListPage() {
       });
     }
 
-    // Filtra per stato del pagamento
+    // Filter by payment status
     if (paymentFilter !== 'all') {
       filtered = filtered.filter(lesson => {
         switch (paymentFilter) {
@@ -331,64 +223,71 @@ function LessonListPage() {
       });
     }
 
-    // Applica l'ordinamento
-    const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
+    // Apply sorting
+    filtered.sort((a, b) => {
+      // Handle special cases
+      if (orderBy === 'lesson_date') {
+        return order === 'asc'
+          ? new Date(a.lesson_date) - new Date(b.lesson_date)
+          : new Date(b.lesson_date) - new Date(a.lesson_date);
+      }
 
-    // Prima di impostare i dati filtrati, preserva la paginazione corrente
-    // se il numero di elementi filtrati è sufficiente a mantenere la pagina attuale
+      if (orderBy === 'start_time') {
+        const timeA = a.start_time ? a.start_time.substring(0, 5).split(':') : ['00', '00'];
+        const timeB = b.start_time ? b.start_time.substring(0, 5).split(':') : ['00', '00'];
+        const minutesA = parseInt(timeA[0]) * 60 + parseInt(timeA[1]);
+        const minutesB = parseInt(timeB[0]) * 60 + parseInt(timeB[1]);
+        return order === 'asc' ? minutesA - minutesB : minutesB - minutesA;
+      }
+
+      if (orderBy === 'student_id') {
+        const studentA = students[a.student_id] || '';
+        const studentB = students[b.student_id] || '';
+        return order === 'asc'
+          ? studentA.localeCompare(studentB)
+          : studentB.localeCompare(studentA);
+      }
+
+      if (orderBy === 'professor_id') {
+        const professorA = professors[a.professor_id] || '';
+        const professorB = professors[b.professor_id] || '';
+        return order === 'asc'
+          ? professorA.localeCompare(professorB)
+          : professorB.localeCompare(professorA);
+      }
+
+      if (['duration', 'hourly_rate', 'total_payment', 'price'].includes(orderBy)) {
+        const valueA = parseFloat(a[orderBy] || 0);
+        const valueB = parseFloat(b[orderBy] || 0);
+        return order === 'asc' ? valueA - valueB : valueB - valueA;
+      }
+
+      if (['is_package', 'is_paid'].includes(orderBy)) {
+        return order === 'asc'
+          ? (a[orderBy] === b[orderBy] ? 0 : a[orderBy] ? 1 : -1)
+          : (b[orderBy] === a[orderBy] ? 0 : b[orderBy] ? 1 : -1);
+      }
+
+      // Default case
+      return order === 'asc'
+        ? a[orderBy] > b[orderBy] ? 1 : -1
+        : b[orderBy] > a[orderBy] ? 1 : -1;
+    });
+
+    // Update page if needed
     let newPage = page;
     const maxPage = Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1);
-
-    // Se la pagina corrente supera il nuovo maxPage, aggiustiamo a maxPage
     if (page > maxPage) {
       newPage = maxPage;
     }
 
-    setFilteredLessons(sortedFiltered);
-
-    // Imposta la nuova pagina solo se è diversa dalla corrente
+    setFilteredLessons(filtered);
     if (newPage !== page) {
       setPage(newPage);
     }
-  }, [searchTerm, lessons, students, professors, timeFilter, paymentFilter, order, orderBy, dateRange]);
+  }, [searchTerm, lessons, students, professors, timeFilter, paymentFilter, order, orderBy, dateRange, page, rowsPerPage]);
 
-  // Aggiorna i gestori degli eventi per modificare anche l'URL
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-    updateSearchParams('page', newPage.toString());
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    const value = parseInt(event.target.value, 10);
-    setRowsPerPage(value);
-    setPage(0); // Reset alla prima pagina
-    updateSearchParams('rows', value.toString());
-    updateSearchParams('page', '0');
-  };
-
-  const handleSearchChange = (event) => {
-    const value = event.target.value;
-    setSearchTerm(value); // Aggiorna solo lo stato locale, la tabella si aggiorna immediatamente
-  };
-
-  // Aggiungi una nuova funzione per gestire l'evento onBlur (quando l'input perde focus)
-  const handleSearchBlur = () => {
-    // Aggiorna i parametri URL solo quando l'input perde focus
-    updateSearchParams('search', searchTerm);
-  };
-
-  // Aggiungi una nuova funzione per gestire il tasto Invio
-  const handleSearchKeyDown = (event) => {
-    // Codice 13 = tasto Invio
-    if (event.keyCode === 13) {
-      // Aggiorna i parametri URL quando si preme Invio
-      updateSearchParams('search', searchTerm);
-      // Rimuovi il focus dall'input
-      event.target.blur();
-    }
-  };
-
-  // Funzione helper per aggiornare i parametri URL
+  // Helper function to update URL parameters
   const updateSearchParams = (key, value) => {
     const newParams = new URLSearchParams(searchParams);
     if (value && value !== '' && value !== 'all' && value !== '0') {
@@ -399,35 +298,85 @@ function LessonListPage() {
     setSearchParams(newParams);
   };
 
+  // Format date range for display
+  const formatDateForDisplay = () => {
+    if (timeFilter === 'custom') {
+      if (dateRange.isRange) {
+        return `${format(dateRange.startDate, 'dd/MM/yyyy')} - ${format(dateRange.endDate, 'dd/MM/yyyy')}`;
+      } else {
+        return format(dateRange.startDate, 'dd/MM/yyyy');
+      }
+    }
+    return '';
+  };
+
+  // Event handlers
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+    updateSearchParams('page', newPage.toString());
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    const value = parseInt(event.target.value, 10);
+    setRowsPerPage(value);
+    setPage(0);
+    updateSearchParams('rows', value.toString());
+    updateSearchParams('page', '0');
+  };
+
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const handleSearchBlur = () => {
+    updateSearchParams('search', searchTerm);
+  };
+
+  const handleSearchKeyDown = (event) => {
+    if (event.keyCode === 13) {
+      updateSearchParams('search', searchTerm);
+      event.target.blur();
+    }
+  };
+
   const handleTimeFilterChange = (event) => {
     const value = event.target.value;
 
-    // Se si seleziona "custom", apri il dialog di selezione date
     if (value === 'custom') {
       setTimeFilter(value);
       setDateRangeDialogOpen(true);
-      updateSearchParams('time', value);
-    } else {
-      // Rimuovi i parametri di data personalizzati dall'URL se non si usa "custom"
+
+      // Update URL directly for the time filter
       const newParams = new URLSearchParams(searchParams);
+      newParams.set('time', value);
+      setSearchParams(newParams);
+    } else {
+      // Create a new params object
+      const newParams = new URLSearchParams(searchParams);
+
+      // Remove custom date parameters
       newParams.delete('startDate');
       newParams.delete('endDate');
       newParams.delete('isRange');
 
-      // Aggiungi il nuovo valore per time, ma solo se non è 'all'
+      // Set or clear time parameter
       if (value !== 'all') {
         newParams.set('time', value);
       } else {
         newParams.delete('time');
       }
 
-      // Imposta i nuovi parametri URL
+      // Apply the new parameters
       setSearchParams(newParams);
 
-      // Aggiorna lo stato del filtro dopo aver pulito i parametri
+      // Update local state
       setTimeFilter(value);
-
-      // Reset anche dello stato locale dateRange quando si passa a filtri non personalizzati
       setDateRange({
         startDate: new Date(),
         endDate: new Date(),
@@ -448,89 +397,34 @@ function LessonListPage() {
     updateSearchParams('mine', newValue.toString());
   };
 
-  useEffect(() => {
-    // Questo useEffect si attiva quando cambia la posizione o i parametri di ricerca
-    const fetchAndApplyFilters = async () => {
-      try {
-        setLoading(true);
+  const handleDateRangeSelected = (newDateRange) => {
+    setDateRange(newDateRange);
 
-        // Carica i dati delle lezioni in base al ruolo e alle preferenze dell'utente
-        let lessonsData;
-        if (isAdmin() && !showOnlyMine) {
-          const lessonsResponse = await lessonService.getAll();
-          lessonsData = lessonsResponse.data;
-        } else {
-          const lessonsResponse = await lessonService.getByProfessor(currentUser.id);
-          lessonsData = lessonsResponse.data;
-        }
-        setLessons(lessonsData);
+    // Create a new URLSearchParams object from the current params
+    const newParams = new URLSearchParams(searchParams);
 
-        // Carica tutti gli studenti per mostrare i loro nomi
-        const studentsResponse = await studentService.getAll();
-        const studentsMap = {};
-        studentsResponse.data.forEach(student => {
-          studentsMap[student.id] = `${student.first_name} ${student.last_name}`;
-        });
-        setStudents(studentsMap);
+    // Update the date parameters
+    if (newDateRange.isRange) {
+      newParams.set('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
+      newParams.set('endDate', format(newDateRange.endDate, 'yyyy-MM-dd'));
+      newParams.set('isRange', 'true');
+    } else {
+      newParams.set('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
+      newParams.delete('endDate');
+      newParams.set('isRange', 'false');
+    }
 
-        // Aggiorna il range di date dall'URL se presente
-        const startDateStr = searchParams.get('startDate');
-        const endDateStr = searchParams.get('endDate');
-        const isRange = searchParams.get('isRange') === 'true';
+    // Always set time to custom for date filters
+    newParams.set('time', 'custom');
 
-        if (startDateStr) {
-          const startDate = parseISO(startDateStr);
-          const endDate = endDateStr ? parseISO(endDateStr) : startDate;
+    // Apply the new parameters directly
+    setSearchParams(newParams);
 
-          setDateRange({
-            startDate,
-            endDate,
-            isRange
-          });
+    // Also update our local state
+    setTimeFilter('custom');
+  };
 
-          // Assicurati che timeFilter sia impostato su custom se ci sono date presenti
-          if (timeFilter !== 'custom') {
-            setTimeFilter('custom');
-          }
-        }
-
-        // Carica i professori se l'utente è admin
-        if (isAdmin()) {
-          const professorsResponse = await professorService.getAll();
-          const professorsMap = {};
-          professorsResponse.data.forEach(professor => {
-            professorsMap[professor.id] = `${professor.first_name} ${professor.last_name}`;
-          });
-          setProfessors(professorsMap);
-        } else {
-          // Se non è admin, aggiungi solo il professore corrente
-          setProfessors({
-            [currentUser.id]: `${currentUser.first_name} ${currentUser.last_name}`
-          });
-        }
-
-        // Importante: aggiorna lo stato dei filtri basandosi sull'URL
-        setPage(parseInt(searchParams.get('page') || '0', 10));
-        setRowsPerPage(parseInt(searchParams.get('rows') || '10', 10));
-        setSearchTerm(searchParams.get('search') || '');
-        setTimeFilter(searchParams.get('time') || 'all');
-        setPaymentFilter(searchParams.get('payment') || 'all');
-        setShowOnlyMine(
-          searchParams.get('mine') === 'true' || (!isAdmin())
-        );
-
-      } catch (err) {
-        console.error('Error fetching lessons:', err);
-        setError('Impossibile caricare la lista delle lezioni. Prova a riaggiornare la pagina.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAndApplyFilters();
-  }, [location.key, currentUser, isAdmin]); // location.key cambia ad ogni navigazione
-
-  // Modifica anche la funzione di navigazione al dettaglio
+  // Navigation handlers
   const handleViewLesson = (id) => {
     navigate(`/lessons/${id}`, {
       state: { returnUrl: `${location.pathname}${location.search}` }
@@ -538,7 +432,7 @@ function LessonListPage() {
   };
 
   const handleEditLesson = (id, event) => {
-    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
+    event.stopPropagation();
     navigate(`/lessons/edit/${id}`);
   };
 
@@ -546,26 +440,34 @@ function LessonListPage() {
     navigate('/lessons/new');
   };
 
+  // Payment handlers
+  const handleTogglePayment = (lesson, event) => {
+    event.stopPropagation();
+
+    if (lesson.is_package) return;
+
+    if (lesson.is_paid) {
+      handleUpdatePaymentStatus(lesson, false, null);
+    } else {
+      setSelectedLesson(lesson);
+      setPaymentDate(new Date());
+      setPaymentDialogOpen(true);
+    }
+  };
+
   const handleUpdatePaymentStatus = async (lesson, isPaid, paymentDate, updatedPrice) => {
     try {
       setUpdating(true);
 
-      // Prepara i dati da aggiornare
       const updateData = {
         is_paid: isPaid,
         payment_date: paymentDate ? format(paymentDate, 'yyyy-MM-dd') : null,
         price: updatedPrice !== undefined ? updatedPrice : lesson.price
       };
 
-      // Chiama il servizio per aggiornare la lezione
       await lessonService.update(lesson.id, updateData);
-
-      // Ricarica le lezioni
       const lessonsData = await fetchLessons();
-
-      // Aggiorna lo stato delle lezioni
       setLessons(lessonsData);
-
     } catch (err) {
       console.error('Error updating payment status:', err);
       alert('Errore durante l\'aggiornamento dello stato di pagamento. Riprova più tardi.');
@@ -576,7 +478,6 @@ function LessonListPage() {
 
   const handleConfirmPayment = () => {
     if (selectedLesson) {
-      // Solo gli admin possono modificare il prezzo
       const priceToUse = isAdmin()
         ? (selectedLesson.price || 20 * selectedLesson.duration)
         : 20 * selectedLesson.duration;
@@ -595,31 +496,13 @@ function LessonListPage() {
     setPaymentDialogOpen(false);
   };
 
-  // Nuova funzione per il toggle del pagamento
-  const handleTogglePayment = (lesson, event) => {
-    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
-
-    // Solo per lezioni singole (non da pacchetto)
-    if (lesson.is_package) return;
-
-    // Se è già pagata, cambia direttamente stato
-    if (lesson.is_paid) {
-      handleUpdatePaymentStatus(lesson, false, null);
-    } else {
-      // Apri dialog per impostare data pagamento
-      setSelectedLesson(lesson);
-      setPaymentDate(new Date());
-      setPaymentDialogOpen(true);
-    }
-  };
-
+  // Delete handler
   const handleDeleteLesson = async (id, event) => {
-    event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
+    event.stopPropagation();
 
     if (window.confirm(`Sei sicuro di voler eliminare la lezione #${id}? Questa azione non può essere annullata.`)) {
       try {
         await lessonService.delete(id);
-        // Aggiorna la lista dopo l'eliminazione
         const lessonsData = await fetchLessons();
         setLessons(lessonsData);
       } catch (err) {
@@ -629,8 +512,8 @@ function LessonListPage() {
     }
   };
 
-  // Componente SortableTableCell per le intestazioni delle colonne
-  const SortableTableCell = ({ id, label, numeric }) => {
+  // SortableTableCell component for headers
+  const SortableTableCell = ({ id, label, numeric = false }) => {
     const isActive = orderBy === id;
 
     return (
@@ -663,6 +546,7 @@ function LessonListPage() {
     );
   };
 
+  // Loading state
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
@@ -671,6 +555,7 @@ function LessonListPage() {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
@@ -681,6 +566,7 @@ function LessonListPage() {
 
   return (
     <Box>
+      {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Lezioni</Typography>
         <Button
@@ -693,8 +579,10 @@ function LessonListPage() {
         </Button>
       </Box>
 
+      {/* Filters */}
       <Box mb={3}>
         <Grid container spacing={2} alignItems="center">
+          {/* Search field */}
           <Grid item xs={12} md={3.5}>
             <TextField
               fullWidth
@@ -702,13 +590,15 @@ function LessonListPage() {
               label="Cerca lezione per studente o per professore"
               value={searchTerm}
               onChange={handleSearchChange}
-              onBlur={handleSearchBlur} // Aggiungi l'evento onBlur
-              onKeyDown={handleSearchKeyDown} // Aggiungi l'evento onKeyDown
+              onBlur={handleSearchBlur}
+              onKeyDown={handleSearchKeyDown}
               InputProps={{
                 startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
               }}
             />
           </Grid>
+
+          {/* Time period filter */}
           <Grid item xs={12} md={3}>
             <FormControl fullWidth variant="outlined">
               <InputLabel id="time-filter-label">Periodo</InputLabel>
@@ -724,7 +614,7 @@ function LessonListPage() {
                 }
                 endAdornment={
                   timeFilter === 'custom' && (
-                    <InputAdornment position="end" sx={{ mr: 2 }}> {/* Aggiunto mr: 2 per spostare a sinistra */}
+                    <InputAdornment position="end" sx={{ mr: 2 }}>
                       <Tooltip title="Modifica periodo">
                         <IconButton
                           size="small"
@@ -753,6 +643,8 @@ function LessonListPage() {
               </Select>
             </FormControl>
           </Grid>
+
+          {/* Payment filter */}
           <Grid item xs={12} md={3}>
             <FormControl fullWidth variant="outlined">
               <InputLabel id="payment-filter-label">Pagamento</InputLabel>
@@ -774,6 +666,8 @@ function LessonListPage() {
               </Select>
             </FormControl>
           </Grid>
+
+          {/* Show only my lessons toggle (only for admin) */}
           {isAdmin() && (
             <Grid item xs={12} md={2.5}>
               <FormControlLabel
@@ -791,6 +685,7 @@ function LessonListPage() {
         </Grid>
       </Box>
 
+      {/* Lessons table */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -812,7 +707,7 @@ function LessonListPage() {
           <TableBody>
             {filteredLessons.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} align="center">
+                <TableCell colSpan={isAdmin() ? 10 : 9} align="center">
                   Nessuna lezione trovata
                 </TableCell>
               </TableRow>
@@ -833,7 +728,6 @@ function LessonListPage() {
                   >
                     <TableCell>#{lesson.id}</TableCell>
                     <TableCell>{students[lesson.student_id] || `Studente #${lesson.student_id}`}</TableCell>
-
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>
                       {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
                     </TableCell>
@@ -841,8 +735,6 @@ function LessonListPage() {
                       {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
                     </TableCell>
                     <TableCell>{lesson.duration} ore</TableCell>
-
-
                     <TableCell>{professors[lesson.professor_id] || `Prof. #${lesson.professor_id}`}</TableCell>
                     <TableCell align="right">€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>
                     <TableCell>
@@ -895,23 +787,19 @@ function LessonListPage() {
                           <>
                             €{parseFloat(lesson.price || 0).toFixed(2)}
                             {parseFloat(lesson.price || 0) === 0 && (
-                              <Tooltip title="Prezzo da impostare">
-                                <span style={{ marginLeft: '4px' }}></span>
-                              </Tooltip>
+                              <Typography variant="caption" color="error" component="span" sx={{ ml: 0.5 }}>
+                                !
+                              </Typography>
                             )}
                           </>
                         )}
                       </TableCell>
                     )}
-
-
-
                     <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ whiteSpace: 'nowrap' }}>
                       <Tooltip title="Modifica">
                         <IconButton
                           color="primary"
                           onClick={(e) => handleEditLesson(lesson.id, e)}
-                          sx={{ whiteSpace: 'nowrap' }}
                         >
                           <EditIcon />
                         </IconButton>
@@ -920,7 +808,6 @@ function LessonListPage() {
                         <IconButton
                           color="error"
                           onClick={(e) => handleDeleteLesson(lesson.id, e)}
-                          sx={{ whiteSpace: 'nowrap' }}
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -944,7 +831,7 @@ function LessonListPage() {
         />
       </TableContainer>
 
-      {/* Dialog per la data di pagamento */}
+      {/* Payment dialog */}
       <Dialog open={paymentDialogOpen} onClose={handleClosePaymentDialog}>
         <DialogTitle>Conferma Pagamento</DialogTitle>
         <DialogContent>
@@ -954,7 +841,7 @@ function LessonListPage() {
                 fullWidth
                 label="Prezzo Lezione"
                 type="number"
-                value={selectedLesson?.price || 0}
+                value={selectedLesson?.price || selectedLesson?.duration * 20 || 0}
                 onChange={(e) => {
                   const updatedLesson = {
                     ...selectedLesson,
@@ -995,29 +882,7 @@ function LessonListPage() {
       <DateRangePickerDialog
         open={dateRangeDialogOpen}
         onClose={() => setDateRangeDialogOpen(false)}
-        onApply={(newDateRange) => {
-          // Aggiorna lo stato locale
-          setDateRange(newDateRange);
-
-          // Aggiorna i parametri URL
-          if (newDateRange.isRange) {
-            // Se è un intervallo di date, salva entrambe le date
-            updateSearchParams('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
-            updateSearchParams('endDate', format(newDateRange.endDate, 'yyyy-MM-dd'));
-            updateSearchParams('isRange', 'true');
-          } else {
-            // Se è una data singola, salva solo startDate
-            updateSearchParams('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
-            updateSearchParams('endDate', ''); // Rimuovi endDate
-            updateSearchParams('isRange', 'false');
-          }
-
-          // Assicurati che timeFilter sia impostato su 'custom'
-          if (timeFilter !== 'custom') {
-            setTimeFilter('custom');
-            updateSearchParams('time', 'custom');
-          }
-        }}
+        onApply={handleDateRangeSelected}  // Qui viene utilizzata la funzione
         initialDateRange={dateRange}
       />
     </Box>
