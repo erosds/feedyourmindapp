@@ -36,7 +36,7 @@ import {
   Timer as TimerIcon,
 } from '@mui/icons-material';
 import { packageService, studentService, lessonService } from '../../services/api';
-import { format, parseISO, isToday, isThisWeek, isThisMonth } from 'date-fns';
+import { format, parseISO, isToday, isThisWeek, isThisMonth, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuth } from '../../context/AuthContext';
 
@@ -47,6 +47,8 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { DatePicker } from '@mui/x-date-pickers';
 
 import InfoIcon from '@mui/icons-material/Info';
+import DateRangePickerDialog from '../../components/common/DateRangePickerDialog';
+import CalendarIcon from '@mui/icons-material/CalendarMonth';
 
 
 function PackageListPage() {
@@ -74,6 +76,100 @@ function PackageListPage() {
   const [rowsPerPage, setRowsPerPage] = useState(
     parseInt(searchParams.get('rows') || '10', 10)
   );
+
+
+  const [dateRangeDialogOpen, setDateRangeDialogOpen] = useState(false);
+  const [dateRange, setDateRange] = useState(() => {
+    const startDateStr = searchParams.get('startDate');
+    const endDateStr = searchParams.get('endDate');
+    const isRange = searchParams.get('isRange') === 'true';
+
+    return {
+      startDate: startDateStr ? parseISO(startDateStr) : new Date(),
+      endDate: endDateStr ? parseISO(endDateStr) : new Date(),
+      isRange: isRange
+    };
+  });
+  const [expiryFilter, setExpiryFilter] = useState(searchParams.get('expiry') || 'all');
+
+  const formatDateForDisplay = () => {
+    if (expiryFilter === 'custom') {
+      if (dateRange.isRange) {
+        return `${format(dateRange.startDate, 'dd/MM/yyyy')} - ${format(dateRange.endDate, 'dd/MM/yyyy')}`;
+      } else {
+        return format(dateRange.startDate, 'dd/MM/yyyy');
+      }
+    }
+    return '';
+  };
+
+  const handleExpiryFilterChange = (event) => {
+    const value = event.target.value;
+
+    if (value === 'custom') {
+      setExpiryFilter(value);
+      setDateRangeDialogOpen(true);
+
+      // Update URL directly for the filter
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('expiry', value);
+      setSearchParams(newParams);
+    } else {
+      // Create a new params object
+      const newParams = new URLSearchParams(searchParams);
+
+      // Remove custom date parameters
+      newParams.delete('startDate');
+      newParams.delete('endDate');
+      newParams.delete('isRange');
+
+      // Set or clear expiry parameter
+      if (value !== 'all') {
+        newParams.set('expiry', value);
+      } else {
+        newParams.delete('expiry');
+      }
+
+      // Apply the new parameters
+      setSearchParams(newParams);
+
+      // Update local state
+      setExpiryFilter(value);
+      setDateRange({
+        startDate: new Date(),
+        endDate: new Date(),
+        isRange: false
+      });
+    }
+  };
+
+
+  const handleDateRangeSelected = (newDateRange) => {
+    setDateRange(newDateRange);
+
+    // Create a new URLSearchParams object from the current params
+    const newParams = new URLSearchParams(searchParams);
+
+    // Update the date parameters
+    if (newDateRange.isRange) {
+      newParams.set('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
+      newParams.set('endDate', format(newDateRange.endDate, 'yyyy-MM-dd'));
+      newParams.set('isRange', 'true');
+    } else {
+      newParams.set('startDate', format(newDateRange.startDate, 'yyyy-MM-dd'));
+      newParams.delete('endDate');
+      newParams.set('isRange', 'false');
+    }
+
+    // Always set expiry to custom for date filters
+    newParams.set('expiry', 'custom');
+
+    // Apply the new parameters directly
+    setSearchParams(newParams);
+
+    // Also update our local state
+    setExpiryFilter('custom');
+  };
 
   // State for sorting
   const [order, setOrder] = useState('desc');
@@ -338,6 +434,66 @@ function PackageListPage() {
             const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
             const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
             return startDate.getMonth() === lastMonth && startDate.getFullYear() === lastMonthYear;
+          }
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filter by expiry date period
+    if (expiryFilter !== 'all') {
+      filtered = filtered.filter(pkg => {
+        const expiryDate = parseISO(pkg.expiry_date);
+
+        switch (expiryFilter) {
+          case 'this_week': {
+            // Get the start and end of the current week
+            const today = new Date();
+            const dayOfWeek = today.getDay() || 7; // 0 is Sunday, convert to 7
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - dayOfWeek + 1); // Monday
+            startOfWeek.setHours(0, 0, 0, 0);
+
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
+            endOfWeek.setHours(23, 59, 59, 999);
+
+            return expiryDate >= startOfWeek && expiryDate <= endOfWeek;
+          }
+          case 'next_week': {
+            // Get the start and end of next week
+            const today = new Date();
+            const dayOfWeek = today.getDay() || 7;
+            const startOfNextWeek = new Date(today);
+            startOfNextWeek.setDate(today.getDate() - dayOfWeek + 8); // Next Monday
+            startOfNextWeek.setHours(0, 0, 0, 0);
+
+            const endOfNextWeek = new Date(startOfNextWeek);
+            endOfNextWeek.setDate(startOfNextWeek.getDate() + 6); // Next Sunday
+            endOfNextWeek.setHours(23, 59, 59, 999);
+
+            return expiryDate >= startOfNextWeek && expiryDate <= endOfNextWeek;
+          }
+          case 'this_month': {
+            const today = new Date();
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+
+            return expiryDate >= startOfMonth && expiryDate <= endOfMonth;
+          }
+          case 'custom': {
+            if (dateRange.isRange) {
+              return isWithinInterval(expiryDate, {
+                start: startOfDay(dateRange.startDate),
+                end: endOfDay(dateRange.endDate)
+              });
+            } else {
+              return isWithinInterval(expiryDate, {
+                start: startOfDay(dateRange.startDate),
+                end: endOfDay(dateRange.startDate)
+              });
+            }
           }
           default:
             return true;
@@ -648,7 +804,7 @@ function PackageListPage() {
 
       <Box mb={3}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={3.5}>
+          <Grid item xs={12} md={3}>
             <TextField
               fullWidth
               variant="outlined"
@@ -664,7 +820,7 @@ function PackageListPage() {
           </Grid>
 
           {/* Filtro per periodo */}
-          <Grid item xs={12} md={3.5}>
+          <Grid item xs={12} md={2.5}>
             <FormControl fullWidth variant="outlined">
               <InputLabel id="time-filter-label">Data di Inizio</InputLabel>
               <Select
@@ -687,8 +843,55 @@ function PackageListPage() {
             </FormControl>
           </Grid>
 
-          {/* Filtro per stato del pacchetto */}
+          {/* Expiry date filter */}
           <Grid item xs={12} md={2.5}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="expiry-filter-label">Data scadenza</InputLabel>
+              <Select
+                labelId="expiry-filter-label"
+                value={expiryFilter}
+                onChange={handleExpiryFilterChange}
+                label="Data scadenza"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <CalendarIcon />
+                  </InputAdornment>
+                }
+                endAdornment={
+                  expiryFilter === 'custom' && (
+                    <InputAdornment position="end" sx={{ mr: 2 }}>
+                      <Tooltip title="Modifica periodo">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDateRangeDialogOpen(true);
+                          }}
+                          edge="end"
+                        >
+                          <CalendarIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </InputAdornment>
+                  )
+                }
+              >
+                <MenuItem value="all">Tutte le scadenze</MenuItem>
+                <MenuItem value="this_week">Questa settimana</MenuItem>
+                <MenuItem value="next_week">Settimana prossima</MenuItem>
+                <MenuItem value="this_month">Questo mese</MenuItem>
+                <MenuItem value="custom">
+                  {expiryFilter === 'custom' && dateRange ?
+                    formatDateForDisplay() :
+                    'Personalizzato...'
+                  }
+                </MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Filtro per stato del pacchetto */}
+          <Grid item xs={12} md={2}>
             <FormControl fullWidth variant="outlined">
               <InputLabel id="status-filter-label">Stato</InputLabel>
               <Select
@@ -712,7 +915,7 @@ function PackageListPage() {
           </Grid>
 
           {/* Filtro per pagamento */}
-          <Grid item xs={12} md={2.5}>
+          <Grid item xs={12} md={2}>
             <FormControl fullWidth variant="outlined">
               <InputLabel id="payment-filter-label">Pagamento</InputLabel>
               <Select
@@ -1066,6 +1269,13 @@ function PackageListPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Date Range Picker Dialog */}
+      <DateRangePickerDialog
+        open={dateRangeDialogOpen}
+        onClose={() => setDateRangeDialogOpen(false)}
+        onApply={handleDateRangeSelected}
+        initialDateRange={dateRange}
+      />
     </Box>
   );
 }

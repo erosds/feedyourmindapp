@@ -150,7 +150,7 @@ function AdminDashboardWeekSummary({
     <Paper sx={{ p: 2, mb: 1 }}>
       <Grid container spacing={2}>
         {/* Income */}
-        <Grid item xs={12} sm={6} md={2.5}>
+        <Grid item xs={12} sm={6} md={2}>
           <Typography variant="body2" color="text.secondary">
             Incasso
           </Typography>
@@ -160,7 +160,7 @@ function AdminDashboardWeekSummary({
         </Grid>
 
         {/* NUOVO: Statistiche lezioni settimana - Make this clickable */}
-        <Grid item xs={12} sm={6} md={1.5}>
+        <Grid item xs={12} sm={6} md={2}>
           <Box
             onClick={navigateToWeekLessons}
             sx={{

@@ -782,7 +782,7 @@ function PaymentCalendarPage() {
           {viewMode === 'payments' ? (
             /* Statistiche per i pagamenti effettuati */
             <>
-              <Grid item xs={12} sm={2.5}>
+              <Grid item xs={12} sm={2}>
                 <Typography variant="body2" color="text.secondary">
                   Incasso
                 </Typography>
@@ -791,7 +791,7 @@ function PaymentCalendarPage() {
                 </Typography>
               </Grid>
 
-              <Grid item xs={12} sm={1.5}>
+              <Grid item xs={12} sm={2}>
                 <Typography variant="body2" color="text.secondary">
                   Pacchetti
                 </Typography>
