@@ -4,8 +4,10 @@ import {
   Grid,
   Paper,
   Typography,
+  Box,  // Add this import
 } from '@mui/material';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom'; // Add this import
 
 function AdminDashboardWeekSummary({
   currentWeekStart,
@@ -14,6 +16,7 @@ function AdminDashboardWeekSummary({
   allPackages = [],
   professorWeeklyData = []
 }) {
+  const navigate = useNavigate(); // Add this line
   const [weeklyStats, setWeeklyStats] = useState({
     income: 0,
     payments: 0,
@@ -134,6 +137,15 @@ function AdminDashboardWeekSummary({
     });
   };
 
+  const navigateToWeekLessons = () => {
+    // Format dates for URL parameters
+    const startDateParam = format(currentWeekStart, 'yyyy-MM-dd');
+    const endDateParam = format(weekEnd, 'yyyy-MM-dd');
+
+    // Navigate to lessons page with date filter parameters
+    navigate(`/lessons?time=custom&startDate=${startDateParam}&endDate=${endDateParam}&isRange=true`);
+  };
+
   return (
     <Paper sx={{ p: 2, mb: 1 }}>
       <Grid container spacing={2}>
@@ -147,14 +159,28 @@ function AdminDashboardWeekSummary({
           </Typography>
         </Grid>
 
-        {/* NUOVO: Statistiche lezioni settimana */}
+        {/* NUOVO: Statistiche lezioni settimana - Make this clickable */}
         <Grid item xs={12} sm={6} md={1.5}>
-          <Typography variant="body2" color="text.secondary">
-            Lezioni saldate
-          </Typography>
+          <Box
+            onClick={navigateToWeekLessons}
+            sx={{
+              cursor: 'pointer',
+              borderRadius: 1,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.04)',
+                transform: 'translateY(-2px)',
+                boxShadow: 1
+              }
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Lezioni saldate
+            </Typography>
             <Typography variant="h5" color="text.primary">
               {weeklyStats.lessonsCount.paid}/{weeklyStats.lessonsCount.total}
             </Typography>
+          </Box>
         </Grid>
 
         {/* NUOVO: Statistiche pacchetti in scadenza */}
@@ -162,9 +188,9 @@ function AdminDashboardWeekSummary({
           <Typography variant="body2" color="text.secondary">
             Pacchetti saldati
           </Typography>
-            <Typography variant="h5" color="text.primary">
-              {weeklyStats.packagesCount.paid}/{weeklyStats.packagesCount.expiring}
-            </Typography>
+          <Typography variant="h5" color="text.primary">
+            {weeklyStats.packagesCount.paid}/{weeklyStats.packagesCount.expiring}
+          </Typography>
         </Grid>
 
         {/* Pending Payments */}
