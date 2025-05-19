@@ -808,7 +808,7 @@ function PackageListPage() {
             <TextField
               fullWidth
               variant="outlined"
-              label="Cerca pacchetto per nome studente"
+              label="Cerca pacchetto per nomi"
               value={searchTerm}
               onChange={handleSearchChange}
               onKeyDown={handleSearchKeyDown} // Aggiungi l'evento onKeyDown
@@ -822,7 +822,7 @@ function PackageListPage() {
           {/* Filtro per periodo */}
           <Grid item xs={12} md={2.5}>
             <FormControl fullWidth variant="outlined">
-              <InputLabel id="time-filter-label">Data di Inizio</InputLabel>
+              <InputLabel id="time-filter-label">Data di inizio</InputLabel>
               <Select
                 labelId="time-filter-label"
                 value={timeFilter}

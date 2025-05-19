@@ -657,38 +657,53 @@ function PaymentCalendarPage() {
     };
   };
 
-  // Get student display names for a specific day
-  // Modifica la funzione getStudentNamesForDay per ordinare alfabeticamente i nomi
+  // Modifica la funzione getStudentNamesForDay per ordinare prima i pacchetti e poi le lezioni
   const getStudentNamesForDay = (day) => {
     // Se siamo in modalità pagamenti, mostra solo i pagamenti
     if (viewMode === 'payments') {
       const dayPayments = getPaymentsForDay(day);
-      return dayPayments.map(payment => ({
-        id: payment.id,
-        name: formatStudentName(payment.studentName),
-        type: payment.type
-      })).sort((a, b) => a.name.localeCompare(b.name));
+
+      // Separa pacchetti e lezioni
+      const packages = dayPayments.filter(payment => payment.type === 'package')
+        .map(payment => ({
+          id: payment.id,
+          name: formatStudentName(payment.studentName),
+          type: payment.type
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const lessons = dayPayments.filter(payment => payment.type === 'lesson')
+        .map(payment => ({
+          id: payment.id,
+          name: formatStudentName(payment.studentName),
+          type: payment.type
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      // Concatena prima i pacchetti e poi le lezioni
+      return [...packages, ...lessons];
     }
     // Se siamo in modalità "da pagare", mostra lezioni non pagate e pacchetti scaduti
     else {
       const dayUnpaid = getUnpaidLessonsForDay(day);
       const dayExpired = getExpiredPackagesForDay(day);
 
-      // Combina lezioni non pagate e pacchetti scaduti
-      const allItems = [
-        ...dayUnpaid.map(unpaid => ({
-          id: unpaid.id,
-          name: formatStudentName(unpaid.studentName),
-          type: 'unpaid'
-        })),
-        ...dayExpired.map(pkg => ({
-          id: pkg.id,
-          name: formatStudentName(pkg.studentName),
-          type: 'expired-package'
-        }))
-      ];
+      // Ordina i pacchetti scaduti alfabeticamente
+      const expiredPackages = dayExpired.map(pkg => ({
+        id: pkg.id,
+        name: formatStudentName(pkg.studentName),
+        type: 'expired-package'
+      })).sort((a, b) => a.name.localeCompare(b.name));
 
-      return allItems.sort((a, b) => a.name.localeCompare(b.name));
+      // Ordina le lezioni non pagate alfabeticamente
+      const unpaidLessons = dayUnpaid.map(unpaid => ({
+        id: unpaid.id,
+        name: formatStudentName(unpaid.studentName),
+        type: 'unpaid'
+      })).sort((a, b) => a.name.localeCompare(b.name));
+
+      // Concatena prima i pacchetti scaduti e poi le lezioni non pagate
+      return [...expiredPackages, ...unpaidLessons];
     }
   };
 
@@ -782,7 +797,7 @@ function PaymentCalendarPage() {
           {viewMode === 'payments' ? (
             /* Statistiche per i pagamenti effettuati */
             <>
-              <Grid item xs={12} sm={2}>
+              <Grid item xs={12} sm={2.5}>
                 <Typography variant="body2" color="text.secondary">
                   Incasso
                 </Typography>
@@ -791,7 +806,7 @@ function PaymentCalendarPage() {
                 </Typography>
               </Grid>
 
-              <Grid item xs={12} sm={2}>
+              <Grid item xs={12} sm={1.5}>
                 <Typography variant="body2" color="text.secondary">
                   Pacchetti
                 </Typography>
@@ -1098,7 +1113,7 @@ function PaymentCalendarPage() {
                           <>
                             {(hasPayments || unpaidCount > 0) && " - "}
                             <span style={{ fontWeight: viewMode === 'unpaid' ? 'bold' : 'normal' }}>
-                              {expiredCount} pacchett{expiredCount === 1 ? 'o scaduto' : 'i scaduti'}
+                              {expiredCount} pacchett{expiredCount === 1 ? 'o scaduto' : 'i scaduti'} non pagat{expiredCount === 1 ? 'o' : 'i'}
                             </span>
                           </>
                         )}
@@ -1184,50 +1199,114 @@ function PaymentCalendarPage() {
 
               <Divider sx={{ mb: 1 }} />
 
-              <List dense>
-                {dayPayments
-                  .sort((a, b) => a.studentName.localeCompare(b.studentName))
-                  .map((payment) => (
-                    <ListItem
-                      key={payment.id}
-                      alignItems="flex-start"
-                      button
-                      onClick={() => handlePaymentClick(payment)}
-                      sx={{
-                        mb: 1,
-                        py: 1,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        borderRadius: 1,
-                        '&:hover': {
-                          backgroundColor: 'action.hover'
-                        }
-                      }}
-                    >
-                      <ListItemText
-                        primary={
-                          <Typography variant="body2" sx={{ mb: -0.5 }}>
-                            <b>{payment.studentName}</b> ha pagato <b>€{payment.amount.toFixed(2)}</b>
-                          </Typography>
-                        }
-                        secondary={
-                          <Typography variant="caption" component="span" sx={{ display: 'inline' }}>
-                            <Typography
-                              variant="caption"
-                              component="span"
-                              color={payment.type === 'lesson' ? 'primary' : 'darkviolet'}
-                              sx={{ fontWeight: 500 }}
-                            >
-                              {payment.type === 'lesson' ? 'Lezione singola' : 'Pacchetto'}
-                            </Typography>{' '}
-                            di {payment.hours} ore
-                          </Typography>
-                        }
-                        sx={{ my: 0 }}
-                      />
-                    </ListItem>
-                  ))}
-              </List>
+              {/* Prima sezione: Pacchetti */}
+              {dayPayments.filter(payment => payment.type === 'package').length > 0 && (
+                <>
+                  <List dense>
+                    {dayPayments
+                      .filter(payment => payment.type === 'package')
+                      .sort((a, b) => a.studentName.localeCompare(b.studentName))
+                      .map((payment) => (
+                        <ListItem
+                          key={payment.id}
+                          alignItems="flex-start"
+                          button
+                          onClick={() => handlePaymentClick(payment)}
+                          sx={{
+                            mb: 1,
+                            py: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                            '&:hover': {
+                              backgroundColor: 'action.hover'
+                            }
+                          }}
+                        >
+                          <ListItemText
+                            primary={
+                              <Typography variant="body2" sx={{ mb: -0.5 }}>
+                                <b>{payment.studentName}</b> ha pagato <b>€{payment.amount.toFixed(2)}</b>
+                              </Typography>
+                            }
+                            secondary={
+                              <Typography variant="caption" component="span" sx={{ display: 'inline' }}>
+                                <Typography
+                                  variant="caption"
+                                  component="span"
+                                  color="darkviolet"
+                                  sx={{ fontWeight: 500 }}
+                                >
+                                  Pacchetto
+                                </Typography>{' '}
+                                di {payment.hours} ore
+                              </Typography>
+                            }
+                            sx={{ my: 0 }}
+                          />
+                        </ListItem>
+                      ))}
+                  </List>
+                </>
+              )}
+
+              {/* Seconda sezione: Lezioni singole */}
+              {dayPayments.filter(payment => payment.type === 'lesson').length > 0 && (
+                <>
+                  <List dense>
+                    {dayPayments
+                      .filter(payment => payment.type === 'lesson')
+                      .sort((a, b) => a.studentName.localeCompare(b.studentName))
+                      .map((payment) => (
+                        <ListItem
+                          key={payment.id}
+                          alignItems="flex-start"
+                          button
+                          onClick={() => handlePaymentClick(payment)}
+                          sx={{
+                            mb: 1,
+                            py: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                            '&:hover': {
+                              backgroundColor: 'action.hover'
+                            }
+                          }}
+                        >
+                          <ListItemText
+                            primary={
+                              <Typography variant="body2" sx={{ mb: -0.5 }}>
+                                <b>{payment.studentName}</b> ha pagato <b>€{payment.amount.toFixed(2)}</b>
+                              </Typography>
+                            }
+                            secondary={
+                              <Typography variant="caption" component="span" sx={{ display: 'inline' }}>
+                                <Typography
+                                  variant="caption"
+                                  component="span"
+                                  color="primary"
+                                  sx={{ fontWeight: 500 }}
+                                >
+                                  Lezione singola
+                                </Typography>{' '}
+                                di {payment.hours} ore
+                              </Typography>
+                            }
+                            sx={{ my: 0 }}
+                          />
+                        </ListItem>
+                      ))}
+                  </List>
+                </>
+              )}
+
+              {/* Messaggio se non ci sono pagamenti */}
+              {dayPayments.length === 0 && (
+                <Typography align="center" color="text.secondary" sx={{ py: 2 }}>
+                  Nessun pagamento registrato per questa data
+                </Typography>
+              )}
             </>
           ) : (
             <>

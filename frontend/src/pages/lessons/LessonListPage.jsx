@@ -39,6 +39,7 @@ import {
   Payment as PaymentIcon,
   Delete as DeleteIcon,
   CalendarMonth as CalendarIcon,
+  School as SchoolIcon,
 } from '@mui/icons-material';
 import { lessonService, studentService, professorService } from '../../services/api';
 import {
@@ -73,6 +74,7 @@ function LessonListPage() {
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [timeFilter, setTimeFilter] = useState(searchParams.get('time') || 'all');
   const [paymentFilter, setPaymentFilter] = useState(searchParams.get('payment') || 'all');
+
   const [showOnlyMine, setShowOnlyMine] = useState(
     searchParams.get('mine') === 'true' || (!isAdmin())
   );
@@ -99,6 +101,20 @@ function LessonListPage() {
   // Sort states
   const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('id');
+
+  // Aggiungi questo nuovo stato dopo gli altri stati di filtro
+  const [lessonTypeFilter, setLessonTypeFilter] = useState(searchParams.get('type') || 'all');
+
+  const handleLessonTypeFilterChange = (event) => {
+    const value = event.target.value;
+    setLessonTypeFilter(value);
+    updateSearchParams('type', value);
+
+    if (value === 'package') {
+      setPaymentFilter('all');
+      updateSearchParams('payment', 'all');
+    }
+  };
 
   // Fetch lessons based on filters
   const fetchLessons = async () => {
@@ -215,6 +231,17 @@ function LessonListPage() {
             return !lesson.is_package && lesson.is_paid;
           case 'unpaid':
             return !lesson.is_package && !lesson.is_paid;
+          default:
+            return true;
+        }
+      });
+    }
+
+    if (lessonTypeFilter !== 'all') {
+      filtered = filtered.filter(lesson => {
+        switch (lessonTypeFilter) {
+          case 'single':
+            return !lesson.is_package;
           case 'package':
             return lesson.is_package;
           default:
@@ -285,7 +312,7 @@ function LessonListPage() {
     if (newPage !== page) {
       setPage(newPage);
     }
-  }, [searchTerm, lessons, students, professors, timeFilter, paymentFilter, order, orderBy, dateRange, page, rowsPerPage]);
+  }, [searchTerm, lessons, students, professors, timeFilter, paymentFilter, lessonTypeFilter, order, orderBy, dateRange, page, rowsPerPage]);
 
   // Helper function to update URL parameters
   const updateSearchParams = (key, value) => {
@@ -583,11 +610,11 @@ function LessonListPage() {
       <Box mb={3}>
         <Grid container spacing={2} alignItems="center">
           {/* Search field */}
-          <Grid item xs={12} md={3.5}>
+          <Grid item xs={12} md={3}>
             <TextField
               fullWidth
               variant="outlined"
-              label="Cerca lezione per studente o per professore"
+              label="Cerca lezione per nomi"
               value={searchTerm}
               onChange={handleSearchChange}
               onBlur={handleSearchBlur}
@@ -599,7 +626,7 @@ function LessonListPage() {
           </Grid>
 
           {/* Time period filter */}
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={2.5}>
             <FormControl fullWidth variant="outlined">
               <InputLabel id="time-filter-label">Periodo</InputLabel>
               <Select
@@ -644,8 +671,30 @@ function LessonListPage() {
             </FormControl>
           </Grid>
 
+          {/* Filtro per tipo di lezione */}
+          <Grid item xs={12} md={2.5}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="lesson-type-filter-label">Tipo</InputLabel>
+              <Select
+                labelId="lesson-type-filter-label"
+                value={lessonTypeFilter}
+                onChange={handleLessonTypeFilterChange}
+                label="Tipo"
+                startAdornment={
+                  <InputAdornment position="start">
+                    <SchoolIcon />
+                  </InputAdornment>
+                }
+              >
+                <MenuItem value="all">Tutti i tipi</MenuItem>
+                <MenuItem value="single">Lezioni singole</MenuItem>
+                <MenuItem value="package">Da pacchetto</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
           {/* Payment filter */}
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={2}>
             <FormControl fullWidth variant="outlined">
               <InputLabel id="payment-filter-label">Pagamento</InputLabel>
               <Select
@@ -659,17 +708,16 @@ function LessonListPage() {
                   </InputAdornment>
                 }
               >
-                <MenuItem value="all">Tutti i pagamenti</MenuItem>
+                <MenuItem value="all">Tutti</MenuItem>
                 <MenuItem value="paid">Pagate</MenuItem>
                 <MenuItem value="unpaid">Non pagate</MenuItem>
-                <MenuItem value="package">Da pacchetto</MenuItem>
               </Select>
             </FormControl>
           </Grid>
 
           {/* Show only my lessons toggle (only for admin) */}
           {isAdmin() && (
-            <Grid item xs={12} md={2.5}>
+            <Grid item xs={12} md={2}>
               <FormControlLabel
                 control={
                   <Switch

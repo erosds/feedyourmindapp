@@ -211,7 +211,7 @@ function AdminDashboardSummary({
     color = 'text.secondary',
     variant = 'body2'
   }) => (
-    <Grid item xs={12} md={4}>
+    <Grid item xs={12} md={6}>
       <Box
         display="flex"
         flexDirection="column"
@@ -258,16 +258,8 @@ function AdminDashboardSummary({
           <Grid container spacing={2}>
             {/* Clickable stat blocks */}
             <ClickableStatBlock
-              icon={<TimerIcon />}
-              label="Pacchetti in scadenza"
-              value={expiringPackages.length}
-              onClick={() => navigateToPackages('expiring')}
-              color="warning.main"
-            />
-
-            <ClickableStatBlock
               icon={<CancelIcon />}
-              label="Pacchetti da saldare"
+              label="Pacchetti non saldati"
               value={expiredPackages.length}
               onClick={() => navigateToPackages('unpaid')}
               color="error.main"
@@ -275,7 +267,7 @@ function AdminDashboardSummary({
 
             <ClickableStatBlock
               icon={<MoneyIcon />}
-              label="Lezioni da saldare"
+              label="Lezioni non saldate"
               value={unpaidLessons.length}
               onClick={() => navigateToLessons('unpaid')}
               color="error.main"

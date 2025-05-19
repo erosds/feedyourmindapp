@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom'; // Add this import
+import { mt } from 'date-fns/locale';
 
 function AdminDashboardWeekSummary({
   currentWeekStart,
@@ -143,7 +144,7 @@ function AdminDashboardWeekSummary({
     const endDateParam = format(weekEnd, 'yyyy-MM-dd');
 
     // Navigate to lessons page with date filter parameters
-    navigate(`/lessons?time=custom&startDate=${startDateParam}&endDate=${endDateParam}&isRange=true`);
+    navigate(`/lessons?type=single&time=custom&startDate=${startDateParam}&endDate=${endDateParam}&isRange=true`);
   };
 
   const navigateToWeekExpiringPackages = () => {
@@ -184,7 +185,7 @@ function AdminDashboardWeekSummary({
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              Lezioni (saldate/totali)
+              Lezioni singole
             </Typography>
             <Typography variant="h5" color="text.primary">
               {weeklyStats.lessonsCount.paid}/{weeklyStats.lessonsCount.total}
@@ -193,7 +194,7 @@ function AdminDashboardWeekSummary({
         </Grid>
 
         {/* NUOVO: Statistiche pacchetti in scadenza */}
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid item xs={12} sm={6} md={2.5}>
           <Box
             onClick={navigateToWeekExpiringPackages}
             sx={{
@@ -208,7 +209,7 @@ function AdminDashboardWeekSummary({
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              Pacchetti (saldati/in scadenza)
+              Pacchetti in scadenza
             </Typography>
             <Typography variant="h5" color="text.primary">
               {weeklyStats.packagesCount.paid}/{weeklyStats.packagesCount.expiring}
@@ -227,7 +228,7 @@ function AdminDashboardWeekSummary({
         </Grid>
 
         {/* Payments to professors */}
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid item xs={12} sm={6} md={1.5}>
           <Typography variant="body2" color="text.secondary">
             Pagamenti
           </Typography>
