@@ -5,6 +5,7 @@ import {
   Paper,
   Typography,
   Box,
+  Tooltip,
 } from '@mui/material';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -178,7 +179,7 @@ function AdminDashboardWeekSummary({
         </Grid>
 
         {/* Payments to professors */}
-        <Grid item xs={12} sm={6} md={1.5}>
+        <Grid item xs={12} sm={6} md={2}>
           <Typography variant="body2" color="text.secondary">
             Pagamenti
           </Typography>
@@ -202,50 +203,54 @@ function AdminDashboardWeekSummary({
 
         {/* Statistiche lezioni periodo - Make this clickable */}
         <Grid item xs={12} sm={6} md={2}>
-          <Box
-            onClick={navigateToPeriodLessons}
-            sx={{
-              cursor: 'pointer',
-              borderRadius: 1,
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                backgroundColor: 'rgba(0,0,0,0.04)',
-                transform: 'translateY(-2px)',
-                boxShadow: 1
-              }
-            }}
-          >
-            <Typography variant="body2" color="primary.main">
-              Lezioni singole
-            </Typography>
-            <Typography variant="h5" color="text.primary">
-              {periodStats.lessonsCount.paid}/{periodStats.lessonsCount.total}
-            </Typography>
-          </Box>
+          <Tooltip title='Lezioni singole pagate/Lezioni singole nel periodo selezionato'>
+            <Box
+              onClick={navigateToPeriodLessons}
+              sx={{
+                cursor: 'pointer',
+                borderRadius: 1,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: 'rgba(0,0,0,0.04)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: 1
+                }
+              }}
+            >
+              <Typography variant="body2" color="primary.main">
+                Lezioni singole
+              </Typography>
+              <Typography variant="h5" color="text.primary">
+                {periodStats.lessonsCount.paid}/{periodStats.lessonsCount.total}
+              </Typography>
+            </Box>
+          </Tooltip>
         </Grid>
 
         {/* Statistiche pacchetti in scadenza */}
-        <Grid item xs={12} sm={6} md={2.5}>
-          <Box
-            onClick={navigateToPeriodExpiringPackages}
-            sx={{
-              cursor: 'pointer',
-              borderRadius: 1,
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                backgroundColor: 'rgba(0,0,0,0.04)',
-                transform: 'translateY(-2px)',
-                boxShadow: 1
-              }
-            }}
-          >
-            <Typography variant="body2" color="primary.main">
-              Pacchetti in scadenza
-            </Typography>
-            <Typography variant="h5" color="text.primary">
-              {periodStats.packagesCount.paid}/{periodStats.packagesCount.expiring}
-            </Typography>
-          </Box>
+        <Grid item xs={12} sm={6} md={1}>
+          <Tooltip title="Pacchetti pagati/Pacchetti in scadenza nel periodo selezionato">
+            <Box
+              onClick={navigateToPeriodExpiringPackages}
+              sx={{
+                cursor: 'pointer',
+                borderRadius: 1,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: 'rgba(0,0,0,0.04)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: 1
+                }
+              }}
+            >
+              <Typography variant="body2" color="primary.main">
+                Pacchetti
+              </Typography>
+              <Typography variant="h5" color="text.primary">
+                {periodStats.packagesCount.paid}/{periodStats.packagesCount.expiring}
+              </Typography>
+            </Box>
+          </Tooltip>
         </Grid>
 
       </Grid>
