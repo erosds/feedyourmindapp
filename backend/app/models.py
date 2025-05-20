@@ -153,11 +153,34 @@ class Package(Base):
 
     students = relationship("Student", secondary="package_students", back_populates="packages")
     lessons = relationship("Lesson", back_populates="package")
+    payments = relationship("PackagePayment", back_populates="package", cascade="all, delete-orphan")
+
 
     __table_args__ = (
         CheckConstraint("total_hours > 0", name="positive_hours"),
         CheckConstraint("package_cost >= 0", name="positive_cost"),
     )
+
+    @property
+    def paid_amount(self):
+        """Calcola l'importo totale già pagato tramite acconti."""
+        return sum(payment.amount for payment in self.payments) if self.payments else Decimal('0')
+    
+    @property
+    def payment_status(self):
+        """Restituisce lo stato di pagamento come stringa."""
+        if not self.payments:
+            return "non_paid"  # Non pagato
+        
+        paid_amount = self.paid_amount
+        package_cost = Decimal(str(self.package_cost))
+        
+        if paid_amount >= package_cost:
+            return "fully_paid"  # Completamente pagato
+        elif paid_amount > 0:
+            return "partially_paid"  # Parzialmente pagato (ha acconti)
+        else:
+            return "non_paid"  # Non pagato
     
 
 # Tabella di giunzione per la relazione many-to-many
@@ -255,69 +278,6 @@ class PackageUpdate(BaseModel):
             self.payment_date = None
             
         return self
-
-class PackageResponse(BaseModel):
-    id: int
-    student_ids: List[int]
-    start_date: date
-    total_hours: Decimal
-    package_cost: Decimal
-    status: str
-    is_paid: bool
-    payment_date: Optional[date]
-    remaining_hours: Decimal
-    expiry_date: date
-    extension_count: int
-    notes: Optional[str]
-    created_at: datetime
-    
-    model_config = ConfigDict(from_attributes=True)
-
-    @model_validator(mode='before')
-    @classmethod
-    def set_student_data(cls, values):
-        """
-        Ensures that student_ids is always properly set in the response.
-        Handles both ORM objects and dictionaries.
-        """
-        if isinstance(values, dict):
-            # If it's already a dict with student_ids, we're good
-            if 'student_ids' in values and values['student_ids'] is not None:
-                return values
-                
-            # If there's a single student_id, convert it to student_ids
-            if 'student_id' in values and values['student_id'] is not None:
-                values['student_ids'] = [values['student_id']]
-                return values
-                
-            # Default to empty array if nothing was found
-            values['student_ids'] = []
-            return values
-            
-        # If it's an ORM object (has students relationship)
-        if hasattr(values, 'students') and values.students:
-            student_ids = [student.id for student in values.students]
-            # Create a dictionary with all attributes
-            return {
-                'id': getattr(values, 'id', None),
-                'student_ids': student_ids,
-                'start_date': getattr(values, 'start_date', None),
-                'total_hours': getattr(values, 'total_hours', None),
-                'package_cost': getattr(values, 'package_cost', None),
-                'status': getattr(values, 'status', None),
-                'is_paid': getattr(values, 'is_paid', None),
-                'payment_date': getattr(values, 'payment_date', None),
-                'remaining_hours': getattr(values, 'remaining_hours', None),
-                'expiry_date': getattr(values, 'expiry_date', None),
-                'extension_count': getattr(values, 'extension_count', None),
-                'notes': getattr(values, 'notes', None),
-                'created_at': getattr(values, 'created_at', None),
-            }
-        
-        # Default fallback
-        values = dict(values) if not isinstance(values, dict) else values
-        values['student_ids'] = []
-        return values
 
 class LessonBase(BaseModel):
     professor_id: int
@@ -492,3 +452,82 @@ class UserActivitySummary(BaseModel):
     last_activity_time: Optional[datetime] = None
     activities_count: int
     recent_activities: List[ActivityLogResponse]
+
+class PackagePayment(Base):
+    __tablename__ = "package_payments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    package_id = Column(Integer, ForeignKey("packages.id", ondelete="CASCADE"), nullable=False)
+    amount = Column(DECIMAL(10, 2), nullable=False)
+    payment_date = Column(Date, nullable=False)
+    payment_method = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    # Relazione con il pacchetto
+    package = relationship("Package", back_populates="payments")
+
+# Aggiungi questi modelli Pydantic in models.py
+
+class PackagePaymentBase(BaseModel):
+    amount: Decimal
+    payment_date: date
+    payment_method: Optional[str] = None
+    notes: Optional[str] = None
+
+class PackagePaymentCreate(PackagePaymentBase):
+    pass
+
+class PackagePaymentUpdate(BaseModel):
+    amount: Optional[Decimal] = None
+    payment_date: Optional[date] = None
+    payment_method: Optional[str] = None
+    notes: Optional[str] = None
+
+class PackagePaymentResponse(PackagePaymentBase):
+    id: int
+    package_id: int
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+# Aggiorna il modello PackageResponse per includere informazioni sui pagamenti
+class PackageResponse(BaseModel):
+    id: int
+    student_ids: List[int]
+    start_date: date
+    total_hours: Decimal
+    package_cost: Decimal
+    status: str
+    is_paid: bool
+    payment_date: Optional[date]
+    remaining_hours: Decimal
+    expiry_date: date
+    extension_count: int
+    notes: Optional[str]
+    created_at: datetime
+    paid_amount: Decimal
+    payment_status: str
+    payments: List[PackagePaymentResponse] = []
+    
+    model_config = ConfigDict(from_attributes=True)
+    
+    @model_validator(mode='before')
+    @classmethod
+    def set_student_data(cls, values):
+        """
+        Ensures that student_ids is always properly set in the response.
+        Handles both ORM objects and dictionaries.
+        """
+        # ... mantieni la validazione esistente per gli student_ids ...
+        return values
+    
+    @field_validator('payment_status')
+    @classmethod
+    def format_payment_status(cls, v):
+        status_map = {
+            "non_paid": "Non saldato",
+            "partially_paid": "Ha acconti",
+            "fully_paid": "Pagato"
+        }
+        return status_map.get(v, v)

@@ -40,6 +40,7 @@ import { useAuth } from '../../context/AuthContext'; // Assicurati di importare 
 import getProfessorNameById from '../../utils/professorMapping';
 import PackageNotes from '../../components/packages/PackageNotes';
 import PackageCompletion from '../../components/packages/PackageCompletion';
+import PackagePayments from '../../components/packages/PackagePayments';
 
 
 function PackageDetailPage() {
@@ -88,6 +89,17 @@ function PackageDetailPage() {
     }
   };
 
+  const reloadPackageData = async () => {
+    try {
+      setLoading(true);
+      const packageResponse = await packageService.getById(id);
+      setPackageData(packageResponse.data);
+    } catch (err) {
+      console.error('Error reloading package data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -706,7 +718,6 @@ function PackageDetailPage() {
                           (da impostare)
                         </Typography>
                       )}
-                      
                     </Box>
                   </Grid>
                 )}
@@ -733,6 +744,14 @@ function PackageDetailPage() {
                   >
                     {remainingHours.toFixed(1)}
                   </Typography>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <PackagePayments
+                      packageId={packageData.id}
+                      packageCost={parseFloat(packageData.package_cost)}
+                      onPaymentChange={reloadPackageData}  // Passa la funzione di callback
+                    />
                 </Grid>
 
                 <Grid item xs={12}>

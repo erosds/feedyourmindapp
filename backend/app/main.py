@@ -12,7 +12,7 @@ from typing import Dict
 
 from app import models, database
 from app.database import get_db
-from app.routes import professors, students, packages, lessons, activity
+from app.routes import professors, students, packages, lessons, activity, package_payments
 from app.auth import (
     authenticate_professor, 
     create_access_token, 
@@ -83,6 +83,7 @@ app.include_router(students.router)
 app.include_router(packages.router)
 app.include_router(lessons.router)
 app.include_router(activity.router)
+app.include_router(package_payments.router)
 
 # Endpoint per le statistiche
 @app.get("/stats/finance", tags=["statistics"])

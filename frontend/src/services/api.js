@@ -148,6 +148,27 @@ export const packageService = {
     return api.put(`/packages/${packageId}/extend`);
   },
 
+  // Nuove funzioni per i pagamenti
+  getPayments: async (packageId) => {
+    return api.get(`/packages/${packageId}/payments/`);
+  },
+  
+  getPayment: async (packageId, paymentId) => {
+    return api.get(`/packages/${packageId}/payments/${paymentId}`);
+  },
+  
+  createPayment: async (packageId, data) => {
+    return api.post(`/packages/${packageId}/payments/`, data);
+  },
+  
+  updatePayment: async (packageId, paymentId, data) => {
+    return api.put(`/packages/${packageId}/payments/${paymentId}`, data);
+  },
+  
+  deletePayment: async (packageId, paymentId) => {
+    return api.delete(`/packages/${packageId}/payments/${paymentId}`);
+  },
+
   // Versione corretta per packageService.update in api.js
   update: async (id, data, allowMultiple = false) => {
     // 1. Conserva dati separati degli studenti se necessario

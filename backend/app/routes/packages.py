@@ -93,6 +93,21 @@ def package_orm_to_response(package_orm):
     if hasattr(package_orm, 'students'):
         student_ids = [student.id for student in package_orm.students]
     
+    # Calculate paid_amount as the sum of all payments
+    from decimal import Decimal
+    paid_amount = Decimal('0')
+    if hasattr(package_orm, 'payments') and package_orm.payments:
+        paid_amount = sum(Decimal(str(payment.amount)) for payment in package_orm.payments)
+    
+    # Set payment_status based on payments
+    package_cost = Decimal(str(package_orm.package_cost))
+    if paid_amount <= 0:
+        payment_status = "non_paid"
+    elif paid_amount >= package_cost:
+        payment_status = "fully_paid"
+    else:
+        payment_status = "partially_paid"
+    
     # Create a dictionary with all required fields
     package_dict = {
         "id": package_orm.id,
@@ -107,7 +122,10 @@ def package_orm_to_response(package_orm):
         "expiry_date": package_orm.expiry_date,
         "extension_count": package_orm.extension_count,
         "notes": package_orm.notes,
-        "created_at": package_orm.created_at
+        "created_at": package_orm.created_at,
+        "paid_amount": paid_amount,
+        "payment_status": payment_status,
+        "payments": package_orm.payments if hasattr(package_orm, 'payments') else []
     }
     
     return models.PackageResponse(**package_dict)
@@ -264,6 +282,8 @@ def read_packages(skip: int = 0, limit: int = 10000, db: Session = Depends(get_d
     
     return package_responses
 
+# Modifica la funzione read_package in packages.py
+
 @router.get("/{package_id}", response_model=models.PackageResponse)
 def read_package(package_id: int, db: Session = Depends(get_db)):
     """Get a specific package by ID with detailed information."""
@@ -278,8 +298,16 @@ def read_package(package_id: int, db: Session = Depends(get_db)):
     # Re-fetch the package to get up-to-date data
     db_package = db.query(models.Package).filter(models.Package.id == package_id).first()
     
-    # Use the custom function to convert ORM to response model
-    return package_orm_to_response(db_package)
+    # Calculate paid amount (sum of all payments)
+    paid_amount = sum(payment.amount for payment in db_package.payments) if db_package.payments else Decimal('0')
+    
+    # Use the package_orm_to_response function with additional fields
+    response = package_orm_to_response(db_package)
+    response.paid_amount = paid_amount
+    response.payment_status = db_package.payment_status
+    response.payments = db_package.payments
+    
+    return response
 
 @router.get("/student/{student_id}", response_model=List[models.PackageResponse])
 def read_student_packages(student_id: int, db: Session = Depends(get_db)):

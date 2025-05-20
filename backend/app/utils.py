@@ -4,6 +4,7 @@ from datetime import date, time
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
+
 def get_password_hash(password: str) -> str:
     """Genera un hash della password."""
     salt = bcrypt.gensalt()
@@ -68,3 +69,40 @@ def parse_time_string(time_str):
         return time(hour=hours, minute=minutes, second=seconds)
     except (ValueError, IndexError):
         return None
+    
+# Aggiungi queste funzioni in utils.py
+
+# app/utils.py (aggiunta alla fine del file)
+
+def update_package_payment_status(db: Session, package_id: int):
+    """
+    Aggiorna lo stato di pagamento di un pacchetto in base ai suoi acconti.
+    Imposta is_paid e payment_date in base alla somma degli acconti.
+    """
+    from app import models
+    from decimal import Decimal
+    
+    package = db.query(models.Package).filter(models.Package.id == package_id).first()
+    if not package:
+        return
+    
+    # Calcola la somma di tutti gli acconti
+    payments = db.query(models.PackagePayment).filter(
+        models.PackagePayment.package_id == package_id
+    ).all()
+    
+    total_paid = sum(Decimal(str(payment.amount)) for payment in payments)
+    package_cost = Decimal(str(package.package_cost))
+    
+    # Aggiorna is_paid in base alla somma degli acconti
+    package.is_paid = total_paid >= package_cost
+    
+    # Se ci sono pagamenti, imposta payment_date all'ultima data di pagamento
+    if payments:
+        # Ordina i pagamenti per data, prendi l'ultimo
+        latest_payment = sorted(payments, key=lambda p: p.payment_date)[-1]
+        package.payment_date = latest_payment.payment_date
+    else:
+        package.payment_date = None
+    
+    db.commit()
