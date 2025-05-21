@@ -1200,24 +1200,16 @@ function PackageListPage() {
         <DialogTitle>Conferma Pagamento</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            {isAdmin() && (
-              <TextField
-                fullWidth
-                label="Prezzo Pacchetto"
-                type="number"
-                value={selectedPackage?.package_cost || 0}
-                onChange={(e) => {
-                  const updatedPackage = {
-                    ...selectedPackage,
-                    package_cost: parseFloat(e.target.value) || 0
-                  };
-                  setSelectedPackage(updatedPackage);
-                }}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">€</InputAdornment>,
-                }}
-              />
-            )}
+            <TextField
+              fullWidth
+              label="Importo Pagamento"
+              type="number"
+              value={priceValue}
+              onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">€</InputAdornment>,
+              }}
+            />
             <DatePicker
               label="Data pagamento"
               value={paymentDate}

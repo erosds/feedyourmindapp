@@ -689,9 +689,9 @@ function PackageDetailPage() {
                   </Typography>
                   {packageData.is_paid || parseFloat(packageData.total_paid) > 0 ? (
                     <Typography variant="body1" fontWeight="medium">
-                      {packageData.payment_date ?
-                        format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it }) :
-                        'Data non disponibile'}
+                      {packageData.payment_date ? 
+                        format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it }) : 
+                        'Non ancora saldato'}
                     </Typography>
                   ) : (
                     <Typography variant="body2" color="text.secondary" fontStyle="italic">
