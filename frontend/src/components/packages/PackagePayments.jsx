@@ -248,7 +248,7 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
         )}
         
         {/* Payment summary */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item xs={12} sm={4}>
             <Typography variant="body2" color="text.secondary">
               Prezzo pacchetto

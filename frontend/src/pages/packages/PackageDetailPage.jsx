@@ -506,8 +506,6 @@ function PackageDetailPage() {
           </Typography>
         </Box>
 
-
-
         <Box>
           <Button
             variant="outlined"
@@ -558,7 +556,7 @@ function PackageDetailPage() {
       <Grid container spacing={1}>
         {/* Header with basic package information */}
         <Grid item xs={12} md={7} >
-          <Card sx={{ mb: 1, mt: 1 }}>
+          <Card sx={{ mb: 1}}>
             <CardContent>
               <Typography variant="h6" color="primary">
                 Informazioni pacchetto
@@ -772,11 +770,13 @@ function PackageDetailPage() {
             </CardContent>
           </Card>
           {/* Mantiene le note nello stesso Grid item, ma ora c'è spazio sufficiente grazie al margin */}
+          <Grid item xs={12}>
           <PackageNotes
             packageId={packageData.id}
             initialNotes={packageData.notes}
             onNotesUpdate={handleNotesUpdate}
           />
+          </Grid>
         </Grid>
 
         <Grid item xs={12} md={5}>
