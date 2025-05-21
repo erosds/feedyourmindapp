@@ -104,16 +104,16 @@ function AdminDashboardWeekSummary({
     const expiringUnpaidPackages = allPackages.filter(pkg => {
       if (pkg.status !== 'in_progress') return false;
       if (parseFloat(pkg.total_paid || 0) >= parseFloat(pkg.package_cost || 0)) return false;
-      
+
       // Check if expiry date is within the period
       if (!(pkg.expiry_date >= periodStartStr && pkg.expiry_date <= periodEndStr)) return false;
-      
+
       return true;
     });
 
     // Combine expired and expiring packages with remaining payment due
     const combinedUnpaidPackages = [...expiredUnpaidPackages, ...expiringUnpaidPackages];
-    
+
     const unpaidPackagesAmount = combinedUnpaidPackages.reduce(
       (sum, pkg) => {
         // Consider only the portion that hasn't been paid yet
@@ -141,7 +141,7 @@ function AdminDashboardWeekSummary({
     );
 
     // Consider a package as "paid" if total_paid >= package_cost
-    const paidExpiringPackages = expiringPackages.filter(pkg => 
+    const paidExpiringPackages = expiringPackages.filter(pkg =>
       parseFloat(pkg.total_paid || 0) >= parseFloat(pkg.package_cost || 0)
     );
 

@@ -64,7 +64,7 @@ function AdminDashboardPage() {
   // Dialog state
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
-  const [professorSchedules, setProfessorSchedules] = useState([]); 
+  const [professorSchedules, setProfessorSchedules] = useState([]);
 
   // Check admin access
   useEffect(() => {
@@ -74,6 +74,8 @@ function AdminDashboardPage() {
   }, [isAdmin, navigate]);
 
   // Load all data
+  // In AdminDashboardPage.jsx, modifica la parte dove vengono caricati i dati e passati al componente
+
   useEffect(() => {
     const fetchAllData = async () => {
       try {
@@ -87,8 +89,25 @@ function AdminDashboardPage() {
         ]);
 
         setLessons(lessonsResponse.data || []);
-        setPackages(packagesResponse.data || []);
         setProfessors(professorsResponse.data || []);
+
+        // Get packages
+        const packagesData = packagesResponse.data || [];
+
+        // Fetch package payments for each package
+        const packagePaymentsPromises = packagesData.map(pkg =>
+          packageService.getPayments(pkg.id)
+        );
+
+        const packagePaymentsResponses = await Promise.all(packagePaymentsPromises);
+
+        // Add payments to each package
+        const packagesWithPayments = packagesData.map((pkg, index) => ({
+          ...pkg,
+          payments: packagePaymentsResponses[index].data || []
+        }));
+
+        setPackages(packagesWithPayments);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError('Impossibile caricare i dati. Prova a riaggiornare la pagina.');
@@ -428,7 +447,7 @@ function AdminDashboardPage() {
         currentWeekStart={periodStartDate}
         weekEnd={periodEnd}
         allLessons={lessons}
-        allPackages={packages}
+        allPackages={packages} // Ora include anche i pagamenti
         professorWeeklyData={professorPeriodData}
       />
 
