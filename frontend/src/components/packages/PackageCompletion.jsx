@@ -1,5 +1,5 @@
 import React from 'react';
-import { useMediaQuery, useTheme } from '@mui/material';
+import { useMediaQuery, useTheme, Box, Typography, Grid } from '@mui/material';
 
 // Un componente per visualizzare un anello aperto che mostra il progresso
 const ProgressArc = ({ value, max, label, index, isExtra = false }) => {
@@ -120,14 +120,7 @@ const OpenPackageRing = ({ totalHours, usedHours }) => {
   const percentage = Math.min(100, (usedHours / totalHours) * 100);
 
   // Determina il colore in base al completamento
-  let color;
-  if (percentage >= 100) {
-    // Se ha completato tutte le ore, usa un colore più scuro
-    color = '#303f9f'; // Primary dark
-  } else {
-    // Altrimenti usa un colore tenue
-    color = '#7986cb'; // Primary light
-  }
+  const color = '#7986cb'; // Usa un colore consistente per i pacchetti aperti
 
   // Raggio dell'anello
   const radius = 40;
@@ -135,9 +128,9 @@ const OpenPackageRing = ({ totalHours, usedHours }) => {
   const strokeWidth = 8;
   // Circonferenza del cerchio
   const circumference = 2 * Math.PI * radius;
-  // Angolo di apertura (in radianti) - lasciamo un'apertura di 60 gradi
+  // Angolo di apertura (in radianti)
   const openingAngle = (Math.PI / 2);
-  // Angolo iniziale (in radianti) - varia in base all'indice per posizionare l'anello
+  // Angolo iniziale (in radianti)
   const startAngle = (-Math.PI * 5 / 4);
 
   // Calcola l'arco da disegnare (tenendo conto dell'apertura)
@@ -168,7 +161,7 @@ const OpenPackageRing = ({ totalHours, usedHours }) => {
       title={`Pacchetto aperto: ${usedHours.toFixed(1)} di ${totalHours.toFixed(1)} ore - ${percentage.toFixed(0)}% utilizzato`}
       style={{
         position: 'relative',
-        width: 150,
+        width: 100,
         height: 100,
         display: 'flex',
         alignItems: 'center',
@@ -176,7 +169,7 @@ const OpenPackageRing = ({ totalHours, usedHours }) => {
         flexDirection: 'column'
       }}
     >
-      <svg width="150" height="100" viewBox="0 0 100 10">
+      <svg width="100" height="100" viewBox="0 0 100 100">
         {/* Sfondo grigio dell'arco */}
         <path
           d={path}
@@ -214,11 +207,11 @@ const OpenPackageRing = ({ totalHours, usedHours }) => {
           textAlign: 'center',
           fontWeight: 'normal',
           fontSize: '0.65rem',
-          bottom: '10px',
+          bottom: '5px',
           color: '#555'
         }}
       >
-        Pacc. aperto
+        Pacchetto aperto
       </div>
     </div>
   );
@@ -229,6 +222,13 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+
+  // Calcola le ore totali utilizzate
+  const totalUsedHours = weeklyLessons.reduce((total, hours) => total + hours, 0) + extraHours;
+  // Calcola le ore rimanenti
+  const remainingHours = Math.max(0, totalHours - totalUsedHours);
+  // Calcola la percentuale di completamento
+  const completionPercentage = Math.min(100, (totalUsedHours / totalHours) * 100);
 
   // Determina il numero di colonne in base alla dimensione dello schermo
   const getGridColumns = () => {
@@ -250,9 +250,6 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
   // Calcola le ore totali utilizzate nelle 4 settimane (senza extra)
   const usedHoursInFourWeeks = weeklyLessons.reduce((total, hours) => total + hours, 0);
 
-  // Calcola le ore totali utilizzate
-  const totalUsedHours = usedHoursInFourWeeks + extraHours;
-
   // Calcola le ore teoriche disponibili per ore extra
   // Sono le ore totali meno quelle già svolte nelle 4 settimane
   const availableExtraHours = Math.max(0, totalHours - usedHoursInFourWeeks);
@@ -264,7 +261,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
   if (isOpenPackage) {
     return (
       <div style={{ marginTop: '1px' }}>
-        <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)'}}>
+        <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)' }}>
           Utilizzo ore pacchetto
         </div>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -275,20 +272,45 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
   }
 
   return (
-    <div style={{ marginTop: '1px' }}>
-      <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)'}}>
-        Utilizzo Pacchetto
-      </div>
+    <Box sx={{ mt: 1, mb: 1 }}>
+      {/* Aggiungi indicatori testuali delle ore */}
+      <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
+        <Grid item xs={5}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Ore totali
+          </Typography>
+          <Typography variant="h6">
+            {totalHours.toFixed(1)}
+          </Typography>
+        </Grid>
+        <Grid item xs={3}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Ore utilizzate
+          </Typography>
+          <Typography variant="h6">
+            {totalUsedHours.toFixed(1)}
+          </Typography>
+        </Grid>
+        <Grid item xs={4}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Ore rimanenti
+          </Typography>
+          <Typography variant="h6" color={remainingHours > 0 ? "" : "error.main"}>
+            {remainingHours.toFixed(1)}
+          </Typography>
+        </Grid>
+      </Grid>
 
-      <div style={{
+      <Box sx={{
         display: 'grid',
         gridTemplateColumns: getGridColumns(),
         gap: '4px',
-        overflowX: 'auto'
+        overflowX: 'auto',
+        py: 1
       }}>
         {/* Anelli per le 4 settimane */}
         {weeklyLessons.map((hours, index) => (
-          <div style={{ display: 'flex', justifyContent: 'center' }} key={`week-container-${index}`}>
+          <Box sx={{ display: 'flex', justifyContent: 'center' }} key={`week-container-${index}`}>
             <ProgressArc
               key={`week-${index}`}
               value={hours}
@@ -296,12 +318,12 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
               label={`Sett. ${index + 1}`}
               index={index}
             />
-          </div>
+          </Box>
         ))}
 
         {/* Anello per le ore extra (se presenti e se ci sono ore disponibili) */}
         {showExtraHours && (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             <ProgressArc
               value={extraHours}
               max={availableExtraHours}
@@ -309,26 +331,26 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
               index={4}
               isExtra={true}
             />
-          </div>
+          </Box>
         )}
-      </div>
+      </Box>
 
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        paddingLeft: '16px',
-        paddingRight: '8px',
-        fontSize: '0.65rem',
-        color: 'rgba(0, 0, 0, 0.6)'
-      }}>
-        <div></div>
-        {hoursBeforeStart > 0 && (
-          <div>
-            ⚠️ Attenzione: ci sono {hoursBeforeStart.toFixed(1)} ore svolte prima della data di inizio del pacchetto.
-          </div>
-        )}
-      </div>
-    </div>
+      {/* Avviso per ore svolte prima dell'inizio del pacchetto */}
+      {hoursBeforeStart > 0 && (
+        <Typography
+          variant="caption"
+          color="warning.main"
+          sx={{
+            display: 'block',
+            textAlign: 'center',
+            mt: 1,
+            fontWeight: 'medium'
+          }}
+        >
+          Ci sono {hoursBeforeStart.toFixed(1)} ore svolte prima della data di inizio del pacchetto.
+        </Typography>
+      )}
+    </Box>
   );
 };
 

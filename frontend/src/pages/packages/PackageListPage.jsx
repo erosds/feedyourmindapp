@@ -981,7 +981,7 @@ function PackageListPage() {
               <SortableTableCell id="student_ids" label="Studente/i" />
               <SortableTableCell id="start_date" label="Inizio" />
               <SortableTableCell id="expiry_date" label="Scadenza" />
-              <SortableTableCell id="remaining_hours" label="Ore Rim./Ore Tot." />
+              <SortableTableCell id="remaining_hours" label="Ore Rim./Tot." />
               <SortableTableCell id="status" label="Stato" />
               <SortableTableCell id="is_paid" label="Pagamento" />
               <SortableTableCell id="payment_date" label="Data Pagamento" />

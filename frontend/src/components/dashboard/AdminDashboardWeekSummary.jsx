@@ -142,6 +142,7 @@ function AdminDashboardWeekSummary({
 
     // Consider a package as "paid" if total_paid >= package_cost
     const paidExpiringPackages = expiringPackages.filter(pkg =>
+      parseFloat(pkg.package_cost || 0) > 0 && // Aggiungi questa condizione
       parseFloat(pkg.total_paid || 0) >= parseFloat(pkg.package_cost || 0)
     );
 
