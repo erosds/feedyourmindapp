@@ -203,6 +203,175 @@ function PaymentCalendarPage() {
     return expiryDate > mondayThisWeek && expiryDate <= mondayNextWeek;
   };
 
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        setLoading(true);
+
+        // Get start and end dates for current month
+        const monthStart = startOfMonth(currentMonth);
+        const monthEnd = endOfMonth(currentMonth);
+
+        // Format dates for API
+        const startDateStr = format(monthStart, 'yyyy-MM-dd');
+        const endDateStr = format(monthEnd, 'yyyy-MM-dd');
+
+        // Load all lessons, packages, and package payments in parallel
+        const [lessonsResponse, packagesResponse, allPackagesResponse] = await Promise.all([
+          lessonService.getAll(),
+          packageService.getAll(),
+          packageService.getAll() // Utilizziamo questa chiamata di nuovo per ottenere tutti i pacchetti
+        ]);
+
+        // Per ogni pacchetto, carica i relativi pagamenti
+        const packagePaymentsPromises = allPackagesResponse.data.map(pkg =>
+          packageService.getPayments(pkg.id)
+        );
+
+        const packagePaymentsResponses = await Promise.all(packagePaymentsPromises);
+
+        // Crea una mappa di pagamenti per ogni pacchetto
+        const packagePaymentsMap = {};
+        packagePaymentsResponses.forEach((response, index) => {
+          const packageId = allPackagesResponse.data[index].id;
+          packagePaymentsMap[packageId] = response.data || [];
+        });
+
+        // Filtra per pagamenti di lezioni singole
+        const paidLessons = lessonsResponse.data.filter(lesson =>
+          lesson.is_paid &&
+          lesson.payment_date &&
+          !lesson.is_package &&
+          lesson.payment_date >= startDateStr &&
+          lesson.payment_date <= endDateStr
+        );
+
+        // Ora raccogliamo i pagamenti dei pacchetti nel periodo
+        const packagePaymentsInPeriod = [];
+
+        Object.entries(packagePaymentsMap).forEach(([packageId, payments]) => {
+          // Trova il pacchetto corrispondente
+          const pkg = allPackagesResponse.data.find(p => p.id === parseInt(packageId));
+
+          if (pkg) {
+            // Filtra i pagamenti che rientrano nel periodo
+            const paymentsInPeriod = payments.filter(payment =>
+              payment.payment_date >= startDateStr &&
+              payment.payment_date <= endDateStr
+            );
+
+            // Aggiungi i pagamenti al nostro array
+            packagePaymentsInPeriod.push(...paymentsInPeriod.map(payment => ({
+              id: `package-payment-${payment.id}`,
+              type: 'package-payment',
+              typeId: payment.id,
+              packageId: parseInt(packageId),
+              date: payment.payment_date,
+              student_id: pkg.student_ids?.[0] || null,
+              amount: parseFloat(payment.amount || 0),
+              hours: parseFloat(pkg.total_hours || 0),
+              notes: payment.notes,
+              studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+            })));
+          }
+        });
+
+        // Filtra i pacchetti scaduti e non pagati
+        const expiredPackagesData = packagesResponse.data.filter(pkg =>
+          pkg.total_paid < pkg.package_cost && // Non pagato completamente
+          pkg.status === 'expired' &&
+          pkg.expiry_date >= startDateStr &&
+          pkg.expiry_date <= endDateStr
+        );
+
+        // Filtra anche i pacchetti in scadenza questa settimana (ancora attivi)
+        const expiringPackagesData = packagesResponse.data.filter(pkg => {
+          const expiryDate = parseISO(pkg.expiry_date);
+          return (
+            pkg.total_paid < pkg.package_cost && // Non pagato completamente
+            pkg.status === 'in_progress' &&
+            isPackageExpiring(pkg) &&
+            expiryDate >= monthStart && expiryDate <= monthEnd
+          );
+        });
+
+        // Formatta i pacchetti scaduti, mostrando solo l'importo rimanente da pagare
+        const formattedExpiredPackages = [
+          ...expiredPackagesData.map(pkg => ({
+            id: `expired-${pkg.id}`,
+            type: 'expired-package',
+            typeId: pkg.id,
+            date: pkg.expiry_date,
+            student_id: pkg.student_ids?.[0] || null,
+            amount: parseFloat(pkg.package_cost || 0) - parseFloat(pkg.total_paid || 0), // Solo l'importo rimanente
+            hours: parseFloat(pkg.total_hours || 0),
+            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+          })),
+          ...expiringPackagesData.map(pkg => ({
+            id: `expiring-${pkg.id}`,
+            type: 'expired-package',
+            typeId: pkg.id,
+            date: pkg.expiry_date,
+            student_id: pkg.student_ids?.[0] || null,
+            amount: parseFloat(pkg.package_cost || 0) - parseFloat(pkg.total_paid || 0), // Solo l'importo rimanente
+            hours: parseFloat(pkg.total_hours || 0),
+            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+          }))
+        ];
+
+        setExpiredPackages(formattedExpiredPackages);
+
+        // Filtra per lezioni non pagate
+        const unpaidLessonsData = lessonsResponse.data.filter(lesson =>
+          !lesson.is_paid &&
+          !lesson.is_package &&
+          lesson.lesson_date >= startDateStr &&
+          lesson.lesson_date <= endDateStr
+        );
+
+        // Format unpaid lessons
+        const formattedUnpaidLessons = unpaidLessonsData.map(lesson => ({
+          id: `unpaid-${lesson.id}`,
+          type: 'unpaid',
+          typeId: lesson.id,
+          date: lesson.lesson_date,
+          student_id: lesson.student_id,
+          amount: parseFloat(lesson.price || 0),
+          hours: parseFloat(lesson.duration || 0),
+          studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`,
+          professorName: getProfessorName(lesson.professor_id)
+        }));
+
+        // Combine and format payments (lezioni + pagamenti pacchetti)
+        const combinedPayments = [
+          ...paidLessons.map(lesson => ({
+            id: `lesson-${lesson.id}`,
+            type: 'lesson',
+            typeId: lesson.id,
+            date: lesson.payment_date,
+            student_id: lesson.student_id,
+            amount: parseFloat(lesson.price || 0),
+            hours: parseFloat(lesson.duration || 0),
+            studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
+          })),
+          ...packagePaymentsInPeriod // Aggiungi i pagamenti dei pacchetti
+        ];
+
+        setUnpaidLessons(formattedUnpaidLessons);
+        setPayments(combinedPayments);
+      } catch (err) {
+        console.error('Error fetching payments:', err);
+        setError('Impossibile caricare i pagamenti. Riprova più tardi.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (Object.keys(students).length > 0) {
+      fetchPayments();
+    }
+  }, [currentMonth, students]);
+
   // Modifica questo useEffect
   useEffect(() => {
     const fetchData = async () => {
@@ -293,24 +462,18 @@ function PaymentCalendarPage() {
       const formattedDate = format(paymentDate, 'yyyy-MM-dd');
 
       if (selectedPaymentItem.type === 'unpaid') {
-        // Per le lezioni non pagate
+        // Per le lezioni non pagate (invariato)
         await lessonService.update(selectedPaymentItem.typeId, {
           is_paid: true,
           payment_date: formattedDate,
           price: priceValue
         });
       } else if (selectedPaymentItem.type === 'expired-package') {
-        // Per i pacchetti scaduti
-        // Prima ottieni tutti i dati del pacchetto
-        const packageResponse = await packageService.getById(selectedPaymentItem.typeId);
-        const packageData = packageResponse.data;
-
-        // Aggiorna solo i campi necessari
-        await packageService.update(selectedPaymentItem.typeId, {
-          ...packageData,
-          is_paid: true,
+        // Per i pacchetti scaduti, aggiungi un nuovo pagamento invece di aggiornare direttamente
+        await packageService.addPayment(selectedPaymentItem.typeId, {
+          amount: priceValue,
           payment_date: formattedDate,
-          package_cost: priceValue
+          notes: "Pagamento generato da calendario pagamenti"
         });
       }
 
@@ -319,6 +482,7 @@ function PaymentCalendarPage() {
       const monthEnd = endOfMonth(currentMonth);
       const startDateStr = format(monthStart, 'yyyy-MM-dd');
       const endDateStr = format(monthEnd, 'yyyy-MM-dd');
+
 
       const [lessonsResponse, packagesResponse] = await Promise.all([
         lessonService.getAll(),
@@ -633,8 +797,10 @@ function PaymentCalendarPage() {
   const handlePaymentClick = (payment) => {
     if (payment.type === 'lesson' || payment.type === 'unpaid') {
       navigate(`/lessons/${payment.typeId}`);
+    } else if (payment.type === 'package-payment') {
+      // Per i pagamenti dei pacchetti, vai al pacchetto corrispondente
+      navigate(`/packages/${payment.packageId}`);
     } else if (payment.type === 'package' || payment.type === 'expired-package') {
-      // Aggiungi gestione esplicita per i pacchetti scaduti
       navigate(`/packages/${payment.typeId}`);
     }
     setDialogOpen(false);
@@ -685,20 +851,21 @@ function PaymentCalendarPage() {
 
   // Calculate monthly stats
   const calculateMonthStats = () => {
-    const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
-
-    const packagePayments = payments.filter(payment => payment.type === 'package');
-    const packageCount = packagePayments.length;
-    const packageTotal = packagePayments.reduce((sum, payment) => sum + payment.amount, 0);
+    // Conta i pagamenti dei pacchetti (anziché i pacchetti stessi)
+    const packagePayments = payments.filter(payment => payment.type === 'package-payment');
+    const packagePaymentsCount = packagePayments.length;
+    const packagePaymentsTotal = packagePayments.reduce((sum, payment) => sum + payment.amount, 0);
 
     const lessonPayments = payments.filter(payment => payment.type === 'lesson');
     const lessonHours = lessonPayments.reduce((sum, payment) => sum + payment.hours, 0);
     const lessonTotal = lessonPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
+    const totalAmount = packagePaymentsTotal + lessonTotal;
+
     return {
       totalAmount,
-      packageCount,
-      packageTotal,
+      packagePaymentsCount,
+      packagePaymentsTotal,
       lessonHours,
       lessonTotal
     };
@@ -855,10 +1022,10 @@ function PaymentCalendarPage() {
 
               <Grid item xs={12} sm={1.5}>
                 <Typography variant="body2" color="text.secondary">
-                  Pacchetti
+                  Pag. pacchetti
                 </Typography>
                 <Typography variant="h5">
-                  {monthStats.packageCount}
+                  {monthStats.packagePaymentsCount}
                 </Typography>
               </Grid>
 
@@ -867,7 +1034,7 @@ function PaymentCalendarPage() {
                   Totale da pacchetti
                 </Typography>
                 <Typography variant="h5" color="darkviolet" fontWeight="bold">
-                  €{monthStats.packageTotal.toFixed(2)}
+                  €{monthStats.packagePaymentsTotal.toFixed(2)}
                 </Typography>
               </Grid>
 

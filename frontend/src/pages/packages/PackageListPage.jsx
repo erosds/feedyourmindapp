@@ -1054,15 +1054,30 @@ function PackageListPage() {
 
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={pkg.is_paid ? 'Pagato' : 'Non pagato'}
-                        color={pkg.is_paid ? 'success' : 'error'}
-                        size="small"
-                        variant="outlined"
-                        onClick={(e) => handleTogglePayment(pkg, e)}
-                        disabled={updating}
-                        sx={{ cursor: 'pointer' }}
-                      />
+                      {pkg.is_paid ? (
+                        <Chip
+                          label="Pagato"
+                          color="success"
+                          size="small"
+                          variant="outlined"
+                        />
+                      ) : parseFloat(pkg.total_paid) > 0 ? (
+                        <Tooltip title={`€${parseFloat(pkg.total_paid).toFixed(2)} di €${parseFloat(pkg.package_cost).toFixed(2)}`}>
+                          <Chip
+                            label="Acconto"
+                            color="warning"
+                            size="small"
+                            variant="outlined"
+                          />
+                        </Tooltip>
+                      ) : (
+                        <Chip
+                          label="Non pagato"
+                          color="error"
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
                     </TableCell>
                     <TableCell>
                       {pkg.payment_date ? format(parseISO(pkg.payment_date), 'dd/MM/yyyy', { locale: it }) : '-'}

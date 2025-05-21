@@ -107,7 +107,8 @@ def package_orm_to_response(package_orm):
         "expiry_date": package_orm.expiry_date,
         "extension_count": package_orm.extension_count,
         "notes": package_orm.notes,
-        "created_at": package_orm.created_at
+        "created_at": package_orm.created_at,
+        "total_paid": package_orm.total_paid if hasattr(package_orm, 'total_paid') else Decimal('0')  # Aggiungi questo campo
     }
     
     return models.PackageResponse(**package_dict)
@@ -571,6 +572,115 @@ def extend_package_expiry(
     )
 
     return db_package
+
+# In routes/packages.py - Aggiungi questi endpoints
+
+@router.post("/{package_id}/payments", response_model=models.PackagePaymentResponse)
+def add_package_payment(
+    package_id: int, 
+    payment: models.PackagePaymentCreate,
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_professor)
+):
+    """Aggiunge un pagamento (acconto o saldo) a un pacchetto."""
+    # Verifica che il pacchetto esista
+    package = db.query(models.Package).filter(models.Package.id == package_id).first()
+    if not package:
+        raise HTTPException(status_code=404, detail="Package not found")
+    
+    # Crea il pagamento
+    db_payment = models.PackagePayment(
+        package_id=package_id,
+        amount=payment.amount,
+        payment_date=payment.payment_date,
+        notes=payment.notes
+    )
+    
+    db.add(db_payment)
+    
+    # Aggiorna il totale pagato del pacchetto
+    package.total_paid = package.total_paid + payment.amount
+    
+    # Se il totale pagato raggiunge o supera il costo del pacchetto, imposta come pagato
+    if package.total_paid >= package.package_cost:
+        package.is_paid = True
+        package.payment_date = payment.payment_date  # Usa la data dell'ultimo pagamento
+    
+    db.commit()
+    db.refresh(db_payment)
+    
+    # Log dell'attività
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="create",
+        entity_type="package_payment",
+        entity_id=db_payment.id,
+        description=f"Aggiunto pagamento di €{payment.amount} al pacchetto #{package_id}"
+    )
+    
+    return db_payment
+
+@router.get("/{package_id}/payments", response_model=List[models.PackagePaymentResponse])
+def get_package_payments(
+    package_id: int,
+    db: Session = Depends(get_db)
+):
+    """Ottiene tutti i pagamenti di un pacchetto."""
+    package = db.query(models.Package).filter(models.Package.id == package_id).first()
+    if not package:
+        raise HTTPException(status_code=404, detail="Package not found")
+    
+    payments = db.query(models.PackagePayment).filter(
+        models.PackagePayment.package_id == package_id
+    ).order_by(models.PackagePayment.payment_date).all()
+    
+    return payments
+
+@router.delete("/payments/{payment_id}", status_code=http_status.HTTP_204_NO_CONTENT)
+def delete_package_payment(
+    payment_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Professor = Depends(get_current_professor)  # Usa get_current_professor
+):
+    """Elimina un pagamento di un pacchetto (solo admin)."""
+    # Verifica manualmente se l'utente è admin
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="Solo gli amministratori possono eliminare i pagamenti"
+        )
+        
+    payment = db.query(models.PackagePayment).filter(models.PackagePayment.id == payment_id).first()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    # Ottieni il pacchetto associato
+    package = db.query(models.Package).filter(models.Package.id == payment.package_id).first()
+    
+    # Sottrai l'importo del pagamento dal totale pagato
+    package.total_paid = max(Decimal('0'), package.total_paid - payment.amount)
+    
+    # Se il totale pagato diventa inferiore al costo, imposta come non pagato
+    if package.total_paid < package.package_cost:
+        package.is_paid = False
+        package.payment_date = None
+    
+    # Elimina il pagamento
+    db.delete(payment)
+    db.commit()
+    
+    # Log dell'attività
+    log_activity(
+        db=db,
+        professor_id=current_user.id,
+        action_type="delete",
+        entity_type="package_payment",
+        entity_id=payment_id,
+        description=f"Eliminato pagamento di €{payment.amount} dal pacchetto #{payment.package_id}"
+    )
+    
+    return None
 
 # Add this to backend/app/routes/packages.py
 @router.put("/{package_id}/cancel-extension", response_model=models.PackageResponse)

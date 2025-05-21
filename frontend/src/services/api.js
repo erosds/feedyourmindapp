@@ -134,6 +134,19 @@ export const packageService = {
   getActiveByStudent: async (studentId) => {
     return api.get(`/packages/student/${studentId}/active`);
   },
+
+  // Aggiungi questi nuovi metodi
+  getPayments: async (packageId) => {
+    return api.get(`/packages/${packageId}/payments`);
+  },
+  
+  addPayment: async (packageId, data) => {
+    return api.post(`/packages/${packageId}/payments`, data);
+  },
+  
+  deletePayment: async (paymentId) => {
+    return api.delete(`/packages/payments/${paymentId}`);
+  },
   
   create: async (data, allowMultiple = false) => {
     // Assicura che student_ids sia un array nel caso di un solo studente

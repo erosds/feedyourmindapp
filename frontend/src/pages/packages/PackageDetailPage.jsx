@@ -40,6 +40,7 @@ import { useAuth } from '../../context/AuthContext'; // Assicurati di importare 
 import getProfessorNameById from '../../utils/professorMapping';
 import PackageNotes from '../../components/packages/PackageNotes';
 import PackageCompletion from '../../components/packages/PackageCompletion';
+import PackagePayments from '../../components/packages/PackagePayments';
 
 
 function PackageDetailPage() {
@@ -666,16 +667,20 @@ function PackageDetailPage() {
 
                 <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
-                    Data Pagamento
+                    Stato Pagamento
                   </Typography>
-                  {packageData.is_paid && packageData.payment_date ? (
+                  {packageData.is_paid ? (
                     <Typography variant="body1" fontWeight="medium" color="success.main">
-                      {format(parseISO(packageData.payment_date), 'EEEE dd MMMM yyyy', { locale: it })}
+                      Saldato {packageData.payment_date && `(${format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it })})`}
                     </Typography>
                   ) : (
-                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                      Non ancora saldato
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                        {parseFloat(packageData.total_paid) > 0
+                          ? `Acconto versato: €${parseFloat(packageData.total_paid).toFixed(2)}`
+                          : 'Non ancora saldato'}
+                      </Typography>
+                    </Box>
                   )}
                 </Grid>
 
@@ -706,7 +711,7 @@ function PackageDetailPage() {
                           (da impostare)
                         </Typography>
                       )}
-                      
+
                     </Box>
                   </Grid>
                 )}
@@ -785,6 +790,23 @@ function PackageDetailPage() {
             initialNotes={packageData.notes}
             onNotesUpdate={handleNotesUpdate}
           />
+
+          {/* Aggiungi questo componente con un margine superiore */}
+          <Box sx={{ mt: 2 }}>
+            <PackagePayments
+              packageId={packageData.id}
+              packageData={packageData}
+              onPaymentsUpdate={async () => {
+                // Ricarica i dati del pacchetto quando i pagamenti vengono aggiornati
+                try {
+                  const packageResponse = await packageService.getById(id);
+                  setPackageData(packageResponse.data);
+                } catch (err) {
+                  console.error('Error refreshing package data:', err);
+                }
+              }}
+            />
+          </Box>
         </Grid>
 
 

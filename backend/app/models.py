@@ -134,6 +134,35 @@ class StudentResponse(StudentBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+class PackagePayment(Base):
+    __tablename__ = "package_payments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    package_id = Column(Integer, ForeignKey("packages.id", ondelete="CASCADE"), nullable=False)
+    amount = Column(DECIMAL(10, 2), nullable=False)
+    payment_date = Column(Date, nullable=False)
+    notes = Column(String, nullable=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    # Relazione con il pacchetto
+    package = relationship("Package", back_populates="payments")
+
+# Modelli per i pagamenti dei pacchetti
+class PackagePaymentBase(BaseModel):
+    amount: Decimal
+    payment_date: date
+    notes: Optional[str] = None
+
+class PackagePaymentCreate(PackagePaymentBase):
+    pass
+
+class PackagePaymentResponse(PackagePaymentBase):
+    id: int
+    package_id: int
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
 # Update Package SQLAlchemy model
 class Package(Base):
     __tablename__ = "packages"
@@ -150,7 +179,9 @@ class Package(Base):
     extension_count = Column(Integer, default=0)  # Nuovo campo per tenere traccia delle estensioni
     notes = Column(String, nullable=True)  # Campo per annotazioni generali
     created_at = Column(TIMESTAMP, server_default=func.now())
+    total_paid = Column(DECIMAL(10, 2), default=0, nullable=False)
 
+    payments = relationship("PackagePayment", back_populates="package", cascade="all, delete-orphan")
     students = relationship("Student", secondary="package_students", back_populates="packages")
     lessons = relationship("Lesson", back_populates="package")
 
@@ -270,6 +301,8 @@ class PackageResponse(BaseModel):
     extension_count: int
     notes: Optional[str]
     created_at: datetime
+    total_paid: Decimal
+    payments: List[PackagePaymentResponse] = []
     
     model_config = ConfigDict(from_attributes=True)
 
