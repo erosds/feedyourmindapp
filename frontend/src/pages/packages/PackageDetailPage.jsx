@@ -561,7 +561,7 @@ function PackageDetailPage() {
               <Typography variant="h6" color="primary">
                 Informazioni pacchetto
               </Typography>
-              <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid container spacing={2} sx={{ mt: 1}}>
                 {/* Left Column */}
                 <Grid item xs={12} md={5}>
                   <Typography variant="body2" color="text.secondary">
