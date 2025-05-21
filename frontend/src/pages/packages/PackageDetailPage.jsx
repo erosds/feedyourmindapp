@@ -700,60 +700,6 @@ function PackageDetailPage() {
                   )}
                 </Grid>
 
-                {/* Financial details */}
-                <Grid item xs={12}>
-                  <Divider />
-                </Grid>
-                {isAdmin() && (
-                  <Grid item xs={12} md={5}>
-                    <Box display="flex" alignItems="center" mb={1}>
-                      <Typography variant="body2" color="text.secondary">
-                        Prezzo pacchetto
-                      </Typography>
-                    </Box>
-                    <Box display="flex" alignItems="center">
-                      <Typography
-                        variant="h6"
-                        fontWeight="medium"
-                        mt={-1}
-                      >
-                        €{parseFloat(packageData.package_cost).toFixed(2)}
-                      </Typography>
-
-                      {(parseFloat(packageData.package_cost) === 0) && (
-                        <Typography variant="caption" color="error" sx={{ ml: 1, alignSelf: "flex-end", mb: 0.5 }}>
-                          (da impostare)
-                        </Typography>
-                      )}
-
-                    </Box>
-                  </Grid>
-                )}
-
-
-                <Grid item xs={12} md={3}>
-                  <Typography variant="body2" color="text.secondary">
-                    Ore totali
-                  </Typography>
-                  <Typography variant="h6" fontWeight="medium" gutterBottom>
-                    {packageData.total_hours}
-                  </Typography>
-                </Grid>
-
-
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    Ore rimanenti
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    fontWeight={remainingHours > 0 ? '' : 'bold'}
-                    color={remainingHours > 0 ? '' : 'error'}
-                  >
-                    {remainingHours.toFixed(1)}
-                  </Typography>
-                </Grid>
-
                 <Grid item xs={12}>
                   <Divider />
                 </Grid>
