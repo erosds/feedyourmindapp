@@ -410,13 +410,14 @@ function PaymentCalendarPage() {
     if (viewMode === 'payments') {
       const dayPayments = getPaymentsForDay(day);
 
-      // Separate packages and lessons
+      // Separa pacchetti e lezioni
       const packages = dayPayments
         .filter(payment => payment.type === 'package' || payment.type === 'package-payment')
         .map(payment => ({
           id: payment.id,
           name: formatStudentName(payment.studentName),
-          type: payment.type === 'package-payment' ? 'package-payment' : 'package'
+          type: payment.type === 'package-payment' ? 'package-payment' : 'package',
+          isFinalPayment: payment.isFinalPayment // Aggiungi questa proprietà
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -428,7 +429,7 @@ function PaymentCalendarPage() {
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-      // Concatenate packages first, then lessons
+      // Concatena pacchetti prima, poi lezioni
       return [...packages, ...lessons];
     }
     // If in "unpaid" mode, show unpaid lessons and expired packages

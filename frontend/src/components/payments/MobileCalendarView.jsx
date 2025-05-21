@@ -193,13 +193,17 @@ function MobileCalendarView({
                       sx={{
                         height: 16,
                         margin: '1px',
-                        backgroundColor: student.type === 'package' || student.type === 'package-payment'
-                          ? 'darkviolet'
-                          : student.type === 'expired-package' || student.type === 'expiring-package' // Usa lo stesso colore per entrambi
-                            ? 'warning.main'
-                            : student.type === 'unpaid'
-                              ? 'secondary.main'
-                              : 'primary.main',
+                        backgroundColor: student.type === 'package'
+                          ? 'darkviolet'  // Pacchetto (non dovrebbe accadere spesso)
+                          : student.type === 'package-payment'
+                            ? (student.isFinalPayment
+                              ? 'darkviolet'    // Saldo pacchetto 
+                              : 'mediumpurple') // Acconto pacchetto
+                            : student.type === 'expired-package' || student.type === 'expiring-package'
+                              ? 'warning.main'
+                              : student.type === 'unpaid'
+                                ? 'secondary.main'
+                                : 'primary.main',
                         color: 'white',
                         '& .MuiChip-label': {
                           px: 0.6,

@@ -224,7 +224,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
   // Calcola le ore totali utilizzate
-  const totalUsedHours = weeklyLessons.reduce((total, hours) => total + hours, 0) + extraHours;
+  const totalUsedHours = weeklyLessons.reduce((total, hours) => total + hours, 0) + extraHours + hoursBeforeStart;
   // Calcola le ore rimanenti
   const remainingHours = Math.max(0, totalHours - totalUsedHours);
   // Calcola la percentuale di completamento
@@ -260,19 +260,66 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
 
   if (isOpenPackage) {
     return (
-      <div style={{ marginTop: '1px' }}>
-        <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)' }}>
-          Utilizzo ore pacchetto
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <OpenPackageRing totalHours={totalHours} usedHours={totalUsedHours} />
-        </div>
-      </div>
+      <Box sx={{ mb: 1 }}>
+        {/* Barra con sfumatura per pacchetto aperto */}
+        <Box sx={{ position: 'relative', width: '100%'}}>
+          {/* Barra base grigia sfumata */}
+          <Box sx={{
+            position: 'absolute',
+            width: '100%',
+            height: '16px',
+            borderRadius: '8px',
+            top: '22px',
+            background: 'linear-gradient(90deg, rgba(240,240,240,1) 0%, rgba(240,240,240,1) 70%, rgba(240,240,240,0.2) 100%)'
+          }} />
+
+          {/* Barra colorata solida che avanza */}
+          <Box sx={{
+            position: 'absolute',
+            width: totalUsedHours > 0 ? `${Math.min(75, totalUsedHours * 4)}%` : '10%', // Limita a 75% della larghezza
+            height: '16px',
+            borderRadius: '8px',
+            top: '22px',
+            bgcolor: 'primary.main',
+            transition: 'width 0.5s ease-in-out'
+          }} />
+
+          {/* Testo esplicativo sopra la barra */}
+          <Typography
+            variant="caption"
+            color="primary.main"
+            sx={{
+              position: 'absolute',
+              fontWeight: 'medium'
+            }}
+          >
+            Pacchetto aperto
+          </Typography>
+
+          {/* Indicatore di ore utilizzate sulla barra, ora senza il trattino */}
+          <Box sx={{
+            position: 'absolute',
+            left: totalUsedHours > 0 ? `${Math.min(73, totalUsedHours * 4.1)}%` : '8%',
+            top: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+          }}>
+            <Typography
+              variant="caption"
+              fontWeight="bold"
+              sx={{ color: 'primary.main' }}
+            >
+              {totalUsedHours.toFixed(1)}h
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <Box sx={{ mt: 1, mb: 1 }}>
+    <Box sx={{ mb: -5 }}>
       {/* Aggiungi indicatori testuali delle ore */}
       <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
         <Grid item xs={5}>
@@ -287,7 +334,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
           <Typography variant="subtitle2" color="text.secondary">
             Ore utilizzate
           </Typography>
-          <Typography variant="h6">
+          <Typography variant="h6" color={totalUsedHours === totalHours ? "success.main" : ""}>
             {totalUsedHours.toFixed(1)}
           </Typography>
         </Grid>
@@ -295,7 +342,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
           <Typography variant="subtitle2" color="text.secondary">
             Ore rimanenti
           </Typography>
-          <Typography variant="h6" color={remainingHours > 0 ? "" : "error.main"}>
+          <Typography variant="h6">
             {remainingHours.toFixed(1)}
           </Typography>
         </Grid>
@@ -304,9 +351,9 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
       <Box sx={{
         display: 'grid',
         gridTemplateColumns: getGridColumns(),
-        gap: '4px',
+        gap: '2px',
         overflowX: 'auto',
-        py: 1
+        py: 1,
       }}>
         {/* Anelli per le 4 settimane */}
         {weeklyLessons.map((hours, index) => (
@@ -344,6 +391,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
             display: 'block',
             textAlign: 'center',
             mt: 1,
+            mb: 3,
             fontWeight: 'medium'
           }}
         >

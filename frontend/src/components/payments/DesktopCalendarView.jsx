@@ -243,13 +243,18 @@ function DesktopCalendarView({
                           sx={{
                             height: 16,
                             margin: '1px',
-                            backgroundColor: student.type === 'package' || student.type === 'package-payment'
-                              ? 'darkviolet'
-                              : student.type === 'expired-package' || student.type === 'expiring-package' // Usa lo stesso colore per entrambi
-                                ? 'warning.main'
-                                : student.type === 'unpaid'
-                                  ? 'secondary.main'
-                                  : 'primary.main',
+                            // Aggiungi questa logica quando definisci il colore del chip:
+                            backgroundColor: student.type === 'package'
+                              ? 'darkviolet'  // Saldo pacchetto
+                              : student.type === 'package-payment'
+                                ? (student.isFinalPayment
+                                  ? 'darkviolet'    // Saldo pacchetto 
+                                  : 'mediumpurple') // Acconto pacchetto
+                                : student.type === 'expired-package' || student.type === 'expiring-package'
+                                  ? 'warning.main'
+                                  : student.type === 'unpaid'
+                                    ? 'secondary.main'
+                                    : 'primary.main',
                             color: 'white',
                             '& .MuiChip-label': {
                               px: 0.6,
