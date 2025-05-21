@@ -33,7 +33,8 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -53,6 +54,8 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
     notes: ''
   });
   const [success, setSuccess] = useState('');
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [finalizeLoading, setFinalizeLoading] = useState(false);
 
   // Fetch payments data
   useEffect(() => {
@@ -90,6 +93,11 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
   // Check if package has an open cost
   const isPackageOpen = () => {
     return packageData && parseFloat(packageData.package_cost) === 0;
+  };
+
+  // Calculate total paid amount
+  const getTotalPaid = () => {
+    return payments.reduce((sum, payment) => sum + parseFloat(payment.amount || 0), 0);
   };
 
   // Handle opening the add payment dialog
@@ -170,11 +178,78 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
     setDeleteDialogOpen(true);
   };
 
+  // Handle opening confirm finalize dialog
+  const handleOpenFinalizeDialog = () => {
+    setConfirmDialogOpen(true);
+  };
+
+  // Handle finalizing an open package
+  const handleFinalizePackage = async () => {
+    try {
+      setFinalizeLoading(true);
+      const totalPaid = getTotalPaid();
+      
+      if (totalPaid <= 0) {
+        setError('Non ci sono pagamenti da registrare');
+        setConfirmDialogOpen(false);
+        return;
+      }
+      
+      // Recupera i dati completi del pacchetto
+      const packageResponse = await packageService.getById(packageId);
+      const currentPackageData = packageResponse.data;
+      
+      // Data dell'ultimo pagamento
+      const lastPayment = payments.sort((a, b) => 
+        new Date(b.payment_date) - new Date(a.payment_date)
+      )[0];
+      
+      // Aggiorna il costo del pacchetto alla somma degli acconti e imposta come pagato
+      const updateData = {
+        ...currentPackageData,
+        package_cost: totalPaid,
+        is_paid: true,
+        payment_date: lastPayment ? lastPayment.payment_date : format(new Date(), 'yyyy-MM-dd')
+      };
+      
+      await packageService.update(packageId, updateData);
+      
+      // Chiudi dialog e mostra messaggio di successo
+      setConfirmDialogOpen(false);
+      setSuccess('Pacchetto finalizzato con successo');
+      setTimeout(() => setSuccess(''), 3000);
+      
+      // Aggiorna i dati del pacchetto
+      if (onPaymentsUpdate) {
+        onPaymentsUpdate();
+      }
+    } catch (err) {
+      console.error('Error finalizing package:', err);
+      setError('Errore durante la finalizzazione del pacchetto. Riprova più tardi.');
+    } finally {
+      setFinalizeLoading(false);
+    }
+  };
+
   // Handle deleting a payment
   const handleDeletePayment = async () => {
     if (!paymentToDelete) return;
     
     try {
+      // Prima di eliminare, verifica che non si stia eliminando un pagamento che renderebbe il totale
+      // inferiore al costo del pacchetto già impostato
+      const paymentAmount = payments.find(p => p.id === paymentToDelete)?.amount || 0;
+      const newTotalPaid = getTotalPaid() - parseFloat(paymentAmount);
+      const packageCost = parseFloat(packageData?.package_cost) || 0;
+      
+      // Se il pacchetto non è aperto e il nuovo totale sarebbe inferiore al costo, mostra errore
+      if (!isPackageOpen() && newTotalPaid < packageCost) {
+        setError(`Impossibile eliminare questo pagamento. Il totale pagato diventerebbe inferiore al costo del pacchetto (€${packageCost.toFixed(2)}). Modifica prima il costo del pacchetto.`);
+        setDeleteDialogOpen(false);
+        setPaymentToDelete(null);
+        return;
+      }
+      
       await packageService.deletePayment(paymentToDelete);
       
       // Remove payment from list
@@ -209,7 +284,7 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
   }
 
   // Calculate total amount paid
-  const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+  const totalPaid = getTotalPaid();
   
   // Calculate remaining amount
   const remainingAmount = calculateRemainingAmount();
@@ -217,25 +292,56 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
   // Check if package is fully paid
   const isFullyPaid = !isPackageOpen() && remainingAmount <= 0;
 
+  // Check if package can be finalized (open package with payments)
+  const canFinalizePackage = isPackageOpen() && totalPaid > 0;
+
   return (
     <Card>
       <CardHeader 
         title={<Typography variant="h6" color="primary">Pagamenti pacchetto</Typography>}
         action={
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<AddIcon />}
-            onClick={handleOpenAddDialog}
-            disabled={isFullyPaid}
-          >
-            Aggiungi pagamento
-          </Button>
+          <Box sx={{ display: 'flex' }}>
+            {/* Bottone per finalizzare pacchetto aperto */}
+            {canFinalizePackage && (
+              <Button
+                variant="outlined"
+                size="small"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={handleOpenFinalizeDialog}
+                sx={{ mr: 1 }}
+              >
+                Finalizza pacchetto
+              </Button>
+            )}
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<AddIcon />}
+              onClick={handleOpenAddDialog}
+              disabled={isFullyPaid}
+            >
+              Aggiungi pagamento
+            </Button>
+          </Box>
         }
       />
       <CardContent>
+        {/* Status messages */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {success}
+          </Alert>
+        )}
+        
         {/* Payment summary */}
-        <Grid container spacing={2} sx={{ mb: 2 , mt: -3 }}>
+        <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item xs={12} sm={4}>
             <Typography variant="body2" color="text.secondary">
               Prezzo pacchetto
@@ -288,6 +394,8 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
             </Typography>
           </Grid>
         </Grid>
+        
+        <Divider sx={{ mb: 2 }} />
         
         {/* Payments list */}
         {payments.length > 0 ? (
@@ -418,6 +526,30 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
             onClick={handleDeletePayment}
           >
             Elimina
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Finalize package confirmation dialog */}
+      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
+        <DialogTitle>Finalizza pacchetto</DialogTitle>
+        <DialogContent>
+          <Typography paragraph>
+            Stai per finalizzare questo pacchetto, impostando il prezzo totale pari alla somma degli acconti versati (€{totalPaid.toFixed(2)}).
+          </Typography>
+          <Typography>
+            Il pacchetto risulterà completamente pagato e non sarà più considerato "aperto". Confermi?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialogOpen(false)}>Annulla</Button>
+          <Button 
+            variant="contained" 
+            color="success"
+            onClick={handleFinalizePackage}
+            disabled={finalizeLoading}
+          >
+            {finalizeLoading ? <CircularProgress size={24} /> : 'Finalizza pacchetto'}
           </Button>
         </DialogActions>
       </Dialog>

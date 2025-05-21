@@ -404,6 +404,16 @@ def update_package(
     # Salva i valori originali
     old_is_paid = db_package.is_paid
     old_package_cost = db_package.package_cost
+
+    if "package_cost" in update_data:
+        new_package_cost = Decimal(str(update_data["package_cost"]))
+        
+        # Se il nuovo costo è inferiore al totale già pagato, genera un errore
+        if new_package_cost < db_package.total_paid:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail=f"Il costo del pacchetto non può essere inferiore al totale già pagato (€{float(db_package.total_paid)})"
+            )
     
     # Aggiorna i campi normali del pacchetto
     for key, value in update_data.items():
