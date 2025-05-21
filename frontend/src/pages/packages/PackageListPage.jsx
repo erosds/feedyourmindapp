@@ -951,8 +951,7 @@ function PackageListPage() {
               <SortableTableCell id="student_ids" label="Studente/i" />
               <SortableTableCell id="start_date" label="Inizio" />
               <SortableTableCell id="expiry_date" label="Scadenza" />
-              <SortableTableCell id="total_hours" label="Ore Tot." />
-              <SortableTableCell id="remaining_hours" label="Ore Rim." />
+              <SortableTableCell id="remaining_hours" label="Ore Rim./Ore Tot." />
               <SortableTableCell id="status" label="Stato" />
               <SortableTableCell id="is_paid" label="Pagamento" />
               <SortableTableCell id="payment_date" label="Data Pagamento" />
@@ -1025,13 +1024,12 @@ function PackageListPage() {
                       </Box>
                     </TableCell>
 
-                    <TableCell>{parseFloat(pkg.total_hours).toFixed(1)}</TableCell>
                     <TableCell sx={{
                       fontWeight: parseFloat(pkg.remaining_hours) > 0
                         ? (pkg.status !== 'in_progress' ? 'bold' : '')
                         : ''
                     }}>
-                      {parseFloat(pkg.remaining_hours).toFixed(1)}
+                      {parseFloat(pkg.remaining_hours).toFixed(1)}/{parseFloat(pkg.total_hours).toFixed(1)}
                     </TableCell>
                     <TableCell>
                       <Chip
