@@ -223,12 +223,20 @@ function PaymentCalendarPage() {
         });
 
         // Filter for expired and unpaid packages
-        const expiredPackagesData = packagesResponse.data.filter(pkg =>
-          pkg.total_paid < pkg.package_cost && // Not fully paid
-          pkg.status === 'expired' &&
-          pkg.expiry_date >= startDateStr &&
-          pkg.expiry_date <= endDateStr
-        );
+        const expiredPackagesData = packagesResponse.data.filter(pkg => {
+          // Converti esplicitamente in numeri per un confronto affidabile
+          const totalPaid = parseFloat(pkg.total_paid || 0);
+          const packageCost = parseFloat(pkg.package_cost || 0);
+
+          // Un pacchetto è considerato "non pagato" se il totale pagato è minore del costo
+          // e se il costo del pacchetto è maggiore di zero (per evitare pacchetti con costo zero)
+          const isNotFullyPaid = totalPaid < packageCost && packageCost > 0;
+
+          return isNotFullyPaid &&
+            pkg.status === 'expired' &&
+            pkg.expiry_date >= startDateStr &&
+            pkg.expiry_date <= endDateStr;
+        });
 
         // Also filter for packages expiring this week (still active)
         const expiringPackagesData = packagesResponse.data.filter(pkg => {
