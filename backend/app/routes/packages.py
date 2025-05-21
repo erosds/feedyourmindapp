@@ -605,6 +605,10 @@ def add_package_payment(
     if package.total_paid >= package.package_cost:
         package.is_paid = True
         package.payment_date = payment.payment_date  # Usa la data dell'ultimo pagamento
+    else:
+        # Se il totale pagato è inferiore al costo del pacchetto, assicurati che sia impostato come non pagato
+        package.is_paid = False
+        package.payment_date = None
     
     db.commit()
     db.refresh(db_payment)
@@ -641,7 +645,7 @@ def get_package_payments(
 def delete_package_payment(
     payment_id: int,
     db: Session = Depends(get_db),
-    current_user: models.Professor = Depends(get_current_professor)  # Usa get_current_professor
+    current_user: models.Professor = Depends(get_current_professor)
 ):
     """Elimina un pagamento di un pacchetto (solo admin)."""
     # Verifica manualmente se l'utente è admin

@@ -232,21 +232,6 @@ class PackageBase(BaseModel):
             raise ValueError('package_cost must be non-negative')
         return v
     
-    @field_validator('payment_date')
-    @classmethod
-    def check_payment_date(cls, v, info):
-        values = info.data
-        is_paid = values.get('is_paid', False)
-        
-        # If paid, payment date is required
-        if is_paid and v is None:
-            raise ValueError('payment_date is required for paid packages')
-        
-        # If not paid, payment date must be None
-        if not is_paid and v is not None:
-            return None
-        
-        return v
 
 class PackageCreate(PackageBase):
     pass
@@ -273,19 +258,6 @@ class PackageUpdate(BaseModel):
         if v is not None and v < 0:
             raise ValueError('package_cost must be non-negative')
         return v
-    
-    @model_validator(mode='after')
-    def validate_payment_fields(self):
-        # If is_paid is True, payment_date should be specified
-        if self.is_paid is True and self.payment_date is None:
-            # We'll set this in the controller
-            pass
-            
-        # If is_paid is False, payment_date should be None
-        if self.is_paid is False and self.payment_date is not None:
-            self.payment_date = None
-            
-        return self
 
 class PackageResponse(BaseModel):
     id: int

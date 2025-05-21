@@ -76,8 +76,7 @@ function PackageListPage() {
   const [rowsPerPage, setRowsPerPage] = useState(
     parseInt(searchParams.get('rows') || '10', 10)
   );
-
-
+  const [priceValue, setPriceValue] = useState(0);
   const [dateRangeDialogOpen, setDateRangeDialogOpen] = useState(false);
   const [dateRange, setDateRange] = useState(() => {
     const startDateStr = searchParams.get('startDate');
@@ -213,7 +212,7 @@ function PackageListPage() {
     }
   };
 
-  const handleUpdatePaymentStatus = async (pkg, isPaid, paymentDate, updatedPrice) => {
+  const handleUpdatePaymentStatus = async (pkg, updatedPrice) => {
     try {
       setUpdating(true);
 
@@ -224,8 +223,6 @@ function PackageListPage() {
       // Prepara i dati da aggiornare mantenendo gli student_ids esistenti
       const updateData = {
         ...currentPackageData,              // Include tutti i dati attuali
-        is_paid: isPaid,                    // Aggiorna solo i campi necessari
-        payment_date: paymentDate ? format(paymentDate, 'yyyy-MM-dd') : null,
         package_cost: updatedPrice || currentPackageData.package_cost
       };
 
@@ -237,9 +234,9 @@ function PackageListPage() {
       // Aggiorna lo stato dei pacchetti ma NON resettare la pagina
       setPackages(packagesResponse.data);
     } catch (err) {
-      console.error('Error updating payment status:', err);
+      console.error('Error updating package price:', err);
       console.error('Detailed error:', err.response?.data || err.message);
-      alert('Errore durante l\'aggiornamento dello stato di pagamento. Riprova più tardi.');
+      alert('Errore durante l\'aggiornamento del prezzo. Riprova più tardi.');
     } finally {
       setUpdating(false);
     }
@@ -249,13 +246,11 @@ function PackageListPage() {
     if (selectedPackage) {
       // Solo gli admin possono modificare il prezzo
       const costToUse = isAdmin()
-        ? selectedPackage.package_cost
-        : 0; // Default zero per utenti non admin
+        ? parseFloat(priceValue) || selectedPackage.package_cost
+        : selectedPackage.package_cost;
 
       handleUpdatePaymentStatus(
         selectedPackage,
-        true,
-        paymentDate,
         costToUse
       );
     }

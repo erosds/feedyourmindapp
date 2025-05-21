@@ -607,53 +607,13 @@ function PackageFormPage() {
                       onChange={handleChange}
                       onBlur={handleBlur}
                       error={touched.package_cost && Boolean(errors.package_cost)}
-                      helperText={touched.package_cost && errors.package_cost}
+                      helperText={(touched.package_cost && errors.package_cost) || "Il pacchetto sarà automaticamente segnato come pagato quando i pagamenti registrati raggiungeranno questo importo"}
                       InputProps={{
                         startAdornment: <InputAdornment position="start">€</InputAdornment>,
                       }}
                       inputProps={{
                         min: 0,
                         step: 0.5,
-                      }}
-                      required={values.is_paid}
-                    />
-                  </Grid>
-                )}
-
-                <Grid item xs={12} md={2}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        name="is_paid"
-                        checked={values.is_paid}
-                        onChange={(e) => {
-                          const isPaid = e.target.checked;
-                          setFieldValue('is_paid', isPaid);
-                          if (isPaid && !values.payment_date) {
-                            setFieldValue('payment_date', new Date());
-                          } else if (!isPaid) {
-                            setFieldValue('payment_date', null);
-                          }
-                        }}
-                      />
-                    }
-                    label="Pacchetto Pagato"
-                  />
-                </Grid>
-
-                {values.is_paid && (
-                  <Grid item xs={12} md={6}>
-                    <DatePicker
-                      label="Data del Pagamento"
-                      value={values.payment_date}
-                      onChange={(date) => setFieldValue('payment_date', date)}
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          required: true,
-                          error: touched.payment_date && Boolean(errors.payment_date),
-                          helperText: touched.payment_date && errors.payment_date,
-                        },
                       }}
                     />
                   </Grid>
