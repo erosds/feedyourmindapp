@@ -354,7 +354,32 @@ function PaymentCalendarPage() {
             hours: parseFloat(lesson.duration || 0),
             studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
           })),
-          ...packagePaymentsInPeriod // Aggiungi i pagamenti dei pacchetti
+          ...packagePaymentsInPeriod.map(payment => {
+            // Per ogni pagamento, determina se è un saldo o un acconto
+            const pkg = allPackagesResponse.data.find(p => p.id === payment.packageId);
+            if (!pkg) return payment;
+
+            // Calcola la somma di tutti i pagamenti precedenti (incluso questo)
+            const packagePayments = packagePaymentsMap[payment.packageId] || [];
+            const paymentIndex = packagePayments.findIndex(p => p.id === payment.typeId);
+            if (paymentIndex === -1) return payment;
+
+            // Calcola la somma dei pagamenti fino a questo pagamento
+            const sumUntilThisPayment = packagePayments
+              .slice(0, paymentIndex + 1)
+              .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+            // Determina se è un saldo (raggiunge o supera il costo del pacchetto)
+            const packageCost = parseFloat(pkg.package_cost || 0);
+            const isFinalPayment = sumUntilThisPayment >= packageCost && packageCost > 0;
+
+            return {
+              ...payment,
+              isFinalPayment, // Aggiungi questa informazione
+              paymentType: isFinalPayment ? 'saldo' : 'acconto',
+              packageCost
+            };
+          })
         ];
 
         setUnpaidLessons(formattedUnpaidLessons);

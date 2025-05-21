@@ -58,15 +58,18 @@ function AdminDashboardWeekSummary({
       lesson.payment_date <= periodEndStr
     );
 
-    const paidPackages = allPackages.filter(pkg =>
-      pkg.is_paid &&
-      pkg.payment_date &&
-      pkg.payment_date >= periodStartStr &&
-      pkg.payment_date <= periodEndStr
-    );
+    // Ottieni tutti i pagamenti dei pacchetti nel periodo
+    const packagePaymentsInPeriod = allPackages
+      .filter(pkg => pkg.payments && pkg.payments.length > 0)
+      .flatMap(pkg =>
+        pkg.payments.filter(payment =>
+          payment.payment_date >= periodStartStr &&
+          payment.payment_date <= periodEndStr
+        )
+      );
 
     const lessonIncome = paidLessons.reduce((sum, lesson) => sum + parseFloat(lesson.price || 0), 0);
-    const packageIncome = paidPackages.reduce((sum, pkg) => sum + parseFloat(pkg.package_cost || 0), 0);
+    const packageIncome = packagePaymentsInPeriod.reduce((sum, payment) => sum + parseFloat(payment.amount || 0), 0);
     const totalIncome = lessonIncome + packageIncome;
 
     // PAYMENTS: Get total payments to professors for the period
@@ -97,8 +100,12 @@ function AdminDashboardWeekSummary({
     );
 
     const unpaidPackagesAmount = expiredUnpaidPackages.reduce(
-      (sum, pkg) => sum + parseFloat(pkg.package_cost || 0),
-      0
+      (sum, pkg) => {
+        // Considera solo la parte non ancora pagata
+        const packageCost = parseFloat(pkg.package_cost || 0);
+        const totalPaid = parseFloat(pkg.total_paid || 0);
+        return sum + Math.max(0, packageCost - totalPaid);
+      }, 0
     );
 
     const totalPendingAmount = unpaidAmount + unpaidPackagesAmount;

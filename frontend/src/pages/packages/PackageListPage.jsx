@@ -201,14 +201,28 @@ function PackageListPage() {
   const handleTogglePayment = (pkg, event) => {
     event.stopPropagation(); // Impedisce la navigazione ai dettagli
 
-    if (pkg.is_paid) {
-      // Se è già pagato, imposta direttamente come non pagato
-      handleUpdatePaymentStatus(pkg, false, null);
-    } else {
-      // Se non è pagato, apri il dialog per impostare la data di pagamento
+    // Se il pacchetto ha un prezzo da concordare, non consentiamo il pagamento rapido
+    if (parseFloat(pkg.package_cost) === 0) {
+      handleViewPackage(pkg.id);
+      return;
+    }
+
+    // Per i pacchetti non pagati o con acconto
+    if (!pkg.is_paid) {
+      // Calcola l'importo rimanente
+      const remainingAmount = Math.max(0, parseFloat(pkg.package_cost) - parseFloat(pkg.total_paid || 0));
+
+      // Imposta il pacchetto selezionato
       setSelectedPackage(pkg);
-      setPaymentDate(new Date());
+
+      // Imposta il valore del prezzo al rimanente
+      setPriceValue(remainingAmount);
+
+      // Apri il dialog di pagamento
       setPaymentDialogOpen(true);
+    } else {
+      // Se è già pagato, naviga ai dettagli del pacchetto
+      handleViewPackage(pkg.id);
     }
   };
 
@@ -242,19 +256,36 @@ function PackageListPage() {
     }
   };
 
-  const handleConfirmPayment = () => {
-    if (selectedPackage) {
-      // Solo gli admin possono modificare il prezzo
-      const costToUse = isAdmin()
-        ? parseFloat(priceValue) || selectedPackage.package_cost
-        : selectedPackage.package_cost;
+  const handleConfirmPayment = async () => {
+    if (!selectedPackage) return;
 
-      handleUpdatePaymentStatus(
-        selectedPackage,
-        costToUse
-      );
+    try {
+      setUpdating(true);
+
+      // Formato della data
+      const formattedDate = format(paymentDate, 'yyyy-MM-dd');
+
+      // Aggiungi un nuovo pagamento al pacchetto
+      await packageService.addPayment(selectedPackage.id, {
+        amount: parseFloat(priceValue),
+        payment_date: formattedDate,
+        notes: "Pagamento rapido da lista pacchetti"
+      });
+
+      // Ricarica i pacchetti
+      const packagesResponse = await packageService.getAll();
+      setPackages(packagesResponse.data);
+
+      // Chiudi il dialog
+      setPaymentDialogOpen(false);
+      setSelectedPackage(null);
+
+    } catch (err) {
+      console.error('Error adding payment:', err);
+      alert('Errore durante l\'aggiunta del pagamento. Riprova più tardi.');
+    } finally {
+      setUpdating(false);
     }
-    setPaymentDialogOpen(false);
   };
 
   const handleClosePaymentDialog = () => {
@@ -1060,6 +1091,10 @@ function PackageListPage() {
                           color="success"
                           size="small"
                           variant="outlined"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewPackage(pkg.id);
+                          }}
                         />
                       ) : parseFloat(pkg.total_paid) > 0 ? (
                         <Tooltip title={`€${parseFloat(pkg.total_paid).toFixed(2)} di €${parseFloat(pkg.package_cost).toFixed(2)}`}>
@@ -1068,6 +1103,7 @@ function PackageListPage() {
                             color="warning"
                             size="small"
                             variant="outlined"
+                            onClick={(e) => handleTogglePayment(pkg, e)}
                           />
                         </Tooltip>
                       ) : (
@@ -1076,6 +1112,7 @@ function PackageListPage() {
                           color="error"
                           size="small"
                           variant="outlined"
+                          onClick={(e) => handleTogglePayment(pkg, e)}
                         />
                       )}
                     </TableCell>

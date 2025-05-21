@@ -556,7 +556,7 @@ function PackageDetailPage() {
       <Grid container spacing={1}>
         {/* Header with basic package information */}
         <Grid item xs={12} md={7} >
-          <Card sx={{ mb: 1}}>
+          <Card sx={{ mb: 1 }}>
             <CardContent>
               <Typography variant="h6" color="primary">
                 Informazioni pacchetto
@@ -613,25 +613,35 @@ function PackageDetailPage() {
                   />
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
-                    Data Pagamento
+                    Stato Pagamento
                   </Typography>
                   {packageData.is_paid ? (
                     <Typography variant="body1" fontWeight="medium" color="success.main">
-                      Saldato {packageData.payment_date && `(${format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it })})`}
+                      <Chip
+                        label="Saldato"
+                        color="success"
+                        size="small"
+                        variant="outlined"
+                      />
                     </Typography>
                   ) : (
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                        {parseFloat(packageData.total_paid) > 0
-                          ? `Acconto versato: €${parseFloat(packageData.total_paid).toFixed(2)}`
-                          : 'Non ancora saldato'}
-                      </Typography>
-                      {packageData.payment_date && (
-                        <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                          {format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it })}
-                        </Typography>
+                      {parseFloat(packageData.total_paid) > 0 ? (
+                        <Chip
+                          label="Acconto"
+                          color="warning"
+                          size="small"
+                          variant="outlined"
+                        />
+                      ) : (
+                        <Chip
+                          label="Non pagato"
+                          color="error"
+                          size="small"
+                          variant="outlined"
+                        />
                       )}
                     </Box>
                   )}
@@ -675,20 +685,18 @@ function PackageDetailPage() {
 
                 <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
-                    Stato Pagamento
+                    Data Ultimo Pagamento
                   </Typography>
-                  {packageData.is_paid ? (
-                    <Typography variant="body1" fontWeight="medium" color="success.main">
-                      Saldato {packageData.payment_date && `(${format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it })})`}
+                  {packageData.is_paid || parseFloat(packageData.total_paid) > 0 ? (
+                    <Typography variant="body1" fontWeight="medium">
+                      {packageData.payment_date ?
+                        format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it }) :
+                        'Data non disponibile'}
                     </Typography>
                   ) : (
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                        {parseFloat(packageData.total_paid) > 0
-                          ? `Acconto versato: €${parseFloat(packageData.total_paid).toFixed(2)}`
-                          : 'Non ancora saldato'}
-                      </Typography>
-                    </Box>
+                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                      Nessun pagamento
+                    </Typography>
                   )}
                 </Grid>
 
@@ -771,11 +779,11 @@ function PackageDetailPage() {
           </Card>
           {/* Mantiene le note nello stesso Grid item, ma ora c'è spazio sufficiente grazie al margin */}
           <Grid item xs={12}>
-          <PackageNotes
-            packageId={packageData.id}
-            initialNotes={packageData.notes}
-            onNotesUpdate={handleNotesUpdate}
-          />
+            <PackageNotes
+              packageId={packageData.id}
+              initialNotes={packageData.notes}
+              onNotesUpdate={handleNotesUpdate}
+            />
           </Grid>
         </Grid>
 
@@ -815,7 +823,7 @@ function PackageDetailPage() {
 
         {/* Lesson Table */}
         <Grid item xs={12}>
-          <Paper sx={{ p: 2}}>
+          <Paper sx={{ p: 2 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="h6" color="primary">
                 Lezioni del pacchetto
