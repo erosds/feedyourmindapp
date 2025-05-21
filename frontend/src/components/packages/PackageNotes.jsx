@@ -103,7 +103,7 @@ const PackageNotes = ({ packageId, initialNotes, onNotesUpdate }) => {
         // Reduce bottom padding of the header
         sx={{ pb: 1 }}
       />
-      <CardContent sx={{ pt: 0 }}>  {/* Reduce top padding of content */}
+      <CardContent >  {/* Reduce top padding of content */}
         {error && (
           <Alert severity="error" sx={{ mb: 1 }}>  {/* Reduced margin bottom */}
             {error}
@@ -146,7 +146,7 @@ const PackageNotes = ({ packageId, initialNotes, onNotesUpdate }) => {
             color="text.secondary" 
             sx={{ 
               fontStyle: 'italic',
-              p: 1,
+              p: 2,
               borderRadius: 1,
               bgcolor: 'background.paper',
               border: '1px dashed',

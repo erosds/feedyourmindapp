@@ -555,8 +555,8 @@ function PackageDetailPage() {
       {/* Main data */}
       <Grid container spacing={1}>
         {/* Header with basic package information */}
-        <Grid item xs={12} md={7} >
-          <Card sx={{ mb: 1 }}>
+        <Grid item xs={12} md={7} sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Card sx={{ mb: 1 , flexGrow: 1 }}>
             <CardContent>
               <Typography variant="h6" color="primary">
                 Informazioni pacchetto
@@ -615,7 +615,7 @@ function PackageDetailPage() {
 
                 <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
-                    Stato Pagamento
+                    Pagamento
                   </Typography>
                   {packageData.is_paid ? (
                     <Typography variant="body1" fontWeight="medium" color="success.main">
@@ -654,7 +654,7 @@ function PackageDetailPage() {
 
                 <Grid item xs={12} md={5}>
                   <Typography variant="body2" color="text.secondary">
-                    Data di Inizio
+                    Data di inizio
                   </Typography>
                   <Typography variant="body1" fontWeight="medium" gutterBottom>
                     {format(parseISO(packageData.start_date), 'EEEE dd MMMM yyyy', { locale: it })}
@@ -663,7 +663,7 @@ function PackageDetailPage() {
 
                 <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
-                    Data di Scadenza
+                    Data di scadenza
                   </Typography>
                   <Typography
                     variant="body1"
@@ -685,7 +685,7 @@ function PackageDetailPage() {
 
                 <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
-                    Data Ultimo Pagamento
+                    Data saldo
                   </Typography>
                   {packageData.is_paid || parseFloat(packageData.total_paid) > 0 ? (
                     <Typography variant="body1" fontWeight="medium">
@@ -708,7 +708,7 @@ function PackageDetailPage() {
                   <Grid item xs={12} md={5}>
                     <Box display="flex" alignItems="center" mb={1}>
                       <Typography variant="body2" color="text.secondary">
-                        Prezzo Pacchetto
+                        Prezzo pacchetto
                       </Typography>
                     </Box>
                     <Box display="flex" alignItems="center">
@@ -733,7 +733,7 @@ function PackageDetailPage() {
 
                 <Grid item xs={12} md={3}>
                   <Typography variant="body2" color="text.secondary">
-                    Ore Totali
+                    Ore totali
                   </Typography>
                   <Typography variant="h6" fontWeight="medium" gutterBottom>
                     {packageData.total_hours}
@@ -778,13 +778,13 @@ function PackageDetailPage() {
             </CardContent>
           </Card>
           {/* Mantiene le note nello stesso Grid item, ma ora c'è spazio sufficiente grazie al margin */}
-          <Grid item xs={12}>
+          <Box sx={{ flexGrow: 1}}>
             <PackageNotes
               packageId={packageData.id}
               initialNotes={packageData.notes}
               onNotesUpdate={handleNotesUpdate}
             />
-          </Grid>
+          </Box>
         </Grid>
 
         <Grid item xs={12} md={5}>

@@ -598,7 +598,6 @@ function PackageFormPage() {
                     <TextField
                       fullWidth
                       name="package_cost"
-                      label="Prezzo Pacchetto"
                       type="number"
                       value={values.package_cost}
                       onChange={handleChange}
