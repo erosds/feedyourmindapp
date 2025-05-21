@@ -1,4 +1,4 @@
-// Modifiche a AdminDashboardWeekSummary.jsx
+// frontend/src/components/dashboard/AdminDashboardWeekSummary.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Grid,
@@ -7,7 +7,7 @@ import {
   Box,
   Tooltip,
 } from '@mui/material';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
 function AdminDashboardWeekSummary({
@@ -49,7 +49,7 @@ function AdminDashboardWeekSummary({
     const periodStartStr = format(currentWeekStart, 'yyyy-MM-dd');
     const periodEndStr = format(weekEnd, 'yyyy-MM-dd');
 
-    // INCOME: Calculate income from lessons and packages that were paid within the period
+    // INCOME: Calculate income from lessons that were paid within the period
     const paidLessons = allLessons.filter(lesson =>
       lesson.is_paid &&
       lesson.payment_date &&
@@ -58,7 +58,7 @@ function AdminDashboardWeekSummary({
       lesson.payment_date <= periodEndStr
     );
 
-    // Ottieni tutti i pagamenti dei pacchetti nel periodo
+    // Get all package payments made in the period (including partial payments)
     const packagePaymentsInPeriod = allPackages
       .filter(pkg => pkg.payments && pkg.payments.length > 0)
       .flatMap(pkg =>
@@ -92,16 +92,31 @@ function AdminDashboardWeekSummary({
       return sum + price;
     }, 0);
 
-    // Expired but unpaid packages from this period
+    // Get expired but unpaid/partially paid packages from this period
     const expiredUnpaidPackages = allPackages.filter(pkg =>
-      !pkg.is_paid &&
+      pkg.status === 'expired' &&
+      parseFloat(pkg.total_paid || 0) < parseFloat(pkg.package_cost || 0) &&
       pkg.expiry_date >= periodStartStr &&
       pkg.expiry_date <= periodEndStr
     );
 
-    const unpaidPackagesAmount = expiredUnpaidPackages.reduce(
+    // Also include packages that are expiring this week but not fully paid
+    const expiringUnpaidPackages = allPackages.filter(pkg => {
+      if (pkg.status !== 'in_progress') return false;
+      if (parseFloat(pkg.total_paid || 0) >= parseFloat(pkg.package_cost || 0)) return false;
+      
+      // Check if expiry date is within the period
+      if (!(pkg.expiry_date >= periodStartStr && pkg.expiry_date <= periodEndStr)) return false;
+      
+      return true;
+    });
+
+    // Combine expired and expiring packages with remaining payment due
+    const combinedUnpaidPackages = [...expiredUnpaidPackages, ...expiringUnpaidPackages];
+    
+    const unpaidPackagesAmount = combinedUnpaidPackages.reduce(
       (sum, pkg) => {
-        // Considera solo la parte non ancora pagata
+        // Consider only the portion that hasn't been paid yet
         const packageCost = parseFloat(pkg.package_cost || 0);
         const totalPaid = parseFloat(pkg.total_paid || 0);
         return sum + Math.max(0, packageCost - totalPaid);
@@ -110,7 +125,7 @@ function AdminDashboardWeekSummary({
 
     const totalPendingAmount = unpaidAmount + unpaidPackagesAmount;
 
-    // Calcolo statistiche su lezioni del periodo
+    // Lezioni single nel periodo (period lessons stats)
     const periodLessons = allLessons.filter(lesson =>
       lesson.lesson_date >= periodStartStr &&
       lesson.lesson_date <= periodEndStr &&
@@ -119,13 +134,16 @@ function AdminDashboardWeekSummary({
 
     const periodLessonsPaid = periodLessons.filter(lesson => lesson.is_paid);
 
-    // Calcolo statistiche su pacchetti in scadenza in questo periodo
+    // Pacchetti in scadenza nel periodo (expiring packages stats)
     const expiringPackages = allPackages.filter(pkg =>
       pkg.expiry_date >= periodStartStr &&
       pkg.expiry_date <= periodEndStr
     );
 
-    const paidExpiringPackages = expiringPackages.filter(pkg => pkg.is_paid);
+    // Consider a package as "paid" if total_paid >= package_cost
+    const paidExpiringPackages = expiringPackages.filter(pkg => 
+      parseFloat(pkg.total_paid || 0) >= parseFloat(pkg.package_cost || 0)
+    );
 
     // Update state with calculated values
     setPeriodStats({
