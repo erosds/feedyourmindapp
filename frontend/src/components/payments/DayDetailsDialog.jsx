@@ -108,7 +108,7 @@ function DayDetailsDialog({
                               <Typography
                                 variant="caption"
                                 component="span"
-                                color="darkviolet"
+                                color={payment.isFinalPayment ? 'darkviolet' : 'mediumpurple'}
                                 sx={{ fontWeight: 500 }}
                               >
                                 {/* Modifica qui: Distingui tra acconto e saldo */}

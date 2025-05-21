@@ -981,10 +981,10 @@ function PackageListPage() {
               <SortableTableCell id="student_ids" label="Studente/i" />
               <SortableTableCell id="start_date" label="Inizio" />
               <SortableTableCell id="expiry_date" label="Scadenza" />
-              <SortableTableCell id="remaining_hours" label="Ore Rim./Tot." />
+              <SortableTableCell id="remaining_hours" label="Ore Tot." />
+              <SortableTableCell id="remaining_hours" label="Ore Rim." />
               <SortableTableCell id="status" label="Stato" />
               <SortableTableCell id="is_paid" label="Pagamento" />
-              <SortableTableCell id="payment_date" label="Data Pagamento" />
               {isAdmin() && (
                 <SortableTableCell id="package_cost" label="Prezzo" numeric={true} />
               )}
@@ -1054,12 +1054,11 @@ function PackageListPage() {
                       </Box>
                     </TableCell>
 
-                    <TableCell sx={{
-                      fontWeight: parseFloat(pkg.remaining_hours) > 0
-                        ? (pkg.status !== 'in_progress' ? 'bold' : '')
-                        : ''
-                    }}>
-                      {parseFloat(pkg.remaining_hours).toFixed(1)}/{parseFloat(pkg.total_hours).toFixed(1)}
+                    <TableCell>
+                      {parseFloat(pkg.total_hours).toFixed(1)}
+                    </TableCell>
+                    <TableCell>
+                      {parseFloat(pkg.remaining_hours).toFixed(1)}
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -1115,9 +1114,6 @@ function PackageListPage() {
                         />
                       )}
                     </TableCell>
-                    <TableCell>
-                      {pkg.payment_date ? format(parseISO(pkg.payment_date), 'dd/MM/yyyy', { locale: it }) : '-'}
-                    </TableCell>
                     {isAdmin() && (
                       <TableCell
                         align="right"
@@ -1130,9 +1126,8 @@ function PackageListPage() {
                           <>
                             <Chip
                               label="da concordare"
-                              color="secondary"
                               size="small"
-                              sx={{ fontSize: '0.65rem', height: 20, fontWeight: 'bold' }}
+                              sx={{ fontSize: '0.6rem', height: 20 }}
                             />
                           </>
                         ) : (

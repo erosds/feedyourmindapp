@@ -207,7 +207,7 @@ function AdminDashboardWeekSummary({
         {/* Payments to professors */}
         <Grid item xs={12} sm={6} md={2}>
           <Typography variant="body2" color="text.secondary">
-            Pagamenti
+            Pagamenti prof.
           </Typography>
           <Typography variant="h5" color="text.primary">
             €{periodStats.payments.toFixed(2)}
