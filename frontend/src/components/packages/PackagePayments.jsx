@@ -251,7 +251,7 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={4}>
             <Typography variant="body2" color="text.secondary">
-              Totale pacchetto
+              Prezzo pacchetto
             </Typography>
             <Typography variant="h6">
               {isPackageOpen() ? (
@@ -286,7 +286,7 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
               fontWeight="bold"
             >
               {isPackageOpen() ? (
-                "Da definire"
+                "-"
               ) : (
                 `€${remainingAmount.toFixed(2)}`
               )}

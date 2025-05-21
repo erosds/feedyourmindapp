@@ -878,11 +878,12 @@ function PaymentCalendarPage() {
       const dayPayments = getPaymentsForDay(day);
 
       // Separa pacchetti e lezioni
-      const packages = dayPayments.filter(payment => payment.type === 'package')
+      const packages = dayPayments
+        .filter(payment => payment.type === 'package' || payment.type === 'package-payment')
         .map(payment => ({
           id: payment.id,
           name: formatStudentName(payment.studentName),
-          type: payment.type
+          type: payment.type === 'package-payment' ? 'package-payment' : 'package'
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -1022,7 +1023,7 @@ function PaymentCalendarPage() {
 
               <Grid item xs={12} sm={1.5}>
                 <Typography variant="body2" color="text.secondary">
-                  Pag. pacchetti
+                  Pacchetti
                 </Typography>
                 <Typography variant="h5">
                   {monthStats.packagePaymentsCount}
@@ -1346,13 +1347,14 @@ function PaymentCalendarPage() {
                                 sx={{
                                   height: 16,
                                   margin: '1px',
-                                  backgroundColor: student.type === 'package'
+                                  backgroundColor: student.type === 'package' || student.type === 'package-payment'
                                     ? 'darkviolet'
                                     : student.type === 'expired-package'
                                       ? 'warning.main'
                                       : student.type === 'unpaid'
                                         ? 'secondary.main'
                                         : 'primary.main',
+
                                   color: 'white',
                                   '& .MuiChip-label': {
                                     px: 0.6,
@@ -1600,11 +1602,12 @@ function PaymentCalendarPage() {
               <Divider sx={{ mb: 1 }} />
 
               {/* Prima sezione: Pacchetti */}
-              {dayPayments.filter(payment => payment.type === 'package').length > 0 && (
+              {/* Sezione aggiuntiva: Pagamenti dei pacchetti */}
+              {dayPayments.filter(payment => payment.type === 'package-payment').length > 0 && (
                 <>
                   <List dense>
                     {dayPayments
-                      .filter(payment => payment.type === 'package')
+                      .filter(payment => payment.type === 'package-payment')
                       .sort((a, b) => a.studentName.localeCompare(b.studentName))
                       .map((payment) => (
                         <ListItem
@@ -1637,7 +1640,7 @@ function PaymentCalendarPage() {
                                   color="darkviolet"
                                   sx={{ fontWeight: 500 }}
                                 >
-                                  Pacchetto
+                                  Pagamento pacchetto
                                 </Typography>{' '}
                                 di {payment.hours} ore
                               </Typography>
@@ -1649,6 +1652,7 @@ function PaymentCalendarPage() {
                   </List>
                 </>
               )}
+
 
               {/* Seconda sezione: Lezioni singole */}
               {dayPayments.filter(payment => payment.type === 'lesson').length > 0 && (

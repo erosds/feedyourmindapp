@@ -527,8 +527,10 @@ function PackageListPage() {
         switch (paymentFilter) {
           case 'paid':
             return pkg.is_paid;
+          case 'partial':
+            return !pkg.is_paid && parseFloat(pkg.total_paid) > 0;
           case 'unpaid':
-            return !pkg.is_paid;
+            return !pkg.is_paid && parseFloat(pkg.total_paid) <= 0;
           default:
             return true;
         }
@@ -933,6 +935,7 @@ function PackageListPage() {
               >
                 <MenuItem value="all">Tutti</MenuItem>
                 <MenuItem value="paid">Pagati</MenuItem>
+                <MenuItem value="partial">Con acconto</MenuItem>
                 <MenuItem value="unpaid">Non pagati</MenuItem>
               </Select>
             </FormControl>
@@ -955,7 +958,11 @@ function PackageListPage() {
               <SortableTableCell id="payment_date" label="Data Pagamento" />
               {isAdmin() && (
                 <SortableTableCell id="package_cost" label="Prezzo" numeric={true} />
-              )}              <TableCell align="right">Azioni</TableCell>
+              )}
+              {isAdmin() && (
+                <SortableTableCell id="total_paid" label="Versato" numeric={true} />
+              )}
+              <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -1081,26 +1088,34 @@ function PackageListPage() {
                       <TableCell
                         align="right"
                         sx={{
-                          color: !pkg.is_paid || parseFloat(pkg.package_cost) === 0
-                            ? "error.main"
-                            : "success.main",
-                          fontWeight: !pkg.is_paid || parseFloat(pkg.package_cost) === 0
-                            ? "bold"
-                            : "normal"
+                          fontWeight: "normal", // Always normal weight
+                          color: "text.primary"  // Always black
                         }}
                       >
                         {parseFloat(pkg.package_cost) === 0 ? (
                           <>
-                            <Chip 
-                              label="da concordare" 
-                              color="secondary" 
-                              size="small" 
-                              sx={{ fontSize: '0.65rem', height: 20, fontWeight: 'bold' }} 
+                            <Chip
+                              label="da concordare"
+                              color="secondary"
+                              size="small"
+                              sx={{ fontSize: '0.65rem', height: 20, fontWeight: 'bold' }}
                             />
                           </>
                         ) : (
                           `€${parseFloat(pkg.package_cost).toFixed(2)}`
                         )}
+                      </TableCell>
+                    )}
+                    {isAdmin() && (
+                      <TableCell
+                        align="right"
+                        sx={{
+                          fontWeight: parseFloat(pkg.total_paid) > 0 ? "bold" : "normal",
+                          color: parseFloat(pkg.total_paid) >= parseFloat(pkg.package_cost) ? "success.main" :
+                            parseFloat(pkg.total_paid) > 0 ? "warning.main" : "text.secondary"
+                        }}
+                      >
+                        {`€${parseFloat(pkg.total_paid).toFixed(2)}`}
                       </TableCell>
                     )}
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>

@@ -169,14 +169,14 @@ const OpenPackageRing = ({ totalHours, usedHours }) => {
       style={{
         position: 'relative',
         width: 150,
-        height: 150,
+        height: 100,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'column'
       }}
     >
-      <svg width="150" height="150" viewBox="0 0 100 100">
+      <svg width="150" height="100" viewBox="0 0 100 10">
         {/* Sfondo grigio dell'arco */}
         <path
           d={path}
@@ -264,7 +264,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
   if (isOpenPackage) {
     return (
       <div style={{ marginTop: '1px' }}>
-        <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)', marginBottom: '26px' }}>
+        <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)'}}>
           Utilizzo ore pacchetto
         </div>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -276,7 +276,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
 
   return (
     <div style={{ marginTop: '1px' }}>
-      <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)', marginBottom: '26px' }}>
+      <div style={{ fontSize: '0.875rem', color: 'rgba(0, 0, 0, 0.6)'}}>
         Utilizzo Pacchetto
       </div>
 
@@ -284,7 +284,6 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
         display: 'grid',
         gridTemplateColumns: getGridColumns(),
         gap: '4px',
-        width: '100%',
         overflowX: 'auto'
       }}>
         {/* Anelli per le 4 settimane */}
@@ -317,7 +316,6 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
-        marginTop: '8px',
         paddingLeft: '16px',
         paddingRight: '8px',
         fontSize: '0.65rem',

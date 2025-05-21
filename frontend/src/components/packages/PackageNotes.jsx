@@ -77,7 +77,7 @@ const PackageNotes = ({ packageId, initialNotes, onNotesUpdate }) => {
   };
 
   return (
-    <Card>
+    <Card sx={{ height: '150px' }}>
       <CardHeader 
         title={<Typography variant="h6" color="primary">Annotazioni pacchetto</Typography>}
         action={

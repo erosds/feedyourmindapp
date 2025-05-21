@@ -620,12 +620,15 @@ def add_package_payment(
     package.total_paid = package.total_paid + payment.amount
     
     # Se il costo del pacchetto è > 0 e il totale pagato raggiunge o supera il costo, imposta come pagato
-    if package.package_cost > Decimal('0') and package.total_paid >= package.package_cost:
-        package.is_paid = True
-        package.payment_date = payment.payment_date  # Usa la data dell'ultimo pagamento
+    if package.package_cost > Decimal('0'):
+        if package.total_paid >= package.package_cost:
+            package.is_paid = True
+            package.payment_date = payment.payment_date  # Usa la data dell'ultimo pagamento
+        else:
+            package.is_paid = False
+            # Don't set payment_date to None here, keep the last payment date
     else:
-        # Se il costo è 0 (pacchetto aperto) o il totale pagato è inferiore,
-        # assicurati che sia impostato come non pagato
+        # Se il costo è 0 (pacchetto aperto), sempre impostato come non pagato
         package.is_paid = False
         package.payment_date = None
     

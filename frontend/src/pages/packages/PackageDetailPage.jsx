@@ -558,7 +558,7 @@ function PackageDetailPage() {
       <Grid container spacing={1}>
         {/* Header with basic package information */}
         <Grid item xs={12} md={7} >
-          <Card sx={{ height: '100%' }}>
+          <Card sx={{ mb: 1, mt: 1 }}>
             <CardContent>
               <Typography variant="h6" color="primary">
                 Informazioni pacchetto
@@ -617,16 +617,26 @@ function PackageDetailPage() {
 
                 <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="text.secondary">
-                    Stato Pagamento
+                    Data Pagamento
                   </Typography>
-                  <Chip
-                    icon={packageData.is_paid ? <CheckIcon /> : <CancelIcon />}
-                    label={packageData.is_paid ? 'Pagato' : 'Non Pagato'}
-                    color={packageData.is_paid ? 'success' : 'error'}
-                    variant="outlined"
-                    size="small"
-                    sx={{ mt: 0.5 }}
-                  />
+                  {packageData.is_paid ? (
+                    <Typography variant="body1" fontWeight="medium" color="success.main">
+                      Saldato {packageData.payment_date && `(${format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it })})`}
+                    </Typography>
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                        {parseFloat(packageData.total_paid) > 0
+                          ? `Acconto versato: €${parseFloat(packageData.total_paid).toFixed(2)}`
+                          : 'Non ancora saldato'}
+                      </Typography>
+                      {packageData.payment_date && (
+                        <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                          {format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it })}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
                 </Grid>
 
                 {/* Dates and times */}
@@ -688,7 +698,6 @@ function PackageDetailPage() {
                 <Grid item xs={12}>
                   <Divider />
                 </Grid>
-
                 {isAdmin() && (
                   <Grid item xs={12} md={5}>
                     <Box display="flex" alignItems="center" mb={1}>
@@ -701,7 +710,6 @@ function PackageDetailPage() {
                         variant="h6"
                         fontWeight="medium"
                         mt={-1}
-                        color={!packageData.is_paid || parseFloat(packageData.package_cost) === 0 ? "error.main" : "inherit"}
                       >
                         €{parseFloat(packageData.package_cost).toFixed(2)}
                       </Typography>
@@ -743,7 +751,6 @@ function PackageDetailPage() {
                 <Grid item xs={12}>
                   <Divider />
                 </Grid>
-
                 <Grid item xs={12}>
                   {/* Nuovo componente per la visualizzazione del completamento */}
                   {(() => {
@@ -760,13 +767,33 @@ function PackageDetailPage() {
                     );
                   })()}
                 </Grid>
+
               </Grid>
             </CardContent>
           </Card>
+          {/* Mantiene le note nello stesso Grid item, ma ora c'è spazio sufficiente grazie al margin */}
+          <PackageNotes
+            packageId={packageData.id}
+            initialNotes={packageData.notes}
+            onNotesUpdate={handleNotesUpdate}
+          />
         </Grid>
 
         <Grid item xs={12} md={5}>
-          <Card sx={{ mb: 1 }}>
+          <PackagePayments
+            packageId={packageData.id}
+            packageData={packageData}
+            onPaymentsUpdate={async () => {
+              // Ricarica i dati del pacchetto quando i pagamenti vengono aggiornati
+              try {
+                const packageResponse = await packageService.getById(id);
+                setPackageData(packageResponse.data);
+              } catch (err) {
+                console.error('Error refreshing package data:', err);
+              }
+            }}
+          />
+          <Card sx={{ mt: 1 }}>
             <CardContent>
               <Typography variant="h6" color="primary">
                 Calendario lezioni
@@ -783,36 +810,12 @@ function PackageDetailPage() {
               />
             </CardContent>
           </Card>
-
-          {/* Mantiene le note nello stesso Grid item, ma ora c'è spazio sufficiente grazie al margin */}
-          <PackageNotes
-            packageId={packageData.id}
-            initialNotes={packageData.notes}
-            onNotesUpdate={handleNotesUpdate}
-          />
-
-          {/* Aggiungi questo componente con un margine superiore */}
-          <Box sx={{ mt: 2 }}>
-            <PackagePayments
-              packageId={packageData.id}
-              packageData={packageData}
-              onPaymentsUpdate={async () => {
-                // Ricarica i dati del pacchetto quando i pagamenti vengono aggiornati
-                try {
-                  const packageResponse = await packageService.getById(id);
-                  setPackageData(packageResponse.data);
-                } catch (err) {
-                  console.error('Error refreshing package data:', err);
-                }
-              }}
-            />
-          </Box>
         </Grid>
 
 
         {/* Lesson Table */}
         <Grid item xs={12}>
-          <Paper sx={{ p: 2, mt: 1 }}>
+          <Paper sx={{ p: 2}}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Typography variant="h6" color="primary">
                 Lezioni del pacchetto
