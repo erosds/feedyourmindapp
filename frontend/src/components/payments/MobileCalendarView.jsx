@@ -135,12 +135,14 @@ function MobileCalendarView({
                     mt: hasPayments ? 0 : 1
                   }}
                 >
+                  {/* Mostra sempre le informazioni sui pagamenti, in grassetto solo se viewMode === 'payments' */}
                   {hasPayments && (
                     <span style={{ fontWeight: viewMode === 'payments' ? 'bold' : 'normal' }}>
                       {dayPayments.length} pagament{dayPayments.length === 1 ? 'o' : 'i'}
                     </span>
                   )}
 
+                  {/* Mostra sempre le informazioni sulle lezioni non pagate, in grassetto solo se viewMode === 'unpaid' */}
                   {unpaidCount > 0 && (
                     <>
                       {hasPayments && " - "}
@@ -150,11 +152,32 @@ function MobileCalendarView({
                     </>
                   )}
 
+                  {/* Modifica qui per distinguere tra pacchetti scaduti e in scadenza */}
+                  {/* Modifica qui per distinguere tra pacchetti scaduti e in scadenza */}
                   {expiredCount > 0 && (
                     <>
                       {(hasPayments || unpaidCount > 0) && " - "}
                       <span style={{ fontWeight: viewMode === 'unpaid' ? 'bold' : 'normal' }}>
-                        {expiredCount} pacchett{expiredCount === 1 ? 'o scaduto' : 'i scaduti'} non saldat{expiredCount === 1 ? 'o' : 'i'}
+                        {/* Conta separatamente i pacchetti scaduti e in scadenza */}
+                        {(() => {
+                          // Usa le funzioni specifiche per contare i diversi tipi di pacchetti
+                          const expiredPackages = getExpiredPackagesForDay(day)
+                            .filter(pkg => pkg.type === 'expired-package').length;
+                          const expiringPackages = getExpiredPackagesForDay(day)
+                            .filter(pkg => pkg.type === 'expiring-package').length;
+
+                          let text = '';
+                          if (expiredPackages > 0) {
+                            text += `${expiredPackages} pacchett${expiredPackages === 1 ? 'o scaduto' : 'i scaduti'} non saldat${expiredPackages === 1 ? 'o' : 'i'}`;
+                          }
+
+                          if (expiringPackages > 0) {
+                            if (expiredPackages > 0) text += ' - ';
+                            text += `${expiringPackages} pacchett${expiringPackages === 1 ? 'o in scadenza' : 'i in scadenza'} non saldat${expiringPackages === 1 ? 'o' : 'i'}`;
+                          }
+
+                          return text;
+                        })()}
                       </span>
                     </>
                   )}
@@ -170,9 +193,9 @@ function MobileCalendarView({
                       sx={{
                         height: 16,
                         margin: '1px',
-                        backgroundColor: student.type === 'package'
+                        backgroundColor: student.type === 'package' || student.type === 'package-payment'
                           ? 'darkviolet'
-                          : student.type === 'expired-package'
+                          : student.type === 'expired-package' || student.type === 'expiring-package' // Usa lo stesso colore per entrambi
                             ? 'warning.main'
                             : student.type === 'unpaid'
                               ? 'secondary.main'

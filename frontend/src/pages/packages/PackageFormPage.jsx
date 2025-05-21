@@ -567,9 +567,11 @@ function PackageFormPage() {
                   </Grid>
                 </Grid>
 
-                {/* Notes Field */}
                 <Grid item xs={12}>
-                  <Divider sx={{ my: 2 }} />
+                  <Divider />
+                </Grid>
+                {/* Notes Field */}
+                <Grid item xs={12} md={6}>
                   <Typography variant="h6" gutterBottom>
                     Annotazioni
                   </Typography>
@@ -587,17 +589,12 @@ function PackageFormPage() {
                   />
                 </Grid>
 
-                {/* Payment section */}
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 2 }} />
-                  <Typography variant="h6" gutterBottom>
-                    Pagamento
-                  </Typography>
-                </Grid>
-
                 {/* Package Cost - only show for admins */}
                 {isAdmin() && (
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="h6" gutterBottom>
+                      Prezzo
+                    </Typography>
                     <TextField
                       fullWidth
                       name="package_cost"
@@ -618,6 +615,7 @@ function PackageFormPage() {
                     />
                   </Grid>
                 )}
+
 
                 {/* Action Buttons */}
                 <Grid item xs={12}>

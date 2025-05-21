@@ -250,6 +250,7 @@ function PaymentCalendarPage() {
         });
 
         // Format expired packages, showing only the remaining amount to pay
+        // Format expired packages, showing only the remaining amount to pay
         const formattedExpiredPackages = [
           ...expiredPackagesData.map(pkg => ({
             id: `expired-${pkg.id}`,
@@ -263,7 +264,7 @@ function PaymentCalendarPage() {
           })),
           ...expiringPackagesData.map(pkg => ({
             id: `expiring-${pkg.id}`,
-            type: 'expired-package',
+            type: 'expiring-package', // Modificato per distinguere i pacchetti in scadenza
             typeId: pkg.id,
             date: pkg.expiry_date,
             student_id: pkg.student_ids?.[0] || null,
@@ -431,16 +432,30 @@ function PaymentCalendarPage() {
       return [...packages, ...lessons];
     }
     // If in "unpaid" mode, show unpaid lessons and expired packages
+    // Nella funzione getStudentNamesForDay
     else {
       const dayUnpaid = getUnpaidLessonsForDay(day);
       const dayExpired = getExpiredPackagesForDay(day);
 
       // Sort expired packages alphabetically
-      const expiredPackages = dayExpired.map(pkg => ({
-        id: pkg.id,
-        name: formatStudentName(pkg.studentName),
-        type: 'expired-package'
-      })).sort((a, b) => a.name.localeCompare(b.name));
+      const expiredPackages = dayExpired
+        .filter(pkg => pkg.type === 'expired-package') // Filtra solo i pacchetti già scaduti
+        .map(pkg => ({
+          id: pkg.id,
+          name: formatStudentName(pkg.studentName),
+          type: 'expired-package'
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      // Aggiungi il supporto per i pacchetti in scadenza
+      const expiringPackages = dayExpired
+        .filter(pkg => pkg.type === 'expiring-package') // Filtra i pacchetti in scadenza
+        .map(pkg => ({
+          id: pkg.id,
+          name: formatStudentName(pkg.studentName),
+          type: 'expiring-package'
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
       // Sort unpaid lessons alphabetically
       const unpaidLessons = dayUnpaid.map(unpaid => ({
@@ -449,8 +464,8 @@ function PaymentCalendarPage() {
         type: 'unpaid'
       })).sort((a, b) => a.name.localeCompare(b.name));
 
-      // Concatenate expired packages first, then unpaid lessons
-      return [...expiredPackages, ...unpaidLessons];
+      // Concatena prima i pacchetti scaduti, poi quelli in scadenza, infine le lezioni non pagate
+      return [...expiredPackages, ...expiringPackages, ...unpaidLessons];
     }
   };
 

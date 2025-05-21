@@ -235,10 +235,10 @@ function DayDetailsDialog({
                               <Typography
                                 variant="caption"
                                 component="span"
-                                color="warning.main"
+                                color={pkg.type === 'expired-package' ? 'warning.main' : 'orange'} // Colore differente
                                 sx={{ fontWeight: 500 }}
                               >
-                                Pacchetto scaduto
+                                {pkg.type === 'expired-package' ? 'Pacchetto scaduto' : 'Pacchetto in scadenza'} {/* Testo differente */}
                               </Typography>{' '}
                               di {pkg.hours} ore
                             </Typography>
@@ -253,10 +253,10 @@ function DayDetailsDialog({
                             minWidth: '40px',
                             height: '30px',
                             ml: 1,
-                            bgcolor: 'warning.main',
+                            bgcolor: pkg.type === 'expired-package' ? 'warning.main' : 'orange', // Colore differente
                             alignSelf: 'center',
-                            fontSize: { xs: '0.65rem', sm: '0.8125rem' }, // Testo più piccolo su mobile
-                            px: { xs: 0.5, sm: 1 }  // Padding ridotto su mobile
+                            fontSize: { xs: '0.65rem', sm: '0.8125rem' },
+                            px: { xs: 0.5, sm: 1 }
                           }}
                         >
                           Segna come pagato
