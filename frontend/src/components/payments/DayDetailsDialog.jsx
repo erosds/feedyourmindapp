@@ -235,7 +235,7 @@ function DayDetailsDialog({
                               <Typography
                                 variant="caption"
                                 component="span"
-                                color={pkg.type === 'expired-package' ? 'warning.main' : 'orange'} // Colore differente
+                                color={pkg.type === 'expired-package' ? 'warning.main' : 'warning.main'} // Colore differente
                                 sx={{ fontWeight: 500 }}
                               >
                                 {pkg.type === 'expired-package' ? 'Pacchetto scaduto' : 'Pacchetto in scadenza'} {/* Testo differente */}
@@ -253,7 +253,7 @@ function DayDetailsDialog({
                             minWidth: '40px',
                             height: '30px',
                             ml: 1,
-                            bgcolor: pkg.type === 'expired-package' ? 'warning.main' : 'orange', // Colore differente
+                            bgcolor: pkg.type === 'expired-package' ? 'warning.main' : 'warning.main', // Colore differente
                             alignSelf: 'center',
                             fontSize: { xs: '0.65rem', sm: '0.8125rem' },
                             px: { xs: 0.5, sm: 1 }

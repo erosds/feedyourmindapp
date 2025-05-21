@@ -97,13 +97,10 @@ const ScrollableChipsContainer = ({ children }) => {
         flexWrap: 'wrap',
         gap: '2px',
         mt: 0,
-        mb: 1,
-        minHeight: '80px',
-        maxHeight: '80px',
+        maxHeight: '100px',
         overflow: 'hidden',
         overflowY: 'auto',
         flexGrow: 1,
-        zIndex: 1,
         scrollbarWidth: 'none', // Firefox
         '&::-webkit-scrollbar': { // Chrome/Safari/Edge
           display: 'none'

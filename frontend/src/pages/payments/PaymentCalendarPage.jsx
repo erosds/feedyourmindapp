@@ -520,13 +520,15 @@ function PaymentCalendarPage() {
     setDialogOpen(false);
   };
 
+  // Modifica della funzione handlePaymentClick in PaymentCalendarPage.jsx
   const handlePaymentClick = (payment) => {
     if (payment.type === 'lesson' || payment.type === 'unpaid') {
       navigate(`/lessons/${payment.typeId}`);
     } else if (payment.type === 'package-payment') {
       // For package payments, go to the corresponding package
       navigate(`/packages/${payment.packageId}`);
-    } else if (payment.type === 'package' || payment.type === 'expired-package') {
+    } else if (payment.type === 'package' || payment.type === 'expired-package' || payment.type === 'expiring-package') {
+      // Aggiunto supporto per 'expiring-package'
       navigate(`/packages/${payment.typeId}`);
     }
     setDialogOpen(false);
