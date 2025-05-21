@@ -623,7 +623,23 @@ def add_package_payment(
     if package.package_cost > Decimal('0'):
         if package.total_paid >= package.package_cost:
             package.is_paid = True
-            package.payment_date = payment.payment_date  # Usa la data dell'ultimo pagamento
+            
+            # Ottieni tutti i pagamenti di questo pacchetto, incluso quello appena aggiunto
+            # Dobbiamo fare la flush prima per assicurarci che il nuovo pagamento sia visibile nella query
+            db.flush()
+            
+            all_payments = db.query(models.PackagePayment).filter(
+                models.PackagePayment.package_id == package_id
+            ).all()
+            
+            # Trova la data più recente tra tutti i pagamenti
+            latest_payment_date = None
+            for p in all_payments:
+                if latest_payment_date is None or p.payment_date > latest_payment_date:
+                    latest_payment_date = p.payment_date
+            
+            # Usa la data più recente come data di pagamento del pacchetto
+            package.payment_date = latest_payment_date
         else:
             package.is_paid = False
             # Don't set payment_date to None here, keep the last payment date

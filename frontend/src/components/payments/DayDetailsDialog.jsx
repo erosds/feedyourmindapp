@@ -115,8 +115,10 @@ function DayDetailsDialog({
                                 {payment.isFinalPayment ? 'Saldo pacchetto' : 'Acconto pacchetto'}
                               </Typography>{' '}
                               di {payment.hours} ore
-                              {payment.packageCost > 0 && (
-                                <span> (€{payment.packageCost.toFixed(2)})</span>
+                              {payment.packageCost > 0 ? (
+                                <span> (pacchetto da €{payment.packageCost.toFixed(2)})</span>
+                              ) : (
+                                <span> (pacchetto aperto)</span>
                               )}
                             </Typography>
                           }
