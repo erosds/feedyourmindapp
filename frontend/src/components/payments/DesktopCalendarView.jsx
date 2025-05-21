@@ -207,7 +207,7 @@ function DesktopCalendarView({
                         <>
                           {(hasPayments || unpaidCount > 0) && " - "}
                           <span style={{ fontWeight: viewMode === 'unpaid' ? 'bold' : 'normal' }}>
-                            {expiredCount} pacchett{expiredCount === 1 ? 'o scaduto' : 'i scaduti'} non pagat{expiredCount === 1 ? 'o' : 'i'}
+                            {expiredCount} pacchett{expiredCount === 1 ? 'o scaduto' : 'i scaduti'} non saldat{expiredCount === 1 ? 'o' : 'i'}
                           </span>
                         </>
                       )}
