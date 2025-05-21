@@ -36,7 +36,7 @@ function PaymentConfirmationDialog({
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           <TextField
             fullWidth
-            label={selectedPaymentItem?.type === 'unpaid' ? "Prezzo Lezione" : "Prezzo Pacchetto"}
+            label={selectedPaymentItem?.type === 'unpaid' ? "Prezzo Lezione" : "Pagamento pacchetto"}
             type="number"
             value={priceValue}
             onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}

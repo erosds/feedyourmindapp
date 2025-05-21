@@ -1,4 +1,4 @@
-// frontend/src/components/payments/DayDetailsDialog.jsx
+// frontend/src/components/payments/DayDetailsDialog.jsx (modificato)
 import React from 'react';
 import {
   Box,
@@ -111,9 +111,13 @@ function DayDetailsDialog({
                                 color="darkviolet"
                                 sx={{ fontWeight: 500 }}
                               >
-                                Pagamento pacchetto
+                                {/* Modifica qui: Distingui tra acconto e saldo */}
+                                {payment.isFinalPayment ? 'Saldo pacchetto' : 'Acconto pacchetto'}
                               </Typography>{' '}
                               di {payment.hours} ore
+                              {payment.packageCost > 0 && (
+                                <span> (€{payment.packageCost.toFixed(2)})</span>
+                              )}
                             </Typography>
                           }
                           sx={{ my: 0 }}
