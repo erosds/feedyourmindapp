@@ -81,15 +81,31 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
     const packageCost = parseFloat(packageData.package_cost) || 0;
     const totalPaid = parseFloat(packageData.total_paid) || 0;
     
+    // Se il costo è 0 (pacchetto aperto), restituisci un valore positivo di default
+    if (packageCost === 0) return 999999;
+    
     return Math.max(0, packageCost - totalPaid);
+  };
+
+  // Check if package has an open cost
+  const isPackageOpen = () => {
+    return packageData && parseFloat(packageData.package_cost) === 0;
   };
 
   // Handle opening the add payment dialog
   const handleOpenAddDialog = () => {
-    const remainingAmount = calculateRemainingAmount();
+    let suggestedAmount = calculateRemainingAmount();
+    
+    // Se il pacchetto è aperto, suggeriamo un importo vuoto
+    if (isPackageOpen()) {
+      suggestedAmount = '';
+    } else {
+      // Altrimenti suggeriamo l'importo rimanente
+      suggestedAmount = suggestedAmount.toString();
+    }
     
     setNewPayment({
-      amount: remainingAmount.toString(),
+      amount: suggestedAmount,
       payment_date: new Date(),
       notes: ''
     });
@@ -107,6 +123,15 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
       if (isNaN(amount) || amount <= 0) {
         setError('Inserisci un importo valido maggiore di zero');
         return;
+      }
+      
+      // Se non è un pacchetto aperto, verifica che l'importo non superi il rimanente
+      if (!isPackageOpen()) {
+        const remainingAmount = calculateRemainingAmount();
+        if (amount > remainingAmount) {
+          setError(`L'importo non può superare il rimanente da pagare (€${remainingAmount.toFixed(2)})`);
+          return;
+        }
       }
       
       const response = await packageService.addPayment(packageId, {
@@ -135,17 +160,25 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
     }
   };
 
+  // Stato per il dialog di conferma eliminazione
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState(null);
+
+  // Handle confirmation dialog open
+  const handleOpenDeleteDialog = (paymentId) => {
+    setPaymentToDelete(paymentId);
+    setDeleteDialogOpen(true);
+  };
+
   // Handle deleting a payment
-  const handleDeletePayment = async (paymentId) => {
-    if (!confirm('Sei sicuro di voler eliminare questo pagamento? Questa azione non può essere annullata.')) {
-      return;
-    }
+  const handleDeletePayment = async () => {
+    if (!paymentToDelete) return;
     
     try {
-      await packageService.deletePayment(paymentId);
+      await packageService.deletePayment(paymentToDelete);
       
       // Remove payment from list
-      setPayments(payments.filter(payment => payment.id !== paymentId));
+      setPayments(payments.filter(payment => payment.id !== paymentToDelete));
       
       // Show success message
       setSuccess('Pagamento eliminato con successo');
@@ -159,6 +192,10 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
       console.error('Error deleting payment:', err);
       setError('Errore durante l\'eliminazione del pagamento. Riprova più tardi.');
     }
+    
+    // Close dialog and reset state
+    setDeleteDialogOpen(false);
+    setPaymentToDelete(null);
   };
 
   if (loading) {
@@ -178,7 +215,7 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
   const remainingAmount = calculateRemainingAmount();
   
   // Check if package is fully paid
-  const isFullyPaid = remainingAmount <= 0;
+  const isFullyPaid = !isPackageOpen() && remainingAmount <= 0;
 
   return (
     <Card>
@@ -217,7 +254,16 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
               Totale pacchetto
             </Typography>
             <Typography variant="h6">
-              €{(parseFloat(packageData?.package_cost) || 0).toFixed(2)}
+              {isPackageOpen() ? (
+                <Chip 
+                  label="da concordare" 
+                  color="secondary" 
+                  size="small" 
+                  sx={{ fontSize: '0.75rem', height: 24, fontWeight: 'bold' }} 
+                />
+              ) : (
+                `€${(parseFloat(packageData?.package_cost) || 0).toFixed(2)}`
+              )}
             </Typography>
           </Grid>
           
@@ -236,10 +282,14 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
             </Typography>
             <Typography 
               variant="h6" 
-              color={isFullyPaid ? "success.main" : "error.main"}
+              color={isFullyPaid ? "success.main" : isPackageOpen() ? "secondary.main" : "error.main"}
               fontWeight="bold"
             >
-              €{remainingAmount.toFixed(2)}
+              {isPackageOpen() ? (
+                "Da definire"
+              ) : (
+                `€${remainingAmount.toFixed(2)}`
+              )}
               {isFullyPaid && (
                 <Chip 
                   label="Saldato" 
@@ -286,7 +336,7 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
                             <IconButton 
                               size="small" 
                               color="error"
-                              onClick={() => handleDeletePayment(payment.id)}
+                              onClick={() => handleOpenDeleteDialog(payment.id)}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -325,6 +375,7 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
                 InputProps={{
                   startAdornment: <span style={{ marginRight: 8 }}>€</span>
                 }}
+                helperText={isPackageOpen() ? "Questo è un pacchetto aperto, l'importo è libero" : ""}
               />
             </Grid>
             
@@ -362,6 +413,26 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
             onClick={handleAddPayment}
           >
             Aggiungi pagamento
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Conferma eliminazione</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Sei sicuro di voler eliminare questo pagamento? Questa azione non può essere annullata.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Annulla</Button>
+          <Button 
+            variant="contained" 
+            color="error"
+            onClick={handleDeletePayment}
+          >
+            Elimina
           </Button>
         </DialogActions>
       </Dialog>

@@ -1089,11 +1089,17 @@ function PackageListPage() {
                             : "normal"
                         }}
                       >
-                        €{parseFloat(pkg.package_cost).toFixed(2)}
-                        {parseFloat(pkg.package_cost) === 0 && (
-                          <Typography variant="caption" color="error" component="span" sx={{ ml: 0.5 }}>
-                            (da inserire)
-                          </Typography>
+                        {parseFloat(pkg.package_cost) === 0 ? (
+                          <>
+                            <Chip 
+                              label="da concordare" 
+                              color="secondary" 
+                              size="small" 
+                              sx={{ fontSize: '0.65rem', height: 20, fontWeight: 'bold' }} 
+                            />
+                          </>
+                        ) : (
+                          `€${parseFloat(pkg.package_cost).toFixed(2)}`
                         )}
                       </TableCell>
                     )}

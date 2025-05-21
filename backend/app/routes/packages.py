@@ -62,6 +62,11 @@ def update_package_status(db: Session, package_id: int, commit: bool = True):
     # Update status based on expiry date, payment status and remaining hours
     today = date.today()
     
+    # Se il package_cost è 0 (pacchetto aperto), non può mai essere pagato
+    if package.package_cost == Decimal('0'):
+        package.is_paid = False
+        package.payment_date = None
+    
     if today <= package.expiry_date:
         # Se non è scaduto, è in corso indipendentemente dal pagamento
         package.status = "in_progress"
@@ -72,8 +77,8 @@ def update_package_status(db: Session, package_id: int, commit: bool = True):
             # indipendentemente dallo stato di pagamento
             package.status = "expired"
         else:
-            # Se non ha ore rimanenti, è completato solo se pagato
-            if package.is_paid:
+            # Se non ha ore rimanenti, è completato solo se pagato E se non è un pacchetto aperto
+            if package.is_paid and package.package_cost > Decimal('0'):
                 package.status = "completed"
             else:
                 package.status = "expired"
@@ -588,6 +593,19 @@ def add_package_payment(
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
     
+    # Verifica che l'importo sia positivo
+    if payment.amount <= Decimal('0'):
+        raise HTTPException(status_code=400, detail="L'importo deve essere positivo")
+    
+    # Verifica che l'importo non superi il rimanente da pagare (solo se package_cost > 0)
+    if package.package_cost > Decimal('0'):
+        remaining = package.package_cost - package.total_paid
+        if payment.amount > remaining:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"L'importo (€{payment.amount}) supera il rimanente da pagare (€{remaining})"
+            )
+    
     # Crea il pagamento
     db_payment = models.PackagePayment(
         package_id=package_id,
@@ -601,12 +619,13 @@ def add_package_payment(
     # Aggiorna il totale pagato del pacchetto
     package.total_paid = package.total_paid + payment.amount
     
-    # Se il totale pagato raggiunge o supera il costo del pacchetto, imposta come pagato
-    if package.total_paid >= package.package_cost:
+    # Se il costo del pacchetto è > 0 e il totale pagato raggiunge o supera il costo, imposta come pagato
+    if package.package_cost > Decimal('0') and package.total_paid >= package.package_cost:
         package.is_paid = True
         package.payment_date = payment.payment_date  # Usa la data dell'ultimo pagamento
     else:
-        # Se il totale pagato è inferiore al costo del pacchetto, assicurati che sia impostato come non pagato
+        # Se il costo è 0 (pacchetto aperto) o il totale pagato è inferiore,
+        # assicurati che sia impostato come non pagato
         package.is_paid = False
         package.payment_date = None
     
@@ -614,13 +633,17 @@ def add_package_payment(
     db.refresh(db_payment)
     
     # Log dell'attività
+    description = f"Aggiunto pagamento di €{payment.amount} al pacchetto #{package_id}"
+    if package.package_cost == Decimal('0'):
+        description += " (pacchetto aperto)"
+    
     log_activity(
         db=db,
         professor_id=current_user.id,
         action_type="create",
         entity_type="package_payment",
         entity_id=db_payment.id,
-        description=f"Aggiunto pagamento di €{payment.amount} al pacchetto #{package_id}"
+        description=description
     )
     
     return db_payment
