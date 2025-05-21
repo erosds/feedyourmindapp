@@ -259,7 +259,7 @@ function DayDetailsDialog({
                             px: { xs: 0.5, sm: 1 }
                           }}
                         >
-                          Segna come pagato
+                          Aggiungi pagamento
                         </Button>
                       </ListItem>
                     ))}

@@ -563,7 +563,6 @@ function PaymentCalendarPage() {
         await packageService.addPayment(selectedPaymentItem.typeId, {
           amount: priceValue,
           payment_date: formattedDate,
-          notes: "Pagamento generato da calendario pagamenti"
         });
       }
 

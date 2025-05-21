@@ -104,18 +104,6 @@ const PackageNotes = ({ packageId, initialNotes, onNotesUpdate }) => {
         sx={{ pb: 1 }}
       />
       <CardContent sx={{ pt: 0 }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 1 }}>  {/* Reduced margin bottom */}
-            {error}
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert severity="success" sx={{ mb: 1 }}>  {/* Reduced margin bottom */}
-            {success}
-          </Alert>
-        )}
-        
         {isEditing ? (
           <TextField
             fullWidth
