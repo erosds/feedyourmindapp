@@ -273,7 +273,7 @@ class PackageResponse(BaseModel):
     extension_count: int
     notes: Optional[str]
     created_at: datetime
-    total_paid: Decimal
+    total_paid: Decimal = Decimal('0')
     payments: List[PackagePaymentResponse] = []
     
     model_config = ConfigDict(from_attributes=True)

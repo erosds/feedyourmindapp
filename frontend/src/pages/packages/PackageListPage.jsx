@@ -269,7 +269,6 @@ function PackageListPage() {
       await packageService.addPayment(selectedPackage.id, {
         amount: parseFloat(priceValue),
         payment_date: formattedDate,
-        notes: "Pagamento rapido da lista pacchetti"
       });
 
       // Ricarica i pacchetti

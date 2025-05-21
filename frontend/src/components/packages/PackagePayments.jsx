@@ -365,7 +365,7 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
         <DialogTitle>Aggiungi un pagamento</DialogTitle>
         <DialogContent sx={{ pt: 2, pb: 0 }}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid item xs={12} sx={{ mt: 1 }}>
               <TextField
                 label="Importo"
                 type="number"

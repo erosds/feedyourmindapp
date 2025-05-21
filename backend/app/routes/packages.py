@@ -113,7 +113,7 @@ def package_orm_to_response(package_orm):
         "extension_count": package_orm.extension_count,
         "notes": package_orm.notes,
         "created_at": package_orm.created_at,
-        "total_paid": package_orm.total_paid if hasattr(package_orm, 'total_paid') else Decimal('0')  # Aggiungi questo campo
+        "total_paid": getattr(package_orm, 'total_paid', Decimal('0')),  # Usa getattr con default
     }
     
     return models.PackageResponse(**package_dict)

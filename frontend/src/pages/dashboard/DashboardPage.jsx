@@ -508,7 +508,7 @@ function DashboardPage() {
                     }
                   }}
                 >
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="primary.main">
                     Lezioni singole saldate
                   </Typography>
                   <Typography variant="h5" color="text.primary">

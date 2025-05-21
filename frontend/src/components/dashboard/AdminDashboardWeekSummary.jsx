@@ -254,7 +254,7 @@ function AdminDashboardWeekSummary({
 
         {/* Statistiche pacchetti in scadenza */}
         <Grid item xs={12} sm={6} md={1}>
-          <Tooltip title="Pacchetti pagati/Pacchetti in scadenza nel periodo selezionato">
+          <Tooltip title="Pacchetti saldati/Pacchetti in scadenza nel periodo selezionato">
             <Box
               onClick={navigateToPeriodExpiringPackages}
               sx={{
