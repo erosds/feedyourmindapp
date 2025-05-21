@@ -1,30 +1,21 @@
-// src/pages/payments/PaymentCalendarPage.jsx
-import React, { useState, useEffect, useRef } from 'react';
+// frontend/src/pages/payments/PaymentCalendarPage.jsx (Refactored)
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
   ButtonGroup,
   Card,
-  Chip,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  Grid,
-  List,
-  ListItem,
-  ListItemText,
   Paper,
   Typography,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   format,
   startOfMonth,
   endOfMonth,
-  eachDayOfInterval,
   addMonths,
   subMonths,
   isSameDay,
@@ -34,124 +25,19 @@ import {
 import { it } from 'date-fns/locale';
 import { lessonService, packageService, studentService, professorService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { TextField, InputAdornment } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers';
-import { useMediaQuery, useTheme } from '@mui/material';
 
-// Componente per il contenitore di chip con autoscroll
-const ScrollableChipsContainer = ({ children }) => {
-  const containerRef = useRef(null);
-  const [isHovering, setIsHovering] = useState(false);
-  const [needsScroll, setNeedsScroll] = useState(false);
-
-  // Verifica se il contenuto necessita di scroll
-  useEffect(() => {
-    if (containerRef.current) {
-      setNeedsScroll(
-        containerRef.current.scrollHeight > containerRef.current.clientHeight
-      );
-    }
-  }, [children]);
-
-  // Gestisce l'effetto di scroll automatico
-  useEffect(() => {
-    if (!isHovering || !needsScroll || !containerRef.current) return;
-
-    let animationId;
-    let scrollTop = 0;
-    let pauseTimer = null;
-    let isPaused = true; // Inizia in pausa all'inizio
-    const scrollSpeed = 0.2; // Velocità di scroll (pixel per frame)
-    const pauseDuration = 1200; // Pausa di 1 secondo sia all'inizio che alla fine
-    const maxScrollTop = containerRef.current.scrollHeight - containerRef.current.clientHeight;
-
-    // Funzione ricorsiva per l'animazione
-    const scrollAnimation = () => {
-      if (!containerRef.current) return;
-
-      if (isPaused) {
-        // Quando è in pausa, attendi e poi continua
-        return;
-      }
-
-      // Aggiorna la posizione di scroll
-      scrollTop += scrollSpeed;
-
-      // Quando raggiunge il fondo, metti in pausa
-      if (scrollTop >= maxScrollTop) {
-        isPaused = true;
-        scrollTop = maxScrollTop; // Assicurati di essere esattamente in fondo
-
-        // Dopo la pausa, torna in cima e riprendi
-        pauseTimer = setTimeout(() => {
-          scrollTop = 0;
-          containerRef.current.scrollTop = 0;
-
-          // Rimani fermo per un momento anche all'inizio
-          pauseTimer = setTimeout(() => {
-            isPaused = false;
-            animationId = requestAnimationFrame(scrollAnimation);
-          }, pauseDuration);
-
-        }, pauseDuration);
-
-        return;
-      }
-
-      // Applica lo scroll
-      containerRef.current.scrollTop = scrollTop;
-
-      // Continua l'animazione
-      animationId = requestAnimationFrame(scrollAnimation);
-    };
-
-    // Inizia con una pausa all'inizio
-    pauseTimer = setTimeout(() => {
-      isPaused = false;
-      animationId = requestAnimationFrame(scrollAnimation);
-    }, pauseDuration);
-
-    // Pulizia quando l'hover finisce
-    return () => {
-      if (pauseTimer) clearTimeout(pauseTimer);
-      cancelAnimationFrame(animationId);
-
-      // Torna in cima quando il mouse esce
-      if (containerRef.current) {
-        containerRef.current.scrollTop = 0;
-      }
-    };
-  }, [isHovering, needsScroll]);
-
-  return (
-    <Box
-      ref={containerRef}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-      sx={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '2px',
-        mt: 0,
-        maxHeight: '100px',
-        overflow: 'hidden',
-        overflowY: 'auto',
-        flexGrow: 1,
-        scrollbarWidth: 'none', // Firefox
-        '&::-webkit-scrollbar': { // Chrome/Safari/Edge
-          display: 'none'
-        },
-        msOverflowStyle: 'none' // IE
-      }}
-    >
-      {children}
-    </Box>
-  );
-};
+// Import our componentized modules
+import DesktopCalendarView from '../../components/payments/DesktopCalendarView';
+import MobileCalendarView from '../../components/payments/MobileCalendarView';
+import DayDetailsDialog from '../../components/payments/DayDetailsDialog';
+import PaymentConfirmationDialog from '../../components/payments/PaymentConfirmationDialog';
+import MonthlyStatsDisplay from '../../components/payments/MonthlyStatsDisplay';
 
 function PaymentCalendarPage() {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // States
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -162,246 +48,78 @@ function PaymentCalendarPage() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [students, setStudents] = useState({});
-  // Aggiungi un nuovo stato per le lezioni non pagate
   const [unpaidLessons, setUnpaidLessons] = useState([]);
   const [dayUnpaidLessons, setDayUnpaidLessons] = useState([]);
   const [viewMode, setViewMode] = useState('payments'); // 'payments' o 'unpaid'
   const [expiredPackages, setExpiredPackages] = useState([]);
   const [dayExpiredPackages, setDayExpiredPackages] = useState([]);
-  // Aggiungi questi stati dopo gli stati esistenti
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPaymentItem, setSelectedPaymentItem] = useState(null);
   const [paymentDate, setPaymentDate] = useState(new Date());
   const [priceValue, setPriceValue] = useState(0);
-
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  // Aggiungi questo stato accanto allo stato students
   const [professors, setProfessors] = useState({});
 
-  // Aggiungi questa funzione
+  // Verify admin access
+  useEffect(() => {
+    if (!isAdmin()) {
+      navigate('/dashboard');
+    }
+  }, [isAdmin, navigate]);
+
+  // Get weekday names
+  const weekdays = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
+
+  // Calculate first day offset for calendar grid
+  const getFirstDayOffset = () => {
+    const firstDay = startOfMonth(currentMonth);
+    // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const dayOfWeek = firstDay.getDay();
+    // Convert to 0 = Monday, 1 = Tuesday, ..., 6 = Sunday
+    return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  };
+
+  // Get days of current month
+  const daysInMonth = (() => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    const days = [];
+    let currentDay = monthStart;
+    while (currentDay <= monthEnd) {
+      days.push(new Date(currentDay));
+      currentDay.setDate(currentDay.getDate() + 1);
+    }
+    return days;
+  })();
+
+  // Helper function to get professor name
   const getProfessorName = (professorId) => {
     return professors[professorId] || `Professore #${professorId}`;
   };
 
+  // Helper function to check if a package is expiring
   const isPackageExpiring = (pkg) => {
     const expiryDate = parseISO(pkg.expiry_date);
 
-    // Ottieni il lunedì della settimana corrente
+    // Get Monday of the current week
     const today = new Date();
-    const dayOfWeek = today.getDay() || 7; // 0 per domenica, trasformato in 7
+    const dayOfWeek = today.getDay() || 7; // 0 for Sunday, transform to 7
     const mondayThisWeek = new Date(today);
-    mondayThisWeek.setDate(today.getDate() - dayOfWeek + 1); // Lunedì della settimana corrente
-    mondayThisWeek.setHours(0, 0, 0, 0); // Inizio della giornata
+    mondayThisWeek.setDate(today.getDate() - dayOfWeek + 1); // Monday of current week
+    mondayThisWeek.setHours(0, 0, 0, 0); // Start of day
 
-    // Ottieni il lunedì della settimana prossima (7 giorni dopo)
+    // Get Monday of next week (7 days later)
     const mondayNextWeek = new Date(mondayThisWeek);
     mondayNextWeek.setDate(mondayThisWeek.getDate() + 7);
 
-    // Controlla se scade tra lunedì di questa settimana e lunedì della prossima
+    // Check if it expires between Monday of this week and Monday of next week
     return expiryDate > mondayThisWeek && expiryDate <= mondayNextWeek;
   };
 
-  useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        setLoading(true);
-
-        // Get start and end dates for current month
-        const monthStart = startOfMonth(currentMonth);
-        const monthEnd = endOfMonth(currentMonth);
-
-        // Format dates for API
-        const startDateStr = format(monthStart, 'yyyy-MM-dd');
-        const endDateStr = format(monthEnd, 'yyyy-MM-dd');
-
-        // Load all lessons, packages, and package payments in parallel
-        const [lessonsResponse, packagesResponse, allPackagesResponse] = await Promise.all([
-          lessonService.getAll(),
-          packageService.getAll(),
-          packageService.getAll() // Utilizziamo questa chiamata di nuovo per ottenere tutti i pacchetti
-        ]);
-
-        // Per ogni pacchetto, carica i relativi pagamenti
-        const packagePaymentsPromises = allPackagesResponse.data.map(pkg =>
-          packageService.getPayments(pkg.id)
-        );
-
-        const packagePaymentsResponses = await Promise.all(packagePaymentsPromises);
-
-        // Crea una mappa di pagamenti per ogni pacchetto
-        const packagePaymentsMap = {};
-        packagePaymentsResponses.forEach((response, index) => {
-          const packageId = allPackagesResponse.data[index].id;
-          packagePaymentsMap[packageId] = response.data || [];
-        });
-
-        // Filtra per pagamenti di lezioni singole
-        const paidLessons = lessonsResponse.data.filter(lesson =>
-          lesson.is_paid &&
-          lesson.payment_date &&
-          !lesson.is_package &&
-          lesson.payment_date >= startDateStr &&
-          lesson.payment_date <= endDateStr
-        );
-
-        // Ora raccogliamo i pagamenti dei pacchetti nel periodo
-        const packagePaymentsInPeriod = [];
-
-        Object.entries(packagePaymentsMap).forEach(([packageId, payments]) => {
-          // Trova il pacchetto corrispondente
-          const pkg = allPackagesResponse.data.find(p => p.id === parseInt(packageId));
-
-          if (pkg) {
-            // Filtra i pagamenti che rientrano nel periodo
-            const paymentsInPeriod = payments.filter(payment =>
-              payment.payment_date >= startDateStr &&
-              payment.payment_date <= endDateStr
-            );
-
-            // Aggiungi i pagamenti al nostro array
-            packagePaymentsInPeriod.push(...paymentsInPeriod.map(payment => ({
-              id: `package-payment-${payment.id}`,
-              type: 'package-payment',
-              typeId: payment.id,
-              packageId: parseInt(packageId),
-              date: payment.payment_date,
-              student_id: pkg.student_ids?.[0] || null,
-              amount: parseFloat(payment.amount || 0),
-              hours: parseFloat(pkg.total_hours || 0),
-              notes: payment.notes,
-              studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
-            })));
-          }
-        });
-
-        // Filtra i pacchetti scaduti e non pagati
-        const expiredPackagesData = packagesResponse.data.filter(pkg =>
-          pkg.total_paid < pkg.package_cost && // Non pagato completamente
-          pkg.status === 'expired' &&
-          pkg.expiry_date >= startDateStr &&
-          pkg.expiry_date <= endDateStr
-        );
-
-        // Filtra anche i pacchetti in scadenza questa settimana (ancora attivi)
-        const expiringPackagesData = packagesResponse.data.filter(pkg => {
-          const expiryDate = parseISO(pkg.expiry_date);
-          return (
-            pkg.total_paid < pkg.package_cost && // Non pagato completamente
-            pkg.status === 'in_progress' &&
-            isPackageExpiring(pkg) &&
-            expiryDate >= monthStart && expiryDate <= monthEnd
-          );
-        });
-
-        // Formatta i pacchetti scaduti, mostrando solo l'importo rimanente da pagare
-        const formattedExpiredPackages = [
-          ...expiredPackagesData.map(pkg => ({
-            id: `expired-${pkg.id}`,
-            type: 'expired-package',
-            typeId: pkg.id,
-            date: pkg.expiry_date,
-            student_id: pkg.student_ids?.[0] || null,
-            amount: parseFloat(pkg.package_cost || 0) - parseFloat(pkg.total_paid || 0), // Solo l'importo rimanente
-            hours: parseFloat(pkg.total_hours || 0),
-            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
-          })),
-          ...expiringPackagesData.map(pkg => ({
-            id: `expiring-${pkg.id}`,
-            type: 'expired-package',
-            typeId: pkg.id,
-            date: pkg.expiry_date,
-            student_id: pkg.student_ids?.[0] || null,
-            amount: parseFloat(pkg.package_cost || 0) - parseFloat(pkg.total_paid || 0), // Solo l'importo rimanente
-            hours: parseFloat(pkg.total_hours || 0),
-            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
-          }))
-        ];
-
-        setExpiredPackages(formattedExpiredPackages);
-
-        // Filtra per lezioni non pagate
-        const unpaidLessonsData = lessonsResponse.data.filter(lesson =>
-          !lesson.is_paid &&
-          !lesson.is_package &&
-          lesson.lesson_date >= startDateStr &&
-          lesson.lesson_date <= endDateStr
-        );
-
-        // Format unpaid lessons
-        const formattedUnpaidLessons = unpaidLessonsData.map(lesson => ({
-          id: `unpaid-${lesson.id}`,
-          type: 'unpaid',
-          typeId: lesson.id,
-          date: lesson.lesson_date,
-          student_id: lesson.student_id,
-          amount: parseFloat(lesson.price || 0),
-          hours: parseFloat(lesson.duration || 0),
-          studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`,
-          professorName: getProfessorName(lesson.professor_id)
-        }));
-
-        // Combine and format payments (lezioni + pagamenti pacchetti)
-        const combinedPayments = [
-          ...paidLessons.map(lesson => ({
-            id: `lesson-${lesson.id}`,
-            type: 'lesson',
-            typeId: lesson.id,
-            date: lesson.payment_date,
-            student_id: lesson.student_id,
-            amount: parseFloat(lesson.price || 0),
-            hours: parseFloat(lesson.duration || 0),
-            studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
-          })),
-          ...packagePaymentsInPeriod.map(payment => {
-            // Per ogni pagamento, determina se è un saldo o un acconto
-            const pkg = allPackagesResponse.data.find(p => p.id === payment.packageId);
-            if (!pkg) return payment;
-
-            // Calcola la somma di tutti i pagamenti precedenti (incluso questo)
-            const packagePayments = packagePaymentsMap[payment.packageId] || [];
-            const paymentIndex = packagePayments.findIndex(p => p.id === payment.typeId);
-            if (paymentIndex === -1) return payment;
-
-            // Calcola la somma dei pagamenti fino a questo pagamento
-            const sumUntilThisPayment = packagePayments
-              .slice(0, paymentIndex + 1)
-              .reduce((sum, p) => sum + parseFloat(p.amount), 0);
-
-            // Determina se è un saldo (raggiunge o supera il costo del pacchetto)
-            const packageCost = parseFloat(pkg.package_cost || 0);
-            const isFinalPayment = sumUntilThisPayment >= packageCost && packageCost > 0;
-
-            return {
-              ...payment,
-              isFinalPayment, // Aggiungi questa informazione
-              paymentType: isFinalPayment ? 'saldo' : 'acconto',
-              packageCost
-            };
-          })
-        ];
-
-        setUnpaidLessons(formattedUnpaidLessons);
-        setPayments(combinedPayments);
-      } catch (err) {
-        console.error('Error fetching payments:', err);
-        setError('Impossibile caricare i pagamenti. Riprova più tardi.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (Object.keys(students).length > 0) {
-      fetchPayments();
-    }
-  }, [currentMonth, students]);
-
-  // Modifica questo useEffect
+  // Load all data (students, professors)
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Caricamento parallelo degli studenti e dei professori
+        // Load students and professors in parallel
         const [studentsResponse, professorsResponse] = await Promise.all([
           studentService.getAll(),
           professorService.getAll()
@@ -430,47 +148,367 @@ function PaymentCalendarPage() {
     fetchData();
   }, []);
 
-
-  // Verify admin access
+  // Load payments data based on current month
   useEffect(() => {
-    if (!isAdmin()) {
-      navigate('/dashboard');
-    }
-  }, [isAdmin, navigate]);
-
-  // Fetch all students first to use for name display
-  useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchPayments = async () => {
       try {
-        const response = await studentService.getAll();
-        const studentsMap = {};
+        setLoading(true);
 
-        if (response && response.data) {
-          response.data.forEach(student => {
-            studentsMap[student.id] = `${student.first_name} ${student.last_name}`;
-          });
-        }
+        // Get start and end dates for current month
+        const monthStart = startOfMonth(currentMonth);
+        const monthEnd = endOfMonth(currentMonth);
 
-        setStudents(studentsMap);
+        // Format dates for API
+        const startDateStr = format(monthStart, 'yyyy-MM-dd');
+        const endDateStr = format(monthEnd, 'yyyy-MM-dd');
+
+        // Load all lessons, packages, and package payments in parallel
+        const [lessonsResponse, packagesResponse, allPackagesResponse] = await Promise.all([
+          lessonService.getAll(),
+          packageService.getAll(),
+          packageService.getAll() // Use this call again to get all packages
+        ]);
+
+        // For each package, load related payments
+        const packagePaymentsPromises = allPackagesResponse.data.map(pkg =>
+          packageService.getPayments(pkg.id)
+        );
+
+        const packagePaymentsResponses = await Promise.all(packagePaymentsPromises);
+
+        // Create a map of payments for each package
+        const packagePaymentsMap = {};
+        packagePaymentsResponses.forEach((response, index) => {
+          const packageId = allPackagesResponse.data[index].id;
+          packagePaymentsMap[packageId] = response.data || [];
+        });
+
+        // Filter for single lesson payments
+        const paidLessons = lessonsResponse.data.filter(lesson =>
+          lesson.is_paid &&
+          lesson.payment_date &&
+          !lesson.is_package &&
+          lesson.payment_date >= startDateStr &&
+          lesson.payment_date <= endDateStr
+        );
+
+        // Collect package payments in the period
+        const packagePaymentsInPeriod = [];
+
+        Object.entries(packagePaymentsMap).forEach(([packageId, payments]) => {
+          // Find the corresponding package
+          const pkg = allPackagesResponse.data.find(p => p.id === parseInt(packageId));
+
+          if (pkg) {
+            // Filter payments within the period
+            const paymentsInPeriod = payments.filter(payment =>
+              payment.payment_date >= startDateStr &&
+              payment.payment_date <= endDateStr
+            );
+
+            // Add the payments to our array
+            packagePaymentsInPeriod.push(...paymentsInPeriod.map(payment => ({
+              id: `package-payment-${payment.id}`,
+              type: 'package-payment',
+              typeId: payment.id,
+              packageId: parseInt(packageId),
+              date: payment.payment_date,
+              student_id: pkg.student_ids?.[0] || null,
+              amount: parseFloat(payment.amount || 0),
+              hours: parseFloat(pkg.total_hours || 0),
+              notes: payment.notes,
+              studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+            })));
+          }
+        });
+
+        // Filter for expired and unpaid packages
+        const expiredPackagesData = packagesResponse.data.filter(pkg =>
+          pkg.total_paid < pkg.package_cost && // Not fully paid
+          pkg.status === 'expired' &&
+          pkg.expiry_date >= startDateStr &&
+          pkg.expiry_date <= endDateStr
+        );
+
+        // Also filter for packages expiring this week (still active)
+        const expiringPackagesData = packagesResponse.data.filter(pkg => {
+          const expiryDate = parseISO(pkg.expiry_date);
+          return (
+            pkg.total_paid < pkg.package_cost && // Not fully paid
+            pkg.status === 'in_progress' &&
+            isPackageExpiring(pkg) &&
+            expiryDate >= monthStart && expiryDate <= monthEnd
+          );
+        });
+
+        // Format expired packages, showing only the remaining amount to pay
+        const formattedExpiredPackages = [
+          ...expiredPackagesData.map(pkg => ({
+            id: `expired-${pkg.id}`,
+            type: 'expired-package',
+            typeId: pkg.id,
+            date: pkg.expiry_date,
+            student_id: pkg.student_ids?.[0] || null,
+            amount: parseFloat(pkg.package_cost || 0) - parseFloat(pkg.total_paid || 0), // Only the remaining amount
+            hours: parseFloat(pkg.total_hours || 0),
+            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+          })),
+          ...expiringPackagesData.map(pkg => ({
+            id: `expiring-${pkg.id}`,
+            type: 'expired-package',
+            typeId: pkg.id,
+            date: pkg.expiry_date,
+            student_id: pkg.student_ids?.[0] || null,
+            amount: parseFloat(pkg.package_cost || 0) - parseFloat(pkg.total_paid || 0), // Only the remaining amount
+            hours: parseFloat(pkg.total_hours || 0),
+            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+          }))
+        ];
+
+        setExpiredPackages(formattedExpiredPackages);
+
+        // Filter for unpaid lessons
+        const unpaidLessonsData = lessonsResponse.data.filter(lesson =>
+          !lesson.is_paid &&
+          !lesson.is_package &&
+          lesson.lesson_date >= startDateStr &&
+          lesson.lesson_date <= endDateStr
+        );
+
+        // Format unpaid lessons
+        const formattedUnpaidLessons = unpaidLessonsData.map(lesson => ({
+          id: `unpaid-${lesson.id}`,
+          type: 'unpaid',
+          typeId: lesson.id,
+          date: lesson.lesson_date,
+          student_id: lesson.student_id,
+          amount: parseFloat(lesson.price || 0),
+          hours: parseFloat(lesson.duration || 0),
+          studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`,
+          professorName: getProfessorName(lesson.professor_id)
+        }));
+
+        // Combine and format payments (lessons + package payments)
+        const combinedPayments = [
+          ...paidLessons.map(lesson => ({
+            id: `lesson-${lesson.id}`,
+            type: 'lesson',
+            typeId: lesson.id,
+            date: lesson.payment_date,
+            student_id: lesson.student_id,
+            amount: parseFloat(lesson.price || 0),
+            hours: parseFloat(lesson.duration || 0),
+            studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
+          })),
+          ...packagePaymentsInPeriod.map(payment => {
+            // For each payment, determine if it's a final payment or partial payment
+            const pkg = allPackagesResponse.data.find(p => p.id === payment.packageId);
+            if (!pkg) return payment;
+
+            // Calculate the sum of all previous payments (including this one)
+            const packagePayments = packagePaymentsMap[payment.packageId] || [];
+            const paymentIndex = packagePayments.findIndex(p => p.id === payment.typeId);
+            if (paymentIndex === -1) return payment;
+
+            // Calculate the sum of payments up to this payment
+            const sumUntilThisPayment = packagePayments
+              .slice(0, paymentIndex + 1)
+              .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+            // Determine if it's a final payment (reaches or exceeds the package cost)
+            const packageCost = parseFloat(pkg.package_cost || 0);
+            const isFinalPayment = sumUntilThisPayment >= packageCost && packageCost > 0;
+
+            return {
+              ...payment,
+              isFinalPayment, // Add this information
+              paymentType: isFinalPayment ? 'saldo' : 'acconto',
+              packageCost
+            };
+          })
+        ];
+
+        setUnpaidLessons(formattedUnpaidLessons);
+        setPayments(combinedPayments);
       } catch (err) {
-        console.error('Error fetching students:', err);
+        console.error('Error fetching payments:', err);
+        setError('Impossibile caricare i pagamenti. Riprova più tardi.');
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchStudents();
-  }, []);
+    if (Object.keys(students).length > 0) {
+      fetchPayments();
+    }
+  }, [currentMonth, students]);
 
+  // Get payments for a specific day
+  const getPaymentsForDay = (day) => {
+    return payments.filter(payment =>
+      isSameDay(parseISO(payment.date), day)
+    );
+  };
+
+  // Get unpaid lessons for a day
+  const getUnpaidLessonsForDay = (day) => {
+    return unpaidLessons.filter(lesson =>
+      isSameDay(parseISO(lesson.date), day)
+    );
+  };
+
+  // Get expired packages for a day
   const getExpiredPackagesForDay = (day) => {
     return expiredPackages.filter(pkg =>
       isSameDay(parseISO(pkg.date), day)
     );
   };
 
+  // Count unpaid lessons for a day
+  const getUnpaidCountForDay = (day) => {
+    return getUnpaidLessonsForDay(day).length;
+  };
+
+  // Count expired packages for a day
   const getExpiredPackagesCountForDay = (day) => {
     return getExpiredPackagesForDay(day).length;
   };
 
-  // Aggiungi questa funzione dopo handlePaymentClick
+  // Calculate total payments for a day
+  const getTotalForDay = (day) => {
+    const dayPayments = getPaymentsForDay(day);
+    return dayPayments.reduce((sum, payment) => sum + payment.amount, 0);
+  };
+
+  // Format student names for display
+  const formatStudentName = (fullName) => {
+    const nameParts = fullName.split(' ');
+    let displayName = '';
+
+    if (nameParts.length > 0) {
+      displayName = nameParts[0];
+      if (nameParts.length > 1) {
+        displayName += ' ' + nameParts[1].charAt(0) + '.';
+      }
+    }
+
+    return displayName;
+  };
+
+  // Get formatted student names for calendar display
+  const getStudentNamesForDay = (day) => {
+    // If in payments mode, show only payments
+    if (viewMode === 'payments') {
+      const dayPayments = getPaymentsForDay(day);
+
+      // Separate packages and lessons
+      const packages = dayPayments
+        .filter(payment => payment.type === 'package' || payment.type === 'package-payment')
+        .map(payment => ({
+          id: payment.id,
+          name: formatStudentName(payment.studentName),
+          type: payment.type === 'package-payment' ? 'package-payment' : 'package'
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const lessons = dayPayments.filter(payment => payment.type === 'lesson')
+        .map(payment => ({
+          id: payment.id,
+          name: formatStudentName(payment.studentName),
+          type: payment.type
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      // Concatenate packages first, then lessons
+      return [...packages, ...lessons];
+    }
+    // If in "unpaid" mode, show unpaid lessons and expired packages
+    else {
+      const dayUnpaid = getUnpaidLessonsForDay(day);
+      const dayExpired = getExpiredPackagesForDay(day);
+
+      // Sort expired packages alphabetically
+      const expiredPackages = dayExpired.map(pkg => ({
+        id: pkg.id,
+        name: formatStudentName(pkg.studentName),
+        type: 'expired-package'
+      })).sort((a, b) => a.name.localeCompare(b.name));
+
+      // Sort unpaid lessons alphabetically
+      const unpaidLessons = dayUnpaid.map(unpaid => ({
+        id: unpaid.id,
+        name: formatStudentName(unpaid.studentName),
+        type: 'unpaid'
+      })).sort((a, b) => a.name.localeCompare(b.name));
+
+      // Concatenate expired packages first, then unpaid lessons
+      return [...expiredPackages, ...unpaidLessons];
+    }
+  };
+
+  // Calculate monthly stats
+  const calculateMonthStats = () => {
+    // Count package payments (not packages themselves)
+    const packagePayments = payments.filter(payment => payment.type === 'package-payment');
+    const packagePaymentsCount = packagePayments.length;
+    const packagePaymentsTotal = packagePayments.reduce((sum, payment) => sum + payment.amount, 0);
+
+    const lessonPayments = payments.filter(payment => payment.type === 'lesson');
+    const lessonHours = lessonPayments.reduce((sum, payment) => sum + payment.hours, 0);
+    const lessonTotal = lessonPayments.reduce((sum, payment) => sum + payment.amount, 0);
+
+    const totalAmount = packagePaymentsTotal + lessonTotal;
+
+    return {
+      totalAmount,
+      packagePaymentsCount,
+      packagePaymentsTotal,
+      lessonHours,
+      lessonTotal
+    };
+  };
+
+  // Event Handlers
+  const handlePreviousMonth = () => {
+    setCurrentMonth(prevMonth => subMonths(prevMonth, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
+  };
+
+  const handleResetToCurrentMonth = () => {
+    setCurrentMonth(new Date());
+  };
+
+  const handleDayClick = (day) => {
+    const dayPayments = getPaymentsForDay(day);
+    const unpaidLessonsForDay = getUnpaidLessonsForDay(day);
+    const expiredPackagesForDay = getExpiredPackagesForDay(day);
+
+    setSelectedDay(day);
+    setDayPayments(dayPayments);
+    setDayUnpaidLessons(unpaidLessonsForDay);
+    setDayExpiredPackages(expiredPackagesForDay);
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+  };
+
+  const handlePaymentClick = (payment) => {
+    if (payment.type === 'lesson' || payment.type === 'unpaid') {
+      navigate(`/lessons/${payment.typeId}`);
+    } else if (payment.type === 'package-payment') {
+      // For package payments, go to the corresponding package
+      navigate(`/packages/${payment.packageId}`);
+    } else if (payment.type === 'package' || payment.type === 'expired-package') {
+      navigate(`/packages/${payment.typeId}`);
+    }
+    setDialogOpen(false);
+  };
+
   const handleOpenPaymentDialog = (item, event) => {
     event.stopPropagation(); // Prevent navigation to details
     setSelectedPaymentItem(item);
@@ -479,7 +517,6 @@ function PaymentCalendarPage() {
     setPaymentDialogOpen(true);
   };
 
-  // Aggiungi questa funzione dopo handleOpenPaymentDialog
   const handleConfirmPayment = async () => {
     try {
       if (!selectedPaymentItem) return;
@@ -487,14 +524,14 @@ function PaymentCalendarPage() {
       const formattedDate = format(paymentDate, 'yyyy-MM-dd');
 
       if (selectedPaymentItem.type === 'unpaid') {
-        // Per le lezioni non pagate (invariato)
+        // For unpaid lessons
         await lessonService.update(selectedPaymentItem.typeId, {
           is_paid: true,
           payment_date: formattedDate,
           price: priceValue
         });
       } else if (selectedPaymentItem.type === 'expired-package') {
-        // Per i pacchetti scaduti, aggiungi un nuovo pagamento invece di aggiornare direttamente
+        // For expired packages, add a new payment instead of directly updating
         await packageService.addPayment(selectedPaymentItem.typeId, {
           amount: priceValue,
           payment_date: formattedDate,
@@ -502,19 +539,18 @@ function PaymentCalendarPage() {
         });
       }
 
-      // Ricarica i dati per aggiornare la UI
+      // Reload data to update UI
       const monthStart = startOfMonth(currentMonth);
       const monthEnd = endOfMonth(currentMonth);
       const startDateStr = format(monthStart, 'yyyy-MM-dd');
       const endDateStr = format(monthEnd, 'yyyy-MM-dd');
-
 
       const [lessonsResponse, packagesResponse] = await Promise.all([
         lessonService.getAll(),
         packageService.getAll()
       ]);
 
-      // Aggiorna i dati nello stato
+      // Update state data
       const paidLessons = lessonsResponse.data.filter(lesson =>
         lesson.is_paid &&
         lesson.payment_date &&
@@ -530,7 +566,7 @@ function PaymentCalendarPage() {
         pkg.payment_date <= endDateStr
       );
 
-      // Formatta i pagamenti aggiornati
+      // Format updated payments
       const combinedPayments = [
         ...paidLessons.map(lesson => ({
           id: `lesson-${lesson.id}`,
@@ -554,7 +590,7 @@ function PaymentCalendarPage() {
         }))
       ];
 
-      // Aggiorna anche lezioni non pagate e pacchetti scaduti
+      // Also update unpaid lessons and expired packages
       const unpaidLessonsData = lessonsResponse.data.filter(lesson =>
         !lesson.is_paid &&
         !lesson.is_package &&
@@ -571,7 +607,7 @@ function PaymentCalendarPage() {
         amount: parseFloat(lesson.price || 0),
         hours: parseFloat(lesson.duration || 0),
         studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`,
-        professorName: getProfessorName(lesson.professor_id) // Aggiungi una funzione per ottenere il nome del professore
+        professorName: getProfessorName(lesson.professor_id)
       }));
 
       const expiredPackagesData = packagesResponse.data.filter(pkg =>
@@ -596,7 +632,7 @@ function PaymentCalendarPage() {
       setUnpaidLessons(formattedUnpaidLessons);
       setExpiredPackages(formattedExpiredPackages);
 
-      // Aggiorna anche i dati visualizzati per il giorno selezionato
+      // Update the data displayed for the selected day
       const dayPayments = combinedPayments.filter(payment =>
         selectedDay && isSameDay(parseISO(payment.date), selectedDay)
       );
@@ -613,352 +649,18 @@ function PaymentCalendarPage() {
       setDayUnpaidLessons(unpaidLessonsForDay);
       setDayExpiredPackages(expiredPackagesForDay);
 
-      // Chiudi il dialogo di pagamento
+      // Close the payment dialog
       setPaymentDialogOpen(false);
 
-      // Se non ci sono più elementi non pagati, torna alla vista pagamenti
+      // If there are no more unpaid items, switch back to payments view
       if (unpaidLessonsForDay.length === 0 && expiredPackagesForDay.length === 0) {
         setViewMode('payments');
       }
 
     } catch (err) {
-      console.error('Errore durante il salvataggio del pagamento:', err);
+      console.error('Error saving payment:', err);
       alert('Errore durante il salvataggio del pagamento. Riprova più tardi.');
     }
-  };
-
-  // Load all payments for the current month
-  useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        setLoading(true);
-
-        // Get start and end dates for current month
-        const monthStart = startOfMonth(currentMonth);
-        const monthEnd = endOfMonth(currentMonth);
-
-        // Format dates for API
-        const startDateStr = format(monthStart, 'yyyy-MM-dd');
-        const endDateStr = format(monthEnd, 'yyyy-MM-dd');
-
-        // Load all lessons and packages in parallel
-        const [lessonsResponse, packagesResponse] = await Promise.all([
-          lessonService.getAll(),
-          packageService.getAll()
-        ]);
-
-        // Filter for paid lessons
-        const paidLessons = lessonsResponse.data.filter(lesson =>
-          lesson.is_paid &&
-          lesson.payment_date &&
-          !lesson.is_package &&
-          lesson.payment_date >= startDateStr &&
-          lesson.payment_date <= endDateStr
-        );
-
-        // Load paid packages
-        const paidPackages = packagesResponse.data.filter(pkg =>
-          pkg.is_paid &&
-          pkg.payment_date &&
-          pkg.payment_date >= startDateStr &&
-          pkg.payment_date <= endDateStr
-        );
-
-        // Filtra i pacchetti scaduti e non pagati
-        const expiredPackagesData = packagesResponse.data.filter(pkg =>
-          !pkg.is_paid &&
-          pkg.status === 'expired' &&
-          pkg.expiry_date >= startDateStr &&
-          pkg.expiry_date <= endDateStr
-        );
-
-        // Filtra anche i pacchetti in scadenza questa settimana (ancora attivi)
-        const expiringPackagesData = packagesResponse.data.filter(pkg => {
-          const expiryDate = parseISO(pkg.expiry_date);
-          return (
-            !pkg.is_paid &&
-            pkg.status === 'in_progress' &&
-            isPackageExpiring(pkg) &&
-            expiryDate >= monthStart && expiryDate <= monthEnd
-          );
-        });
-
-
-        // Formatta i pacchetti scaduti
-        const formattedExpiredPackages = [
-          ...expiredPackagesData.map(pkg => ({
-            id: `expired-${pkg.id}`,
-            type: 'expired-package',
-            typeId: pkg.id,
-            date: pkg.expiry_date,
-            student_id: pkg.student_ids?.[0] || null,
-            amount: parseFloat(pkg.package_cost || 0),
-            hours: parseFloat(pkg.total_hours || 0),
-            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
-          })),
-          // Aggiungi anche i pacchetti in scadenza, trattandoli come expired-package
-          ...expiringPackagesData.map(pkg => ({
-            id: `expiring-${pkg.id}`,
-            type: 'expired-package', // Usa lo stesso tipo per trattarli allo stesso modo
-            typeId: pkg.id,
-            date: pkg.expiry_date,
-            student_id: pkg.student_ids?.[0] || null,
-            amount: parseFloat(pkg.package_cost || 0),
-            hours: parseFloat(pkg.total_hours || 0),
-            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
-          }))
-        ];
-
-        setExpiredPackages(formattedExpiredPackages);
-
-        // Combine and format payments
-        const combinedPayments = [
-          ...paidLessons.map(lesson => ({
-            id: `lesson-${lesson.id}`,
-            type: 'lesson',
-            typeId: lesson.id,
-            date: lesson.payment_date,
-            student_id: lesson.student_id,
-            amount: parseFloat(lesson.price || 0),
-            hours: parseFloat(lesson.duration || 0)
-          })),
-          ...paidPackages.map(pkg => ({
-            id: `package-${pkg.id}`,
-            type: 'package',
-            typeId: pkg.id,
-            date: pkg.payment_date,
-            student_id: pkg.student_ids?.[0] || null, // Use first student if multiple
-            amount: parseFloat(pkg.package_cost || 0),
-            hours: parseFloat(pkg.total_hours || 0)
-          }))
-        ];
-
-        // Add student names to payments
-        const paymentsWithStudentNames = combinedPayments.map(payment => {
-          const studentName = students[payment.student_id] || `Studente #${payment.student_id}`;
-          return {
-            ...payment,
-            studentName
-          };
-        });
-
-        // Filter for unpaid lessons
-        const unpaidLessonsData = lessonsResponse.data.filter(lesson =>
-          !lesson.is_paid &&
-          !lesson.is_package &&
-          lesson.lesson_date >= startDateStr &&
-          lesson.lesson_date <= endDateStr
-        );
-
-        // Format unpaid lessons
-        const formattedUnpaidLessons = unpaidLessonsData.map(lesson => ({
-          id: `unpaid-${lesson.id}`,
-          type: 'unpaid',
-          typeId: lesson.id,
-          date: lesson.lesson_date, // Nota: usa lesson_date invece di payment_date
-          student_id: lesson.student_id,
-          amount: parseFloat(lesson.price || 0),
-          hours: parseFloat(lesson.duration || 0),
-          studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`,
-          professorName: getProfessorName(lesson.professor_id) // Aggiungi una funzione per ottenere il nome del professore
-        }));
-
-        setUnpaidLessons(formattedUnpaidLessons);
-        setPayments(paymentsWithStudentNames);
-      } catch (err) {
-        console.error('Error fetching payments:', err);
-        setError('Impossibile caricare i pagamenti. Riprova più tardi.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (Object.keys(students).length > 0) {
-      fetchPayments();
-    }
-  }, [currentMonth, students]);
-
-  // Change month handlers
-  const handlePreviousMonth = () => {
-    setCurrentMonth(prevMonth => subMonths(prevMonth, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
-  };
-
-  const handleResetToCurrentMonth = () => {
-    setCurrentMonth(new Date());
-  };
-
-  // Handle day click
-  // Modifica la funzione handleDayClick
-  const handleDayClick = (day) => {
-    const dayPayments = payments.filter(payment =>
-      isSameDay(parseISO(payment.date), day)
-    );
-
-    const unpaidLessonsForDay = getUnpaidLessonsForDay(day);
-    const expiredPackagesForDay = getExpiredPackagesForDay(day);
-
-    setSelectedDay(day);
-    setDayPayments(dayPayments);
-    setDayUnpaidLessons(unpaidLessonsForDay);
-    setDayExpiredPackages(expiredPackagesForDay);
-
-    // Mantieni la modalità di visualizzazione coerente con quella selezionata nel calendario
-    // Questo assicura che il dialogo si apra nella stessa modalità del calendario
-    setViewMode(viewMode);  // Non cambiare la modalità, usa quella già attiva
-
-    setDialogOpen(true);
-  };
-
-  // Close dialog
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-  };
-
-  // Navigate to payment details
-  const handlePaymentClick = (payment) => {
-    if (payment.type === 'lesson' || payment.type === 'unpaid') {
-      navigate(`/lessons/${payment.typeId}`);
-    } else if (payment.type === 'package-payment') {
-      // Per i pagamenti dei pacchetti, vai al pacchetto corrispondente
-      navigate(`/packages/${payment.packageId}`);
-    } else if (payment.type === 'package' || payment.type === 'expired-package') {
-      navigate(`/packages/${payment.typeId}`);
-    }
-    setDialogOpen(false);
-  };
-
-  // Get days of current month
-  const daysInMonth = eachDayOfInterval({
-    start: startOfMonth(currentMonth),
-    end: endOfMonth(currentMonth)
-  });
-
-  // Get weekday names
-  const weekdays = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
-
-  // Get payments for a specific day
-  const getPaymentsForDay = (day) => {
-    return payments.filter(payment =>
-      isSameDay(parseISO(payment.date), day)
-    );
-  };
-
-  // Modificare la funzione per ottenere le lezioni non pagate per un giorno
-  const getUnpaidLessonsForDay = (day) => {
-    return unpaidLessons.filter(lesson =>
-      isSameDay(parseISO(lesson.date), day)
-    );
-  };
-
-  // Conteggio lezioni non pagate per un giorno
-  const getUnpaidCountForDay = (day) => {
-    return getUnpaidLessonsForDay(day).length;
-  };
-
-  // Calculate total payments for a day
-  const getTotalForDay = (day) => {
-    const dayPayments = getPaymentsForDay(day);
-    return dayPayments.reduce((sum, payment) => sum + payment.amount, 0);
-  };
-
-  // Calculate start day offset (to align first day with correct weekday column)
-  const getFirstDayOffset = () => {
-    const firstDay = startOfMonth(currentMonth);
-    // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    const dayOfWeek = firstDay.getDay();
-    // Convert to 0 = Monday, 1 = Tuesday, ..., 6 = Sunday
-    return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  };
-
-  // Calculate monthly stats
-  const calculateMonthStats = () => {
-    // Conta i pagamenti dei pacchetti (anziché i pacchetti stessi)
-    const packagePayments = payments.filter(payment => payment.type === 'package-payment');
-    const packagePaymentsCount = packagePayments.length;
-    const packagePaymentsTotal = packagePayments.reduce((sum, payment) => sum + payment.amount, 0);
-
-    const lessonPayments = payments.filter(payment => payment.type === 'lesson');
-    const lessonHours = lessonPayments.reduce((sum, payment) => sum + payment.hours, 0);
-    const lessonTotal = lessonPayments.reduce((sum, payment) => sum + payment.amount, 0);
-
-    const totalAmount = packagePaymentsTotal + lessonTotal;
-
-    return {
-      totalAmount,
-      packagePaymentsCount,
-      packagePaymentsTotal,
-      lessonHours,
-      lessonTotal
-    };
-  };
-
-  // Modifica la funzione getStudentNamesForDay per ordinare prima i pacchetti e poi le lezioni
-  const getStudentNamesForDay = (day) => {
-    // Se siamo in modalità pagamenti, mostra solo i pagamenti
-    if (viewMode === 'payments') {
-      const dayPayments = getPaymentsForDay(day);
-
-      // Separa pacchetti e lezioni
-      const packages = dayPayments
-        .filter(payment => payment.type === 'package' || payment.type === 'package-payment')
-        .map(payment => ({
-          id: payment.id,
-          name: formatStudentName(payment.studentName),
-          type: payment.type === 'package-payment' ? 'package-payment' : 'package'
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      const lessons = dayPayments.filter(payment => payment.type === 'lesson')
-        .map(payment => ({
-          id: payment.id,
-          name: formatStudentName(payment.studentName),
-          type: payment.type
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      // Concatena prima i pacchetti e poi le lezioni
-      return [...packages, ...lessons];
-    }
-    // Se siamo in modalità "da pagare", mostra lezioni non pagate e pacchetti scaduti
-    else {
-      const dayUnpaid = getUnpaidLessonsForDay(day);
-      const dayExpired = getExpiredPackagesForDay(day);
-
-      // Ordina i pacchetti scaduti alfabeticamente
-      const expiredPackages = dayExpired.map(pkg => ({
-        id: pkg.id,
-        name: formatStudentName(pkg.studentName),
-        type: 'expired-package'
-      })).sort((a, b) => a.name.localeCompare(b.name));
-
-      // Ordina le lezioni non pagate alfabeticamente
-      const unpaidLessons = dayUnpaid.map(unpaid => ({
-        id: unpaid.id,
-        name: formatStudentName(unpaid.studentName),
-        type: 'unpaid'
-      })).sort((a, b) => a.name.localeCompare(b.name));
-
-      // Concatena prima i pacchetti scaduti e poi le lezioni non pagate
-      return [...expiredPackages, ...unpaidLessons];
-    }
-  };
-
-  const formatStudentName = (fullName) => {
-    const nameParts = fullName.split(' ');
-    let displayName = '';
-
-    if (nameParts.length > 0) {
-      displayName = nameParts[0];
-      if (nameParts.length > 1) {
-        displayName += ' ' + nameParts[1].charAt(0) + '.';
-      }
-    }
-
-    return displayName;
   };
 
   if (loading) {
@@ -977,7 +679,6 @@ function PaymentCalendarPage() {
     );
   }
 
-  // Calculate monthly statistics
   const monthStats = calculateMonthStats();
 
   return (
@@ -1031,903 +732,76 @@ function PaymentCalendarPage() {
         </Box>
       </Card>
 
-      {/* Monthly summary - moved abow the calendar */}
+      {/* Monthly summary */}
       <Paper sx={{ p: 2, mb: 1 }}>
-        <Grid container spacing={2}>
-          {viewMode === 'payments' ? (
-            /* Statistiche per i pagamenti effettuati */
-            <>
-              <Grid item xs={12} sm={2.5}>
-                <Typography variant="body2" color="text.secondary">
-                  Incasso
-                </Typography>
-                <Typography variant="h5" fontWeight="bold" color="success.main">
-                  €{monthStats.totalAmount.toFixed(2)}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={1.5}>
-                <Typography variant="body2" color="text.secondary">
-                  Pacchetti
-                </Typography>
-                <Typography variant="h5">
-                  {monthStats.packagePaymentsCount}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={2}>
-                <Typography variant="body2" color="text.secondary">
-                  Totale da pacchetti
-                </Typography>
-                <Typography variant="h5" color="darkviolet" fontWeight="bold">
-                  €{monthStats.packagePaymentsTotal.toFixed(2)}
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={2}>
-                <Typography variant="body2" color="text.secondary">
-                  Lezioni singole
-                </Typography>
-                <Typography variant="h5">
-                  {monthStats.lessonHours.toFixed(1)} ore
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} sm={2}>
-                <Typography variant="body2" color="text.secondary">
-                  Totale da lezioni
-                </Typography>
-                <Typography variant="h5" color="primary" fontWeight="bold">
-                  €{monthStats.lessonTotal.toFixed(2)}
-                </Typography>
-              </Grid>
-            </>
-          ) : (
-            /* Statistiche per i pagamenti da ricevere */
-            <>
-              {/* Calcoli per statistiche "da pagare" */}
-              {(() => {
-                // Calcola totale da lezioni non pagate
-                const unpaidTotal = unpaidLessons.reduce((sum, lesson) => sum + lesson.amount, 0);
-                const unpaidHours = unpaidLessons.reduce((sum, lesson) => sum + lesson.hours, 0);
-
-                // Calcola totale da pacchetti scaduti
-                const expiredPackagesCount = expiredPackages.length;
-                const expiredPackagesTotal = expiredPackages.reduce((sum, pkg) => sum + pkg.amount, 0);
-
-                // Totale complessivo da ricevere
-                const totalToBePaid = unpaidTotal + expiredPackagesTotal;
-
-                return (
-                  <>
-                    <Grid item xs={12} sm={2.5}>
-                      <Typography variant="body2" color="text.secondary">
-                        Da incassare
-                      </Typography>
-                      <Typography variant="h5" fontWeight="bold" color="error.main">
-                        €{totalToBePaid.toFixed(2)}
-                      </Typography>
-                    </Grid>
-
-                    <Grid item xs={12} sm={1.5}>
-                      <Typography variant="body2" color="text.secondary">
-                        Pacchetti
-                      </Typography>
-                      <Typography variant="h5">
-                        {expiredPackagesCount}
-                      </Typography>
-                    </Grid>
-
-                    <Grid item xs={12} sm={2}>
-                      <Typography variant="body2" color="text.secondary">
-                        Totale da pacchetti
-                      </Typography>
-                      <Typography variant="h5" color="warning.main" fontWeight="bold">
-                        €{expiredPackagesTotal.toFixed(2)}
-                      </Typography>
-                    </Grid>
-
-                    <Grid item xs={12} sm={2}>
-                      <Typography variant="body2" color="text.secondary">
-                        Lezioni singole
-                      </Typography>
-                      <Typography variant="h5">
-                        {unpaidHours.toFixed(1)} ore
-                      </Typography>
-                    </Grid>
-
-                    <Grid item xs={12} sm={2}>
-                      <Typography variant="body2" color="text.secondary">
-                        Totale da lezioni
-                      </Typography>
-                      <Typography variant="h5" color="secondary" fontWeight="bold">
-                        €{unpaidTotal.toFixed(2)}
-                      </Typography>
-                    </Grid>
-                  </>
-                );
-              })()}
-            </>
-          )}
-          {/* Colonna del bottone di switch - posizionarlo in alto a destra */}
-          <Grid item xs={12} sm={2} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: { xs: 2, sm: 0 } }}>
-            <ButtonGroup size="small">
-              <Button
-                variant={viewMode === 'payments' ? 'contained' : 'outlined'}
-                onClick={() => setViewMode('payments')}
-              >
-                Pagato
-              </Button>
-              <Button
-                variant={viewMode === 'unpaid' ? 'contained' : 'outlined'}
-                onClick={() => setViewMode('unpaid')}
-              >
-                Non pagato
-              </Button>
-            </ButtonGroup>
-          </Grid>
-        </Grid>
-
+        <MonthlyStatsDisplay
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          monthStats={monthStats}
+          unpaidLessons={unpaidLessons}
+          expiredPackages={expiredPackages}
+        />
       </Paper>
 
       {/* Calendar */}
       <Paper sx={{ p: 2, mb: 3 }}>
         {!isMobile ? (
-          <>
-            {/* Desktop layout */}
-            {/* Calendar header with weekdays */}
-            <Grid container spacing={1} sx={{ mb: 1 }}>
-              {weekdays.map((day, index) => (
-                <Grid item xs={12 / 7} key={`weekday-${index}`}>
-                  <Box
-                    sx={{
-                      textAlign: 'center',
-                      fontWeight: 'bold',
-                      backgroundColor: 'primary.light',
-                      color: 'primary.contrastText',
-                      borderRadius: 1
-                    }}
-                  >
-                    {day}
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-
-            {/* Calendar grid with days */}
-            <Grid container spacing={1}>
-              {/* Empty cells for days before the start of the month */}
-              {Array.from({ length: getFirstDayOffset() }).map((_, index) => (
-                <Grid item xs={12 / 7} key={`empty-${index}`}>
-                  <Box sx={{
-                    height: 120,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1
-                  }}></Box>
-                </Grid>
-              ))}
-
-              {/* Days of the month */}
-              {daysInMonth.map((day, index) => {
-                const dayPayments = getPaymentsForDay(day);
-                const hasPayments = dayPayments.length > 0;
-                const dayTotal = getTotalForDay(day);
-                const isCurrentDay = isToday(day);
-                const studentChips = getStudentNamesForDay(day);
-
-                // MODIFICA QUI: Aggiungi questi calcoli
-                const unpaidCount = getUnpaidCountForDay(day);
-                const expiredCount = getExpiredPackagesCountForDay(day);
-                const hasAnyData = hasPayments || unpaidCount > 0 || expiredCount > 0;
-
-                return (
-                  <Grid item xs={12 / 7} key={`day-${index}`}>
-                    <Box
-                      sx={{
-                        height: 120,
-                        border: '1px solid',
-                        borderColor: isCurrentDay ? 'primary.main' : 'divider',
-                        borderRadius: 1,
-                        position: 'relative',
-                        p: 1,
-                        pb: 0.5,
-                        // MODIFICA QUI: Usa hasAnyData invece di hasPayments
-                        cursor: hasAnyData ? 'pointer' : 'default',
-                        '&:hover': hasAnyData ? {
-                          backgroundColor: 'action.hover',
-                          transform: 'scale(1.02)',
-                          transition: 'transform 0.2s'
-                        } : {},
-                        boxShadow: 0,
-                        backgroundColor: 'inherit',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        overflow: 'hidden'
-                      }}
-                      // MODIFICA QUI: Usa hasAnyData invece di hasPayments
-                      onClick={hasAnyData ? () => handleDayClick(day) : undefined}
-                    >
-                      {/* Day number in corner */}
-                      <Typography
-                        variant="subtitle2"
-                        sx={{
-                          fontWeight: isCurrentDay ? 'bold' : 'normal',
-                          textAlign: 'right',
-                          color: isCurrentDay ? 'primary.main' : 'text.primary',
-                          position: 'absolute',
-                          top: 2,
-                          right: 4,
-                          fontSize: '0.9rem'
-                        }}
-                      >
-                        {format(day, 'd')}
-                      </Typography>
-
-                      {/* MODIFICA QUI: Cambia la condizione da hasPayments a hasAnyData */}
-                      {hasAnyData && (
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            height: '100%',
-                            width: '100%'
-                          }}
-                        >
-                          {/* Amount in bold at the top - cambia in base alla modalità */}
-                          {(() => {
-                            if (viewMode === 'payments' && hasPayments) {
-                              // Se in modalità "pagato" e ci sono pagamenti, mostra il totale pagato
-                              return (
-                                <Typography
-                                  variant="body1"
-                                  color="success.main"
-                                  fontWeight="bold"
-                                  sx={{
-                                    mt: 0.5,
-                                    mb: 0.5,
-                                    fontSize: '1rem',
-                                    lineHeight: 1
-                                  }}
-                                >
-                                  €{dayTotal.toFixed(2)}
-                                </Typography>
-                              );
-                            } else if (viewMode === 'unpaid') {
-                              // Se in modalità "da pagare", calcola e mostra il totale da pagare
-                              const unpaidAmount = getUnpaidLessonsForDay(day).reduce((sum, lesson) => sum + lesson.amount, 0);
-                              const expiredAmount = getExpiredPackagesForDay(day).reduce((sum, pkg) => sum + pkg.amount, 0);
-                              const totalToBePaid = unpaidAmount + expiredAmount;
-
-                              // Mostra solo se c'è un importo da pagare
-                              if (totalToBePaid > 0) {
-                                return (
-                                  <Typography
-                                    variant="body1"
-                                    color="error.main"
-                                    fontWeight="bold"
-                                    sx={{
-                                      mt: 0.5,
-                                      mb: 0.5,
-                                      fontSize: '1rem',
-                                      lineHeight: 1
-                                    }}
-                                  >
-                                    €{totalToBePaid.toFixed(2)}
-                                  </Typography>
-                                );
-                              }
-                            }
-
-                            // Se non ci sono pagamenti nella modalità selezionata, non mostrare nulla
-                            return null;
-                          })()}
-
-                          {/* Riepilogo numero di elementi */}
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{
-                              fontSize: '0.7rem',
-                              mb: 1,
-                              lineHeight: 1,
-                              mt: hasPayments ? 0 : 1.5 // mantieni il margine se non ci sono pagamenti
-                            }}
-                          >
-                            {/* Mostra sempre le informazioni sui pagamenti, in grassetto solo se viewMode === 'payments' */}
-                            {hasPayments && (
-                              <span style={{ fontWeight: viewMode === 'payments' ? 'bold' : 'normal' }}>
-                                {dayPayments.length} pagament{dayPayments.length === 1 ? 'o' : 'i'}
-                              </span>
-                            )}
-
-                            {/* Mostra sempre le informazioni sulle lezioni non pagate, in grassetto solo se viewMode === 'unpaid' */}
-                            {unpaidCount > 0 && (
-                              <>
-                                {hasPayments && " - "}
-                                <span style={{ fontWeight: viewMode === 'unpaid' ? 'bold' : 'normal' }}>
-                                  {unpaidCount} lezion{unpaidCount === 1 ? 'e' : 'i'} non pagat{unpaidCount === 1 ? 'a' : 'e'}
-                                </span>
-                              </>
-                            )}
-
-                            {/* Mostra sempre le informazioni sui pacchetti scaduti, in grassetto solo se viewMode === 'unpaid' */}
-                            {expiredCount > 0 && (
-                              <>
-                                {(hasPayments || unpaidCount > 0) && " - "}
-                                <span style={{ fontWeight: viewMode === 'unpaid' ? 'bold' : 'normal' }}>
-                                  {expiredCount} pacchett{expiredCount === 1 ? 'o scaduto' : 'i scaduti'} non pagat{expiredCount === 1 ? 'o' : 'i'}
-                                </span>
-                              </>
-                            )}
-                          </Typography>
-
-                          {/* Student chips with auto-scroll component - always show */}
-                          <ScrollableChipsContainer>
-                            {studentChips.map((student) => (
-                              <Chip
-                                key={student.id}
-                                label={student.name}
-                                size="small"
-                                sx={{
-                                  height: 16,
-                                  margin: '1px',
-                                  backgroundColor: student.type === 'package' || student.type === 'package-payment'
-                                    ? 'darkviolet'
-                                    : student.type === 'expired-package'
-                                      ? 'warning.main'
-                                      : student.type === 'unpaid'
-                                        ? 'secondary.main'
-                                        : 'primary.main',
-
-                                  color: 'white',
-                                  '& .MuiChip-label': {
-                                    px: 0.6,
-                                    fontSize: '0.65rem',
-                                    fontWeight: 'medium',
-                                    whiteSpace: 'nowrap'
-                                  }
-                                }}
-                              />
-                            ))}
-                          </ScrollableChipsContainer>
-                        </Box>
-                      )}
-                    </Box>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </>
+          <DesktopCalendarView
+            daysInMonth={daysInMonth}
+            weekdays={weekdays}
+            getFirstDayOffset={getFirstDayOffset}
+            getPaymentsForDay={getPaymentsForDay}
+            getTotalForDay={getTotalForDay}
+            getUnpaidLessonsForDay={getUnpaidLessonsForDay}
+            getUnpaidCountForDay={getUnpaidCountForDay}
+            getExpiredPackagesForDay={getExpiredPackagesForDay}
+            getExpiredPackagesCountForDay={getExpiredPackagesCountForDay}
+            getStudentNamesForDay={getStudentNamesForDay}
+            viewMode={viewMode}
+            handleDayClick={handleDayClick}
+          />
         ) : (
-          /* Mobile layout - giorni in verticale */
-          <Box>
-            {daysInMonth.map((day, index) => {
-              const dayPayments = getPaymentsForDay(day);
-              const hasPayments = dayPayments.length > 0;
-              const dayTotal = getTotalForDay(day);
-              const isCurrentDay = isToday(day);
-              const studentChips = getStudentNamesForDay(day);
-              const unpaidCount = getUnpaidCountForDay(day);
-              const expiredCount = getExpiredPackagesCountForDay(day);
-              const hasAnyData = hasPayments || unpaidCount > 0 || expiredCount > 0;
-              const dayOfWeek = day.getDay() || 7; // 0 for Sunday, transformed to 7
-
-              return (
-                <Box
-                  key={`day-mobile-${index}`}
-                  sx={{
-                    mb: 2,
-                    border: '1px solid',
-                    borderColor: isCurrentDay ? 'primary.main' : 'divider',
-                    borderRadius: 1,
-                    p: 1,
-                    cursor: hasAnyData ? 'pointer' : 'default',
-                    '&:hover': hasAnyData ? {
-                      backgroundColor: 'action.hover',
-                      transform: 'scale(1.02)',
-                      transition: 'transform 0.2s'
-                    } : {},
-                    minHeight: '80px'  // Altezza minima per garantire consistenza visiva
-                  }}
-                  onClick={hasAnyData ? () => handleDayClick(day) : undefined}
-                >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 1,
-                      pb: 1,
-                      borderBottom: '1px solid',
-                      borderColor: 'divider'
-                    }}
-                  >
-                    <Typography variant="subtitle1" sx={{ fontWeight: isCurrentDay ? 'bold' : 'normal' }}>
-                      {weekdays[(dayOfWeek - 1) % 7]} {format(day, 'd')}
-                    </Typography>
-                    {isCurrentDay && (
-                      <Chip
-                        label="Oggi"
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                        sx={{ height: 20 }}
-                      />
-                    )}
-                  </Box>
-
-                  {hasAnyData ? (
-                    <Box>
-                      {/* Amount in bold at the top - cambia in base alla modalità */}
-                      {(() => {
-                        if (viewMode === 'payments' && hasPayments) {
-                          return (
-                            <Typography
-                              variant="body1"
-                              color="success.main"
-                              fontWeight="bold"
-                              sx={{
-                                mt: 0.5,
-                                mb: 0.5,
-                                fontSize: '1rem',
-                                lineHeight: 1
-                              }}
-                            >
-                              €{dayTotal.toFixed(2)}
-                            </Typography>
-                          );
-                        } else if (viewMode === 'unpaid') {
-                          const unpaidAmount = getUnpaidLessonsForDay(day).reduce((sum, lesson) => sum + lesson.amount, 0);
-                          const expiredAmount = getExpiredPackagesForDay(day).reduce((sum, pkg) => sum + pkg.amount, 0);
-                          const totalToBePaid = unpaidAmount + expiredAmount;
-
-                          if (totalToBePaid > 0) {
-                            return (
-                              <Typography
-                                variant="body1"
-                                color="error.main"
-                                fontWeight="bold"
-                                sx={{
-                                  mt: 0.5,
-                                  mb: 0.5,
-                                  fontSize: '1rem',
-                                  lineHeight: 1
-                                }}
-                              >
-                                €{totalToBePaid.toFixed(2)}
-                              </Typography>
-                            );
-                          }
-                        }
-                        return null;
-                      })()}
-
-                      {/* Riepilogo numero di elementi */}
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{
-                          fontSize: '0.7rem',
-                          mb: 1,
-                          lineHeight: 1,
-                          mt: hasPayments ? 0 : 1
-                        }}
-                      >
-                        {hasPayments && (
-                          <span style={{ fontWeight: viewMode === 'payments' ? 'bold' : 'normal' }}>
-                            {dayPayments.length} pagament{dayPayments.length === 1 ? 'o' : 'i'}
-                          </span>
-                        )}
-
-                        {unpaidCount > 0 && (
-                          <>
-                            {hasPayments && " - "}
-                            <span style={{ fontWeight: viewMode === 'unpaid' ? 'bold' : 'normal' }}>
-                              {unpaidCount} lezion{unpaidCount === 1 ? 'e' : 'i'} non pagat{unpaidCount === 1 ? 'a' : 'e'}
-                            </span>
-                          </>
-                        )}
-
-                        {expiredCount > 0 && (
-                          <>
-                            {(hasPayments || unpaidCount > 0) && " - "}
-                            <span style={{ fontWeight: viewMode === 'unpaid' ? 'bold' : 'normal' }}>
-                              {expiredCount} pacchett{expiredCount === 1 ? 'o scaduto' : 'i scaduti'} non pagat{expiredCount === 1 ? 'o' : 'i'}
-                            </span>
-                          </>
-                        )}
-                      </Typography>
-
-                      {/* Student chips with auto-scroll component */}
-                      <ScrollableChipsContainer>
-                        {studentChips.map((student) => (
-                          <Chip
-                            key={student.id}
-                            label={student.name}
-                            size="small"
-                            sx={{
-                              height: 16,
-                              margin: '1px',
-                              backgroundColor: student.type === 'package'
-                                ? 'darkviolet'
-                                : student.type === 'expired-package'
-                                  ? 'warning.main'
-                                  : student.type === 'unpaid'
-                                    ? 'secondary.main'
-                                    : 'primary.main',
-                              color: 'white',
-                              '& .MuiChip-label': {
-                                px: 0.6,
-                                fontSize: '0.65rem',
-                                fontWeight: 'medium',
-                                whiteSpace: 'nowrap'
-                              }
-                            }}
-                          />
-                        ))}
-                      </ScrollableChipsContainer>
-                    </Box>
-                  ) : (
-                    // Per i giorni senza dati, mostriamo uno spazio vuoto con un'altezza minima
-                    <Box sx={{ minHeight: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                        Nessun dato
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              );
-            })}
-          </Box>
+          <MobileCalendarView
+            daysInMonth={daysInMonth}
+            getPaymentsForDay={getPaymentsForDay}
+            getTotalForDay={getTotalForDay}
+            // Parte mancante del codice da aggiungere alla fine del componente
+            getUnpaidLessonsForDay={getUnpaidLessonsForDay}
+            getUnpaidCountForDay={getUnpaidCountForDay}
+            getExpiredPackagesForDay={getExpiredPackagesForDay}
+            getExpiredPackagesCountForDay={getExpiredPackagesCountForDay}
+            getStudentNamesForDay={getStudentNamesForDay}
+            viewMode={viewMode}
+            handleDayClick={handleDayClick}
+          />
         )}
       </Paper>
 
-      {/* Day payments dialog */}
-      <Dialog
+      {/* Day details dialog */}
+      <DayDetailsDialog
         open={dialogOpen}
         onClose={handleCloseDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
-            {selectedDay && format(selectedDay, 'EEEE d MMMM yyyy', { locale: it })}
-          </Typography>
-          <ButtonGroup size="small">
-            <Button
-              variant={viewMode === 'payments' ? 'contained' : 'outlined'}
-              onClick={() => setViewMode('payments')}
-            >
-              Pagato
-            </Button>
-            <Button
-              variant={viewMode === 'unpaid' ? 'contained' : 'outlined'}
-              color='primary'
-              onClick={() => setViewMode('unpaid')}
-            >
-              Non pagato
-            </Button>
-          </ButtonGroup>
-        </DialogTitle>
-        <DialogContent>
-          {viewMode === 'payments' ? (
-            <>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Totale giornaliero
-                  </Typography>
-                  <Typography variant="h5" gutterBottom>
-                    €{dayPayments.reduce((sum, payment) => sum + payment.amount, 0).toFixed(2)}
-                  </Typography>
-                </Box>
-              </Box>
+        selectedDay={selectedDay}
+        dayPayments={dayPayments}
+        dayUnpaidLessons={dayUnpaidLessons}
+        dayExpiredPackages={dayExpiredPackages}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        handlePaymentClick={handlePaymentClick}
+        handleOpenPaymentDialog={handleOpenPaymentDialog}
+      />
 
-              <Divider sx={{ mb: 1 }} />
-
-              {/* Prima sezione: Pacchetti */}
-              {/* Sezione aggiuntiva: Pagamenti dei pacchetti */}
-              {dayPayments.filter(payment => payment.type === 'package-payment').length > 0 && (
-                <>
-                  <List dense>
-                    {dayPayments
-                      .filter(payment => payment.type === 'package-payment')
-                      .sort((a, b) => a.studentName.localeCompare(b.studentName))
-                      .map((payment) => (
-                        <ListItem
-                          key={payment.id}
-                          alignItems="flex-start"
-                          button
-                          onClick={() => handlePaymentClick(payment)}
-                          sx={{
-                            mb: 1,
-                            py: 1,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            borderRadius: 1,
-                            '&:hover': {
-                              backgroundColor: 'action.hover'
-                            }
-                          }}
-                        >
-                          <ListItemText
-                            primary={
-                              <Typography variant="body2" sx={{ mb: -0.5 }}>
-                                <b>{payment.studentName}</b> ha pagato <b>€{payment.amount.toFixed(2)}</b>
-                              </Typography>
-                            }
-                            secondary={
-                              <Typography variant="caption" component="span" sx={{ display: 'inline' }}>
-                                <Typography
-                                  variant="caption"
-                                  component="span"
-                                  color="darkviolet"
-                                  sx={{ fontWeight: 500 }}
-                                >
-                                  Pagamento pacchetto
-                                </Typography>{' '}
-                                di {payment.hours} ore
-                              </Typography>
-                            }
-                            sx={{ my: 0 }}
-                          />
-                        </ListItem>
-                      ))}
-                  </List>
-                </>
-              )}
-
-
-              {/* Seconda sezione: Lezioni singole */}
-              {dayPayments.filter(payment => payment.type === 'lesson').length > 0 && (
-                <>
-                  <List dense>
-                    {dayPayments
-                      .filter(payment => payment.type === 'lesson')
-                      .sort((a, b) => a.studentName.localeCompare(b.studentName))
-                      .map((payment) => (
-                        <ListItem
-                          key={payment.id}
-                          alignItems="flex-start"
-                          button
-                          onClick={() => handlePaymentClick(payment)}
-                          sx={{
-                            mb: 1,
-                            py: 1,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            borderRadius: 1,
-                            '&:hover': {
-                              backgroundColor: 'action.hover'
-                            }
-                          }}
-                        >
-                          <ListItemText
-                            primary={
-                              <Typography variant="body2" sx={{ mb: -0.5 }}>
-                                <b>{payment.studentName}</b> ha pagato <b>€{payment.amount.toFixed(2)}</b>
-                              </Typography>
-                            }
-                            secondary={
-                              <Typography variant="caption" component="span" sx={{ display: 'inline' }}>
-                                <Typography
-                                  variant="caption"
-                                  component="span"
-                                  color="primary"
-                                  sx={{ fontWeight: 500 }}
-                                >
-                                  Lezione singola
-                                </Typography>{' '}
-                                di {payment.hours} ore
-                              </Typography>
-                            }
-                            sx={{ my: 0 }}
-                          />
-                        </ListItem>
-                      ))}
-                  </List>
-                </>
-              )}
-
-              {/* Messaggio se non ci sono pagamenti */}
-              {dayPayments.length === 0 && (
-                <Typography align="center" color="text.secondary" sx={{ py: 2 }}>
-                  Nessun pagamento registrato per questa data
-                </Typography>
-              )}
-            </>
-          ) : (
-            <>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Totale da saldare
-                  </Typography>
-                  <Typography variant="h5" gutterBottom>
-                    €{(dayUnpaidLessons.reduce((sum, lesson) => sum + lesson.amount, 0) +
-                      dayExpiredPackages.reduce((sum, pkg) => sum + pkg.amount, 0)).toFixed(2)}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Divider sx={{ mb: 1 }} />
-              {dayExpiredPackages.length > 0 && (
-                <>
-                  <List dense>
-                    {dayExpiredPackages
-                      .sort((a, b) => a.studentName.localeCompare(b.studentName))
-                      .map((pkg) => (
-                        <ListItem
-                          key={pkg.id}
-                          alignItems="flex-start"
-                          button
-                          onClick={() => handlePaymentClick(pkg)}
-                          sx={{
-                            mb: 1,
-                            py: 1,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            borderRadius: 1,
-                            '&:hover': {
-                              backgroundColor: 'action.hover'
-                            }
-                          }}
-                        >
-                          <ListItemText
-                            primary={
-                              <Typography variant="body2" sx={{ mb: -0.5 }}>
-                                <b>{pkg.studentName}</b> deve pagare <b>€{pkg.amount.toFixed(2)}</b>
-                              </Typography>
-                            }
-                            secondary={
-                              <Typography variant="caption" component="span" sx={{ display: 'inline' }}>
-                                <Typography
-                                  variant="caption"
-                                  component="span"
-                                  color="warning.main"
-                                  sx={{ fontWeight: 500 }}
-                                >
-                                  Pacchetto scaduto
-                                </Typography>{' '}
-                                di {pkg.hours} ore
-                              </Typography>
-                            }
-                            sx={{ my: 0 }}
-                          />
-                          <Button
-                            variant="contained"
-                            size="small"
-                            onClick={(e) => handleOpenPaymentDialog(pkg, e)}
-                            sx={{
-                              minWidth: '40px',
-                              height: '30px',
-                              ml: 1,
-                              bgcolor: 'warning.main',
-                              alignSelf: 'center',
-                              fontSize: { xs: '0.65rem', sm: '0.8125rem' }, // Testo più piccolo su mobile
-                              px: { xs: 0.5, sm: 1 }  // Padding ridotto su mobile
-                            }}
-                          >
-                            Segna come pagato
-                          </Button>
-                        </ListItem>
-                      ))}
-                  </List>
-                </>
-              )}
-              <List dense>
-                {dayUnpaidLessons
-                  .sort((a, b) => a.studentName.localeCompare(b.studentName))
-                  .map((lesson) => (
-                    <ListItem
-                      key={lesson.id}
-                      alignItems="flex-start"
-                      button
-                      onClick={() => handlePaymentClick(lesson)}
-                      sx={{
-                        mb: 1,
-                        py: 1,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        borderRadius: 1,
-                        '&:hover': {
-                          backgroundColor: 'action.hover'
-                        }
-                      }}
-                    >
-                      <ListItemText
-                        primary={
-                          <Typography variant="body2" sx={{ mb: -0.5 }}>
-                            <b>{lesson.studentName}</b> deve pagare <b>€{lesson.amount.toFixed(2)}</b>
-                          </Typography>
-                        }
-                        secondary={
-                          <Typography variant="caption" component="span" sx={{ display: 'inline' }}>
-                            <Typography
-                              variant="caption"
-                              component="span"
-                              color="secondary"
-                              sx={{ fontWeight: 500 }}
-                            >
-                              Lezione singola
-                            </Typography>{' '}
-                            di {lesson.hours} ore
-                            {lesson.professorName && <> con <b>{lesson.professorName}</b></>}
-                          </Typography>
-                        }
-                        sx={{ my: 0 }}
-                      />
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={(e) => handleOpenPaymentDialog(lesson, e)}
-                        sx={{
-                          minWidth: '40px',
-                          height: '30px',
-                          ml: 1,
-                          bgcolor: 'secondary.main',
-                          alignSelf: 'center',
-                          fontSize: { xs: '0.65rem', sm: '0.8125rem' }, // Testo più piccolo su mobile
-                          px: { xs: 0.5, sm: 1 }  // Padding ridotto su mobile
-                        }}
-                      >
-                        Segna come pagata
-                      </Button>
-                    </ListItem>
-                  ))}
-              </List>
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
-            Chiudi
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialogo per impostare il pagamento */}
-      <Dialog open={paymentDialogOpen} onClose={() => setPaymentDialogOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>
-          Conferma Pagamento
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              fullWidth
-              label={selectedPaymentItem?.type === 'unpaid' ? "Prezzo Lezione" : "Prezzo Pacchetto"}
-              type="number"
-              value={priceValue}
-              onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}
-              InputProps={{
-                startAdornment: <InputAdornment position="start">€</InputAdornment>,
-              }}
-            />
-            <DatePicker
-              label="Data pagamento"
-              value={paymentDate}
-              onChange={(date) => setPaymentDate(date)}
-              slotProps={{
-                textField: {
-                  fullWidth: true,
-                  variant: "outlined"
-                }
-              }}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPaymentDialogOpen(false)}>Annulla</Button>
-          <Button
-            onClick={handleConfirmPayment}
-            variant="contained"
-            color="primary"
-          >
-            Conferma Pagamento
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Payment confirmation dialog */}
+      <PaymentConfirmationDialog
+        open={paymentDialogOpen}
+        onClose={() => setPaymentDialogOpen(false)}
+        selectedPaymentItem={selectedPaymentItem}
+        paymentDate={paymentDate}
+        setPaymentDate={setPaymentDate}
+        priceValue={priceValue}
+        setPriceValue={setPriceValue}
+        onConfirm={handleConfirmPayment}
+      />
     </Box>
   );
 }
