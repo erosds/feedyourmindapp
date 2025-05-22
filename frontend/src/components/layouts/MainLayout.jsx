@@ -89,22 +89,15 @@ function MainLayout() {
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
       { text: 'Professori', icon: <PeopleIcon />, path: '/professors' },
       { text: 'FAQ', icon: <HelpOutlineIcon />, path: '/faq' },
-      // Mostra le voci del menu attività solo se l'utente è erosdesimone
-      ...(currentUser && currentUser.username === 'erosdesimone' ? [
-        { text: 'Cronologia Attività', icon: <HistoryIcon />, path: '/activities' },
-      ] : []),
+      { text: 'Cronologia Attività', icon: <HistoryIcon />, path: '/activities' },
     ];
   } else {
     menuItems = [
       { text: 'MyDashboard', icon: <DashboardIcon />, path: '/dashboard' },
-      { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
       { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
+      { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },
-      {
-        text: 'FAQ',
-        icon: <HelpOutlineIcon />,
-        path: '/faq'
-      },
+      { text: 'FAQ', icon: <HelpOutlineIcon />, path: '/faq' },
     ];
   }
 
