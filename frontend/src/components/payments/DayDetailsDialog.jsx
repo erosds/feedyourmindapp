@@ -227,7 +227,7 @@ function DayDetailsDialog({
                         <ListItemText
                           primary={
                             <Typography variant="body2" sx={{ mb: -0.5 }}>
-                              <b>{pkg.studentName}</b> deve pagare <b>€{pkg.amount.toFixed(2)}</b>
+                              <b>{pkg.studentName}</b> {pkg.isOpenPackage ? 'deve concordare il prezzo' : `deve pagare €${pkg.amount.toFixed(2)}`}
                             </Typography>
                           }
                           secondary={
@@ -235,10 +235,16 @@ function DayDetailsDialog({
                               <Typography
                                 variant="caption"
                                 component="span"
-                                color={pkg.type === 'expired-package' ? 'warning.main' : 'warning.main'} // Colore differente
+                                color={pkg.type === 'expired-package'
+                                  ? (pkg.isOpenPackage ? 'darkorange' : 'warning.main')
+                                  : (pkg.isOpenPackage ? 'darkorange' : 'warning.main')
+                                }
                                 sx={{ fontWeight: 500 }}
                               >
-                                {pkg.type === 'expired-package' ? 'Pacchetto scaduto' : 'Pacchetto in scadenza'} {/* Testo differente */}
+                                {pkg.type === 'expired-package'
+                                  ? (pkg.isOpenPackage ? 'Pacchetto aperto scaduto' : 'Pacchetto scaduto')
+                                  : (pkg.isOpenPackage ? 'Pacchetto aperto in scadenza' : 'Pacchetto in scadenza')
+                                }
                               </Typography>{' '}
                               di {pkg.hours} ore
                             </Typography>
@@ -253,13 +259,13 @@ function DayDetailsDialog({
                             minWidth: '40px',
                             height: '30px',
                             ml: 1,
-                            bgcolor: pkg.type === 'expired-package' ? 'warning.main' : 'warning.main', // Colore differente
+                            bgcolor: pkg.isOpenPackage ? 'darkorange' : 'warning.main',
                             alignSelf: 'center',
                             fontSize: { xs: '0.65rem', sm: '0.8125rem' },
                             px: { xs: 0.5, sm: 1 }
                           }}
                         >
-                          Aggiungi pagamento
+                          {pkg.isOpenPackage ? 'Aggiungi pagamento' : 'Aggiungi pagamento'}
                         </Button>
                       </ListItem>
                     ))}

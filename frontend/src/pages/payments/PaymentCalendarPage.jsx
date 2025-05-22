@@ -267,42 +267,59 @@ function PaymentCalendarPage() {
 
         // Filter for expired and unpaid packages
         const expiredPackagesData = packagesResponse.data.filter(pkg => {
-          // SOLO pacchetti con status 'expired' (non in_progress)
-          if (pkg.status !== 'expired') return false;
+          // Converti esplicitamente in numeri per un confronto affidabile
+          const totalPaid = parseFloat(pkg.total_paid || 0);
+          const packageCost = parseFloat(pkg.package_cost || 0);
 
-          // Calcola quanto è stato pagato usando packagePaymentsMap
-          const packagePayments = packagePaymentsMap[pkg.id] || [];
-          const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+          // MODIFICA: Gestione separata per pacchetti aperti (costo = 0) e pacchetti normali
+          let isNotFullyPaid;
 
-          // Considera solo pacchetti non completamente pagati
-          if (totalPaid >= parseFloat(pkg.package_cost || 0)) return false;
+          if (packageCost === 0) {
+            // Per pacchetti aperti: sono "non pagati" se non hanno ricevuto pagamenti e sono scaduti
+            // oppure se sono stati pagati parzialmente ma non finalizzati
+            isNotFullyPaid = !pkg.is_paid; // Semplicemente se il pacchetto non è marcato come pagato
+          } else {
+            // Per pacchetti normali: sono "non pagati" se il totale pagato è minore del costo
+            isNotFullyPaid = totalPaid < packageCost;
+          }
 
-          // Filtra per data di scadenza nel periodo
-          return pkg.expiry_date >= startDateStr && pkg.expiry_date <= endDateStr;
+          return isNotFullyPaid &&
+            pkg.status === 'expired' &&
+            pkg.expiry_date >= startDateStr &&
+            pkg.expiry_date <= endDateStr;
         });
 
         // Also filter for packages expiring this week (still active)
         const expiringPackagesData = packagesResponse.data.filter(pkg => {
           const expiryDate = parseISO(pkg.expiry_date);
 
-          // Calcola quanto è stato pagato usando packagePaymentsMap (CONSISTENTE)
-          const packagePayments = packagePaymentsMap[pkg.id] || [];
-          const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+          // MODIFICA: Stessa logica per i pacchetti in scadenza
+          const totalPaid = parseFloat(pkg.total_paid || 0);
+          const packageCost = parseFloat(pkg.package_cost || 0);
+
+          let isNotFullyPaid;
+          if (packageCost === 0) {
+            isNotFullyPaid = !pkg.is_paid;
+          } else {
+            isNotFullyPaid = totalPaid < packageCost;
+          }
 
           return (
-            totalPaid < parseFloat(pkg.package_cost || 0) && // Usa totalPaid calcolato
-            pkg.status === 'in_progress' && // SOLO pacchetti attivi
+            isNotFullyPaid &&
+            pkg.status === 'in_progress' &&
             isPackageExpiring(pkg) &&
             expiryDate >= monthStart && expiryDate <= monthEnd
           );
         });
 
-        // Format expired packages, showing only the remaining amount to pay
+        // Format expired packages, showing the remaining amount or "da concordare" for open packages
         const formattedExpiredPackages = [
           ...expiredPackagesData.map(pkg => {
-            // Calcola quanto è stato pagato usando packagePaymentsMap
-            const packagePayments = packagePaymentsMap[pkg.id] || [];
-            const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+            const totalPaid = parseFloat(pkg.total_paid || 0);
+            const packageCost = parseFloat(pkg.package_cost || 0);
+
+            // MODIFICA: Per pacchetti aperti, mostra 0 come amount (verrà gestito nell'UI)
+            const remainingAmount = packageCost === 0 ? 0 : Math.max(0, packageCost - totalPaid);
 
             return {
               id: `expired-${pkg.id}`,
@@ -310,15 +327,18 @@ function PaymentCalendarPage() {
               typeId: pkg.id,
               date: pkg.expiry_date,
               student_id: pkg.student_ids?.[0] || null,
-              amount: Math.max(0, parseFloat(pkg.package_cost || 0) - totalPaid), // Usa totalPaid calcolato
+              amount: remainingAmount,
               hours: parseFloat(pkg.total_hours || 0),
-              studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+              studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`,
+              isOpenPackage: packageCost === 0 // NUOVO: Flag per identificare pacchetti aperti
             };
           }),
           ...expiringPackagesData.map(pkg => {
-            // Calcola quanto è stato pagato usando packagePaymentsMap
-            const packagePayments = packagePaymentsMap[pkg.id] || [];
-            const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+            const totalPaid = parseFloat(pkg.total_paid || 0);
+            const packageCost = parseFloat(pkg.package_cost || 0);
+
+            // MODIFICA: Stessa logica per pacchetti in scadenza
+            const remainingAmount = packageCost === 0 ? 0 : Math.max(0, packageCost - totalPaid);
 
             return {
               id: `expiring-${pkg.id}`,
@@ -326,9 +346,10 @@ function PaymentCalendarPage() {
               typeId: pkg.id,
               date: pkg.expiry_date,
               student_id: pkg.student_ids?.[0] || null,
-              amount: Math.max(0, parseFloat(pkg.package_cost || 0) - totalPaid), // Usa totalPaid calcolato
+              amount: remainingAmount,
               hours: parseFloat(pkg.total_hours || 0),
-              studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+              studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`,
+              isOpenPackage: packageCost === 0 // NUOVO: Flag per identificare pacchetti aperti
             };
           })
         ];
@@ -572,7 +593,16 @@ function PaymentCalendarPage() {
     event.stopPropagation(); // Prevent navigation to details
     setSelectedPaymentItem(item);
     setPaymentDate(new Date());
-    setPriceValue(item.amount || 0);
+
+    // MODIFICA: Gestione speciale per pacchetti aperti
+    if (item.isOpenPackage) {
+      // Per pacchetti aperti, suggerisci un importo vuoto perché il prezzo è da concordare
+      setPriceValue('');
+    } else {
+      // Per altri tipi, usa l'importo esistente
+      setPriceValue(item.amount || 0);
+    }
+
     setPaymentDialogOpen(true);
   };
 
@@ -593,7 +623,16 @@ function PaymentCalendarPage() {
           price: priceValue
         });
       } else if (selectedPaymentItem.type === 'expired-package' || selectedPaymentItem.type === 'expiring-package') {
-        // Per pacchetti scaduti/in scadenza, aggiungiamo un nuovo pagamento al pacchetto
+        // MODIFICA: Per pacchetti scaduti/in scadenza (inclusi quelli aperti), aggiungiamo un nuovo pagamento
+
+        // Validazione speciale per pacchetti aperti
+        if (selectedPaymentItem.isOpenPackage) {
+          if (!priceValue || priceValue <= 0) {
+            alert('Per i pacchetti aperti è necessario inserire un importo valido');
+            return;
+          }
+        }
+
         await packageService.addPayment(selectedPaymentItem.typeId, {
           amount: priceValue,
           payment_date: formattedDate,
@@ -746,31 +785,46 @@ function PaymentCalendarPage() {
       // *** QUI È LA CORREZIONE PRINCIPALE ***
       // PACCHETTI SCADUTI - SOLO status === 'expired'
       const expiredPackagesData = packagesResponse.data.filter(pkg => {
-        // SOLO pacchetti con status 'expired' (NON in_progress)
-        if (pkg.status !== 'expired') return false;
+        // CORREZIONE: Usa la stessa logica del caricamento iniziale
+        const totalPaid = parseFloat(pkg.total_paid || 0);
+        const packageCost = parseFloat(pkg.package_cost || 0);
 
-        // Calcola quanto è stato pagato usando packagePaymentsMap
-        const packagePayments = packagePaymentsMap[pkg.id] || [];
-        const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        // Gestione separata per pacchetti aperti (costo = 0) e pacchetti normali
+        let isNotFullyPaid;
 
-        // Considera solo pacchetti non completamente pagati
-        if (totalPaid >= parseFloat(pkg.package_cost || 0)) return false;
+        if (packageCost === 0) {
+          // Per pacchetti aperti: sono "non pagati" se non sono marcati come pagati
+          isNotFullyPaid = !pkg.is_paid;
+        } else {
+          // Per pacchetti normali: sono "non pagati" se il totale pagato è minore del costo
+          isNotFullyPaid = totalPaid < packageCost;
+        }
 
-        // Filtra per data di scadenza nel periodo
-        return pkg.expiry_date >= startDateStr && pkg.expiry_date <= endDateStr;
+        // Filtra per data di scadenza nel periodo E per stato non completamente pagato
+        return isNotFullyPaid &&
+          pkg.status === 'expired' &&
+          pkg.expiry_date >= startDateStr &&
+          pkg.expiry_date <= endDateStr;
       });
 
       // PACCHETTI IN SCADENZA - SOLO status === 'in_progress'
       const expiringPackagesData = packagesResponse.data.filter(pkg => {
         const expiryDate = parseISO(pkg.expiry_date);
 
-        // Calcola quanto è stato pagato usando packagePaymentsMap
-        const packagePayments = packagePaymentsMap[pkg.id] || [];
-        const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        // CORREZIONE: Stessa logica per i pacchetti in scadenza
+        const totalPaid = parseFloat(pkg.total_paid || 0);
+        const packageCost = parseFloat(pkg.package_cost || 0);
+
+        let isNotFullyPaid;
+        if (packageCost === 0) {
+          isNotFullyPaid = !pkg.is_paid;
+        } else {
+          isNotFullyPaid = totalPaid < packageCost;
+        }
 
         return (
-          totalPaid < parseFloat(pkg.package_cost || 0) && // Not fully paid
-          pkg.status === 'in_progress' && // SOLO pacchetti attivi
+          isNotFullyPaid &&
+          pkg.status === 'in_progress' &&
           isPackageExpiring(pkg) &&
           expiryDate >= monthStart && expiryDate <= monthEnd
         );
@@ -778,12 +832,13 @@ function PaymentCalendarPage() {
 
       const formattedExpiredPackages = [
         ...expiredPackagesData.map(pkg => {
-          // Calcola quanto è stato pagato
+          // CORREZIONE: Calcola il totale versato usando i pagamenti effettivi
           const packagePayments = packagePaymentsMap[pkg.id] || [];
           const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+          const packageCost = parseFloat(pkg.package_cost || 0);
 
-          // Calcola quanto resta da pagare
-          const remainingAmount = Math.max(0, parseFloat(pkg.package_cost || 0) - totalPaid);
+          // Per pacchetti aperti, mostra 0 come amount (verrà gestito nell'UI)
+          const remainingAmount = packageCost === 0 ? 0 : Math.max(0, packageCost - totalPaid);
 
           return {
             id: `expired-${pkg.id}`,
@@ -791,18 +846,19 @@ function PaymentCalendarPage() {
             typeId: pkg.id,
             date: pkg.expiry_date,
             student_id: pkg.student_ids?.[0] || null,
-            amount: remainingAmount, // Solo l'importo rimanente
+            amount: remainingAmount,
             hours: parseFloat(pkg.total_hours || 0),
-            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`,
+            isOpenPackage: packageCost === 0 // Flag per identificare pacchetti aperti
           };
         }),
         ...expiringPackagesData.map(pkg => {
-          // Calcola quanto è stato pagato
+          // CORREZIONE: Stessa logica per pacchetti in scadenza
           const packagePayments = packagePaymentsMap[pkg.id] || [];
           const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+          const packageCost = parseFloat(pkg.package_cost || 0);
 
-          // Calcola quanto resta da pagare
-          const remainingAmount = Math.max(0, parseFloat(pkg.package_cost || 0) - totalPaid);
+          const remainingAmount = packageCost === 0 ? 0 : Math.max(0, packageCost - totalPaid);
 
           return {
             id: `expiring-${pkg.id}`,
@@ -810,9 +866,10 @@ function PaymentCalendarPage() {
             typeId: pkg.id,
             date: pkg.expiry_date,
             student_id: pkg.student_ids?.[0] || null,
-            amount: remainingAmount, // Solo l'importo rimanente
+            amount: remainingAmount,
             hours: parseFloat(pkg.total_hours || 0),
-            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`,
+            isOpenPackage: packageCost === 0 // Flag per identificare pacchetti aperti
           };
         })
       ];
@@ -846,7 +903,15 @@ function PaymentCalendarPage() {
 
     } catch (err) {
       console.error('Error saving payment:', err);
-      alert('Errore durante il salvataggio del pagamento. Riprova più tardi.');
+
+      // MODIFICA: Messaggio di errore più specifico per pacchetti aperti
+      let errorMessage = 'Errore durante il salvataggio del pagamento. Riprova più tardi.';
+
+      if (selectedPaymentItem?.isOpenPackage && err.response?.status === 400) {
+        errorMessage = 'Errore: verificare che l\'importo sia valido per il pacchetto aperto.';
+      }
+
+      alert(errorMessage);
     }
   };
 

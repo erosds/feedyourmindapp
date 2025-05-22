@@ -23,26 +23,27 @@ function PaymentConfirmationDialog({
   onConfirm
 }) {
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="xs" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
       fullWidth
     >
       <DialogTitle>
-        Conferma Pagamento
+        {selectedPaymentItem?.isOpenPackage ? 'Imposta prezzo e pagamento' : 'Conferma Pagamento'}
       </DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           <TextField
             fullWidth
-            label={selectedPaymentItem?.type === 'unpaid' ? "Prezzo Lezione" : "Pagamento pacchetto"}
+            label={selectedPaymentItem?.isOpenPackage ? "Prezzo del pacchetto" : (selectedPaymentItem?.type === 'unpaid' ? "Prezzo Lezione" : "Pagamento pacchetto")}
             type="number"
             value={priceValue}
             onChange={(e) => setPriceValue(parseFloat(e.target.value) || 0)}
             InputProps={{
               startAdornment: <InputAdornment position="start">€</InputAdornment>,
             }}
+            helperText={selectedPaymentItem?.isOpenPackage ? "Questo è un pacchetto aperto: imposta il prezzo finale" : ""}
           />
           <DatePicker
             label="Data pagamento"
@@ -64,7 +65,7 @@ function PaymentConfirmationDialog({
           variant="contained"
           color="primary"
         >
-          Conferma Pagamento
+          {selectedPaymentItem?.isOpenPackage ? 'Imposta prezzo e paga' : 'Conferma Pagamento'}
         </Button>
       </DialogActions>
     </Dialog>
