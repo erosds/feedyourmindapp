@@ -72,8 +72,7 @@ function DayDetailsDialog({
 
             <Divider sx={{ mb: 1 }} />
 
-            {/* Prima sezione: Pacchetti */}
-            {/* Sezione aggiuntiva: Pagamenti dei pacchetti */}
+            {/* Sezione: Pagamenti dei pacchetti */}
             {dayPayments.filter(payment => payment.type === 'package-payment').length > 0 && (
               <>
                 <List dense>
@@ -111,7 +110,7 @@ function DayDetailsDialog({
                                 color={payment.isFinalPayment ? 'darkviolet' : 'mediumpurple'}
                                 sx={{ fontWeight: 500 }}
                               >
-                                {/* Modifica qui: Distingui tra acconto e saldo */}
+                                {/* Usa isFinalPayment per distinguere tra acconto e saldo */}
                                 {payment.isFinalPayment ? 'Saldo pacchetto' : 'Acconto pacchetto'}
                               </Typography>{' '}
                               di {payment.hours} ore
@@ -129,7 +128,6 @@ function DayDetailsDialog({
                 </List>
               </>
             )}
-
 
             {/* Seconda sezione: Lezioni singole */}
             {dayPayments.filter(payment => payment.type === 'lesson').length > 0 && (

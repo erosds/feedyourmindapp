@@ -371,8 +371,6 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
           </Grid>
         </Grid>
 
-        <Divider sx={{ mb: 2 }} />
-
         {/* Payments list */}
         {payments.length > 0 ? (
           <TableContainer component={Paper} variant="outlined">

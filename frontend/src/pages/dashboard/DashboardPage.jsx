@@ -397,7 +397,7 @@ function DashboardPage() {
   return (
     <Box>
       <Typography variant="h4" gutterBottom mb={3}>
-        Dashboard Personale
+        MyDashboard
       </Typography>
 
       {/* Week selector header */}

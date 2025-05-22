@@ -40,7 +40,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import HistoryIcon from '@mui/icons-material/History';
 
-const drawerWidth = 250;
+const drawerWidth = 230;
 
 function MainLayout() {
   const { currentUser, logout, isAdmin } = useAuth();
@@ -82,8 +82,8 @@ function MainLayout() {
   if (isAdmin()) {
     menuItems = [
       { text: 'Agenda Incassi', icon: <DateRangeIcon />, path: '/payments/calendar' }, // Aggiungi questa riga
-      { text: 'Dashboard Admin', icon: <GridViewIcon />, path: '/admin-dashboard' },
-      { text: 'Dashboard Personale', icon: <DashboardIcon />, path: '/dashboard' },
+      { text: 'AdminDashboard', icon: <GridViewIcon />, path: '/admin-dashboard' },
+      { text: 'MyDashboard', icon: <DashboardIcon />, path: '/dashboard' },
       { text: 'Pacchetti', icon: <BookIcon />, path: '/packages' },
       { text: 'Lezioni', icon: <MenuBookIcon />, path: '/lessons' },
       { text: 'Studenti', icon: <SchoolIcon />, path: '/students' },

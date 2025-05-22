@@ -261,8 +261,21 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
   if (isOpenPackage) {
     return (
       <Box sx={{ mb: 1 }}>
+        <Box sx={{mb: 1, position: 'relative', width: '100%', height: '16px' }}>
+          {/* Testo esplicativo sopra la barra */}
+          <Typography
+            variant="caption"
+            color="primary.main"
+            sx={{
+              position: 'absolute',
+              fontWeight: 'medium'
+            }}
+          >
+            Pacchetto aperto
+          </Typography>
+        </Box>
         {/* Barra con sfumatura per pacchetto aperto */}
-        <Box sx={{ position: 'relative', width: '100%'}}>
+        <Box sx={{ position: 'relative', width: '100%' }}>
           {/* Barra base grigia sfumata */}
           <Box sx={{
             position: 'absolute',
@@ -276,7 +289,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
           {/* Barra colorata solida che avanza */}
           <Box sx={{
             position: 'absolute',
-            width: totalUsedHours > 0 ? `${Math.min(75, totalUsedHours * 4)}%` : '10%', // Limita a 75% della larghezza
+            width: totalUsedHours > 0 ? `${Math.min(75, totalUsedHours * 4)}%` : '2%', // Limita a 75% della larghezza
             height: '16px',
             borderRadius: '8px',
             top: '22px',
@@ -284,26 +297,15 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
             transition: 'width 0.5s ease-in-out'
           }} />
 
-          {/* Testo esplicativo sopra la barra */}
-          <Typography
-            variant="caption"
-            color="primary.main"
-            sx={{
-              position: 'absolute',
-              fontWeight: 'medium'
-            }}
-          >
-            Pacchetto aperto
-          </Typography>
-
           {/* Indicatore di ore utilizzate sulla barra, ora senza il trattino */}
           <Box sx={{
             position: 'absolute',
-            left: totalUsedHours > 0 ? `${Math.min(73, totalUsedHours * 4.1)}%` : '8%',
+            left: totalUsedHours > 0 ? `${Math.min(73, totalUsedHours * 4.1)}%` : '2%',
             top: '20px',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center'
+            alignItems: 'center',
+            ml: 1,
           }}>
             <Typography
               variant="caption"

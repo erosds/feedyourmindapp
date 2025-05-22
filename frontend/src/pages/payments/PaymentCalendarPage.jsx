@@ -207,18 +207,61 @@ function PaymentCalendarPage() {
             );
 
             // Add the payments to our array
-            packagePaymentsInPeriod.push(...paymentsInPeriod.map(payment => ({
-              id: `package-payment-${payment.id}`,
-              type: 'package-payment',
-              typeId: payment.id,
-              packageId: parseInt(packageId),
-              date: payment.payment_date,
-              student_id: pkg.student_ids?.[0] || null,
-              amount: parseFloat(payment.amount || 0),
-              hours: parseFloat(pkg.total_hours || 0),
-              notes: payment.notes,
-              studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
-            })));
+            packagePaymentsInPeriod.push(...paymentsInPeriod.map(payment => {
+              // For each payment, determine if it's a final payment or partial payment
+              const packageCost = parseFloat(pkg.package_cost || 0);
+
+              // Skip calculation for open packages (cost = 0)
+              if (packageCost === 0) {
+                return {
+                  id: `package-payment-${payment.id}`,
+                  type: 'package-payment',
+                  typeId: payment.id,
+                  packageId: parseInt(packageId),
+                  date: payment.payment_date,
+                  student_id: pkg.student_ids?.[0] || null,
+                  amount: parseFloat(payment.amount || 0),
+                  hours: parseFloat(pkg.total_hours || 0),
+                  notes: payment.notes,
+                  studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`,
+                  isFinalPayment: false, // Open packages never have "final" payments
+                  packageCost: packageCost
+                };
+              }
+
+              // Calculate cumulative payments up to this specific payment
+              // Sort all payments by date first
+              const sortedPayments = [...payments].sort((a, b) =>
+                new Date(a.payment_date) - new Date(b.payment_date)
+              );
+
+              // Find the index of the current payment in the sorted list
+              const currentPaymentIndex = sortedPayments.findIndex(p => p.id === payment.id);
+
+              // Calculate sum of payments up to and including this payment
+              const sumUntilThisPayment = sortedPayments
+                .slice(0, currentPaymentIndex + 1)
+                .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+              // Determine if it's a final payment (reaches or exceeds the package cost)
+              const isFinalPayment = sumUntilThisPayment >= packageCost;
+
+              return {
+                id: `package-payment-${payment.id}`,
+                type: 'package-payment',
+                typeId: payment.id,
+                packageId: parseInt(packageId),
+                date: payment.payment_date,
+                student_id: pkg.student_ids?.[0] || null,
+                amount: parseFloat(payment.amount || 0),
+                hours: parseFloat(pkg.total_hours || 0),
+                notes: payment.notes,
+                studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`,
+                isFinalPayment, // This will now correctly identify final payments
+                paymentType: isFinalPayment ? 'saldo' : 'acconto',
+                packageCost: packageCost
+              };
+            }));
           }
         });
 
@@ -249,7 +292,6 @@ function PaymentCalendarPage() {
           );
         });
 
-        // Format expired packages, showing only the remaining amount to pay
         // Format expired packages, showing only the remaining amount to pay
         const formattedExpiredPackages = [
           ...expiredPackagesData.map(pkg => ({
@@ -309,32 +351,7 @@ function PaymentCalendarPage() {
             hours: parseFloat(lesson.duration || 0),
             studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
           })),
-          ...packagePaymentsInPeriod.map(payment => {
-            // For each payment, determine if it's a final payment or partial payment
-            const pkg = allPackagesResponse.data.find(p => p.id === payment.packageId);
-            if (!pkg) return payment;
-
-            // Calculate the sum of all previous payments (including this one)
-            const packagePayments = packagePaymentsMap[payment.packageId] || [];
-            const paymentIndex = packagePayments.findIndex(p => p.id === payment.typeId);
-            if (paymentIndex === -1) return payment;
-
-            // Calculate the sum of payments up to this payment
-            const sumUntilThisPayment = packagePayments
-              .slice(0, paymentIndex + 1)
-              .reduce((sum, p) => sum + parseFloat(p.amount), 0);
-
-            // Determine if it's a final payment (reaches or exceeds the package cost)
-            const packageCost = parseFloat(pkg.package_cost || 0);
-            const isFinalPayment = sumUntilThisPayment >= packageCost && packageCost > 0;
-
-            return {
-              ...payment,
-              isFinalPayment, // Add this information
-              paymentType: isFinalPayment ? 'saldo' : 'acconto',
-              packageCost
-            };
-          })
+          ...packagePaymentsInPeriod
         ];
 
         setUnpaidLessons(formattedUnpaidLessons);
@@ -433,7 +450,6 @@ function PaymentCalendarPage() {
       return [...packages, ...lessons];
     }
     // If in "unpaid" mode, show unpaid lessons and expired packages
-    // Nella funzione getStudentNamesForDay
     else {
       const dayUnpaid = getUnpaidLessonsForDay(day);
       const dayExpired = getExpiredPackagesForDay(day);
@@ -557,9 +573,8 @@ function PaymentCalendarPage() {
           payment_date: formattedDate,
           price: priceValue
         });
-      } else if (selectedPaymentItem.type === 'expired-package') {
-        // Per pacchetti scaduti, invece di modificare il package_cost,
-        // aggiungiamo un nuovo pagamento al pacchetto con packageService.addPayment
+      } else if (selectedPaymentItem.type === 'expired-package' || selectedPaymentItem.type === 'expiring-package') {
+        // Per pacchetti scaduti/in scadenza, aggiungiamo un nuovo pagamento al pacchetto
         await packageService.addPayment(selectedPaymentItem.typeId, {
           amount: priceValue,
           payment_date: formattedDate,
@@ -614,7 +629,7 @@ function PaymentCalendarPage() {
         studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
       }));
 
-      // Raccogli tutti i pagamenti di pacchetti nel periodo
+      // Raccogli tutti i pagamenti di pacchetti nel periodo (AGGIORNATO)
       const packagePaymentsInPeriod = [];
       packagesResponse.data.forEach(pkg => {
         const packageId = pkg.id;
@@ -626,14 +641,45 @@ function PaymentCalendarPage() {
           payment.payment_date <= endDateStr
         );
 
-        // Calcola il costo totale del pacchetto e i pagamenti accumulati per ogni pagamento
-        filteredPayments.forEach((payment, index) => {
-          // Calcola la somma dei pagamenti fino a questo pagamento
-          const paymentsUntilThis = payments.slice(0, payments.findIndex(p => p.id === payment.id) + 1);
-          const sumPaid = paymentsUntilThis.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        // Calcola il costo totale del pacchetto
+        const packageCost = parseFloat(pkg.package_cost || 0);
 
-          // Determina se questo è il pagamento finale (raggiunge o supera il costo del pacchetto)
-          const isFinalPayment = sumPaid >= parseFloat(pkg.package_cost || 0) && parseFloat(pkg.package_cost || 0) > 0;
+        // Per ogni pagamento, calcola se è finale
+        filteredPayments.forEach((payment) => {
+          // Skip calculation for open packages
+          if (packageCost === 0) {
+            packagePaymentsInPeriod.push({
+              id: `package-payment-${payment.id}`,
+              type: 'package-payment',
+              typeId: payment.id,
+              packageId: packageId,
+              date: payment.payment_date,
+              student_id: pkg.student_ids?.[0] || null,
+              amount: parseFloat(payment.amount || 0),
+              hours: parseFloat(pkg.total_hours || 0),
+              notes: payment.notes,
+              studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`,
+              isFinalPayment: false,
+              packageCost: packageCost
+            });
+            return;
+          }
+
+          // Sort all payments by date
+          const sortedPayments = [...payments].sort((a, b) =>
+            new Date(a.payment_date) - new Date(b.payment_date)
+          );
+
+          // Find current payment index
+          const currentPaymentIndex = sortedPayments.findIndex(p => p.id === payment.id);
+
+          // Calculate cumulative sum up to this payment
+          const sumUntilThisPayment = sortedPayments
+            .slice(0, currentPaymentIndex + 1)
+            .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+          // Determine if this is the final payment
+          const isFinalPayment = sumUntilThisPayment >= packageCost;
 
           packagePaymentsInPeriod.push({
             id: `package-payment-${payment.id}`,
@@ -646,8 +692,8 @@ function PaymentCalendarPage() {
             hours: parseFloat(pkg.total_hours || 0),
             notes: payment.notes,
             studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`,
-            isFinalPayment, // Indica se questo è il pagamento finale
-            packageCost: parseFloat(pkg.package_cost || 0)
+            isFinalPayment, // Correctly calculated
+            packageCost: packageCost
           });
         });
       });
@@ -693,25 +739,57 @@ function PaymentCalendarPage() {
         return pkg.expiry_date >= startDateStr && pkg.expiry_date <= endDateStr;
       });
 
-      const formattedExpiredPackages = expiredPackagesData.map(pkg => {
-        // Calcola quanto è stato pagato
-        const packagePayments = packagePaymentsMap[pkg.id] || [];
-        const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-
-        // Calcola quanto resta da pagare
-        const remainingAmount = Math.max(0, parseFloat(pkg.package_cost || 0) - totalPaid);
-
-        return {
-          id: `expired-${pkg.id}`,
-          type: 'expired-package',
-          typeId: pkg.id,
-          date: pkg.expiry_date,
-          student_id: pkg.student_ids?.[0] || null,
-          amount: remainingAmount, // Solo l'importo rimanente
-          hours: parseFloat(pkg.total_hours || 0),
-          studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
-        };
+      // Also filter for packages expiring this week (still active)
+      const expiringPackagesData = packagesResponse.data.filter(pkg => {
+        const expiryDate = parseISO(pkg.expiry_date);
+        return (
+          pkg.total_paid < pkg.package_cost && // Not fully paid
+          pkg.status === 'in_progress' &&
+          isPackageExpiring(pkg) &&
+          expiryDate >= monthStart && expiryDate <= monthEnd
+        );
       });
+
+      const formattedExpiredPackages = [
+        ...expiredPackagesData.map(pkg => {
+          // Calcola quanto è stato pagato
+          const packagePayments = packagePaymentsMap[pkg.id] || [];
+          const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+          // Calcola quanto resta da pagare
+          const remainingAmount = Math.max(0, parseFloat(pkg.package_cost || 0) - totalPaid);
+
+          return {
+            id: `expired-${pkg.id}`,
+            type: 'expired-package',
+            typeId: pkg.id,
+            date: pkg.expiry_date,
+            student_id: pkg.student_ids?.[0] || null,
+            amount: remainingAmount, // Solo l'importo rimanente
+            hours: parseFloat(pkg.total_hours || 0),
+            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+          };
+        }),
+        ...expiringPackagesData.map(pkg => {
+          // Calcola quanto è stato pagato
+          const packagePayments = packagePaymentsMap[pkg.id] || [];
+          const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+          // Calcola quanto resta da pagare
+          const remainingAmount = Math.max(0, parseFloat(pkg.package_cost || 0) - totalPaid);
+
+          return {
+            id: `expiring-${pkg.id}`,
+            type: 'expiring-package',
+            typeId: pkg.id,
+            date: pkg.expiry_date,
+            student_id: pkg.student_ids?.[0] || null,
+            amount: remainingAmount, // Solo l'importo rimanente
+            hours: parseFloat(pkg.total_hours || 0),
+            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+          };
+        })
+      ];
 
       setExpiredPackages(formattedExpiredPackages);
 
@@ -848,7 +926,6 @@ function PaymentCalendarPage() {
             daysInMonth={daysInMonth}
             getPaymentsForDay={getPaymentsForDay}
             getTotalForDay={getTotalForDay}
-            // Parte mancante del codice da aggiungere alla fine del componente
             getUnpaidLessonsForDay={getUnpaidLessonsForDay}
             getUnpaidCountForDay={getUnpaidCountForDay}
             getExpiredPackagesForDay={getExpiredPackagesForDay}
