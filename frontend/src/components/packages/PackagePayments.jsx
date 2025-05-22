@@ -305,8 +305,8 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
         title={<Typography variant="h6" color="primary">Pagamenti pacchetto</Typography>}
         action={
           <Box sx={{ display: 'flex' }}>
-            {/* Bottone per finalizzare pacchetto aperto */}
-            {canFinalizePackage && (
+            {/* Bottone per finalizzare pacchetto aperto - SOLO ADMIN */}
+            {canFinalizePackage && isAdmin() && (
               <Button
                 variant="outlined"
                 size="small"
@@ -318,15 +318,18 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
                 Finalizza pacchetto
               </Button>
             )}
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={handleOpenAddDialog}
-              disabled={isFullyPaid}
-            >
-              Aggiungi pagamento
-            </Button>
+            {/* Bottone aggiungi pagamento - SOLO ADMIN */}
+            {isAdmin() && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={handleOpenAddDialog}
+                disabled={isFullyPaid}
+              >
+                Aggiungi pagamento
+              </Button>
+            )}
           </Box>
         }
       />
@@ -543,4 +546,4 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
   );
 };
 
-export default PackagePayments;
+export default PackagePayments

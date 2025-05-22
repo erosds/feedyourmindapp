@@ -22,10 +22,10 @@ function FAQSection3({ searchQuery = '' }) {
               </Button> in alto a destra. Basta inserire poche informazioni necessarie: <b>studente/i</b>, <b>data di inizio</b>, <b>ore totali</b>. Se non conosci queste informazioni, chiedile ad un admin oppure allo studente stesso.
           </Typography>
           <Typography paragraph>    
-              Se vedi che non c'è nessun pacchetto per lo studente di cui vuoi inserire una lezione, <b>non esitare a crearlo</b>! Creare i pacchetti non è compito degli admin, ma <b>tuo</b>.
+              Se vedi che non c'è nessun pacchetto per lo studente di cui vuoi inserire una lezione, <b>non esitare a crearlo</b>! Creare i pacchetti non è compito solo degli admin, ma soprattutto <b>tuo</b>.
           </Typography>
           <Typography paragraph>    
-              Di default un nuovo pacchetto viene inserito come non pagato. Se invece vuoi inserire che è stato pagato, va inserita anche la <b>data di pagamento</b>. Ma non preoccuparti di questo, se non lo sai lascia il pacchetto come non pagato.
+              Di default un nuovo pacchetto viene inserito come non pagato. Se vuoi inserire un <b>pacchetto aperto</b>, inserisci 30 come ore totali.
           </Typography>
         </>
       )

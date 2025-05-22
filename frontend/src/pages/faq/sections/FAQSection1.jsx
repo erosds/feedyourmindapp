@@ -17,7 +17,7 @@ function FAQSection1({ searchQuery = '' }) {
             <li>Calcolare in automatico il proprio <b>compenso settimanale</b></li>
             <li>Gestire le <b>lezioni</b> e associarle agli eventuali <b>pacchetti</b> di ogni studente</li>
             <li>Tenere traccia delle <b>ore rimanenti</b> sui pacchetti</li>
-            <li>Tenere traccia delle <b>scadenze</b> e dei <b>pagamenti</b></li>
+            <li>Tenere traccia delle <b>scadenze</b> e degli <b>acconti</b></li>
             <li>Gestire il <b>planning giornaliero</b> in base alle lezioni di tutti</li>
           </ul>
           Tenerla aggiornata è fondamentale: con un minimo di contributo da parte di tutti, possiamo semplificare di molto la gestione dell'associazione.
@@ -51,7 +51,7 @@ function FAQSection1({ searchQuery = '' }) {
             lista di quelli disponibili. Dalla lista, cliccando su un elemento, si aprirà una <b>scheda dettagli</b> di quell'elemento.
           </Typography>
           <Typography>
-            In più c'è <Link component={RouterLink} to="/dashboard">Dashboard Personale</Link>. Questa dashboard mostra
+            In più c'è <Link component={RouterLink} to="/dashboard">MyDashboard</Link>. Questa dashboard mostra
             automaticamente un calendario settimanale con tutte le tue lezioni. Puoi navigare tra le settimane
             usando i pulsanti "Precedente" e "Successiva", o tornare alla settimana corrente con il pulsante
             centrale. In più viene visualizzato un riepilogo del proprio compenso.
