@@ -245,13 +245,13 @@ function DesktopCalendarView({
                             margin: '1px',
                             // Aggiungi questa logica quando definisci il colore del chip:
                             backgroundColor: student.type === 'package'
-                              ? 'darkviolet'  // Saldo pacchetto
+                              ? 'darkviolet'  // Pacchetto (non dovrebbe accadere spesso)
                               : student.type === 'package-payment'
                                 ? (student.isFinalPayment
                                   ? 'darkviolet'    // Saldo pacchetto 
                                   : 'mediumpurple') // Acconto pacchetto
                                 : student.type === 'expired-package' || student.type === 'expiring-package'
-                                  ? 'warning.main'
+                                  ? (student.isOpenPackage ? 'darkorange' : 'warning.main') // MODIFICA QUI
                                   : student.type === 'unpaid'
                                     ? 'secondary.main'
                                     : 'primary.main',

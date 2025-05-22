@@ -13,19 +13,19 @@ function FAQSection3({ searchQuery = '' }) {
         <>
           <Typography paragraph>
             Vai alla sezione <Link component={RouterLink} to="/packages">Pacchetti</Link> e clicca su <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AddIcon />}
-                sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '130px' }}
-              >
-                Nuovo Pacchetto
-              </Button> in alto a destra. Basta inserire poche informazioni necessarie: <b>studente/i</b>, <b>data di inizio</b>, <b>ore totali</b>. Se non conosci queste informazioni, chiedile ad un admin oppure allo studente stesso.
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              sx={{ fontSize: '0.75rem', py: 0.2, ml: 0.5, mr: 0.5, minWidth: '130px' }}
+            >
+              Nuovo Pacchetto
+            </Button> in alto a destra. Basta inserire poche informazioni necessarie: <b>studente/i</b>, <b>data di inizio</b>, <b>ore totali</b>. Se non conosci queste informazioni, chiedile ad un admin oppure allo studente stesso.
           </Typography>
-          <Typography paragraph>    
-              Se vedi che non c'è nessun pacchetto per lo studente di cui vuoi inserire una lezione, <b>non esitare a crearlo</b>! Creare i pacchetti non è compito solo degli admin, ma soprattutto <b>tuo</b>.
+          <Typography paragraph>
+            Se vedi che non c'è nessun pacchetto per lo studente di cui vuoi inserire una lezione, <b>non esitare a crearlo</b>! Creare i pacchetti non è compito solo degli admin, ma soprattutto <b>tuo</b>.
           </Typography>
-          <Typography paragraph>    
-              Di default un nuovo pacchetto viene inserito come non pagato. Se vuoi inserire un <b>pacchetto aperto</b>, inserisci 30 come ore totali.
+          <Typography paragraph>
+            Se vuoi inserire un <b>pacchetto aperto</b> (senza un limite di ore prestabilite), inserisci 30 (o più) come ore totali.
           </Typography>
         </>
       )
@@ -103,6 +103,64 @@ function FAQSection3({ searchQuery = '' }) {
       )
     },
     {
+      question: 'Qual è la differenza tra gli stati di pagamento di un pacchetto?',
+      answer: (
+        <>
+          <Typography paragraph>
+            I pacchetti possono trovarsi in diversi stati di pagamento, indicati da badge colorati:
+          </Typography>
+
+          <Box sx={{ mb: 3, ml: 1, mr: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="Pagato"
+                  color="success"
+                  size="small"
+                  variant="outlined"
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                Pacchetto <b>completamente saldato</b>. L'importo versato corrisponde al prezzo del pacchetto.
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="Acconto"
+                  color="warning"
+                  size="small"
+                  variant="outlined"
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                Pacchetto con <b>pagamento parziale</b>. È stato versato un acconto ma rimane ancora una parte da saldare.
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center' }}>
+              <Box>
+                <Chip
+                  label="Non pagato"
+                  color="error"
+                  size="small"
+                  variant="outlined"
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                Pacchetto <b>non ancora pagato</b>. Non sono stati registrati pagamenti per questo pacchetto.
+              </Typography>
+            </Box>
+          </Box>
+
+          <Typography paragraph sx={{ mt: 2 }}>
+            <b>Nota importante:</b> I pagamenti sui pacchetti verrano caricati dagli admin. Se uno studente ha pagato te, magari puoi assicurati che dopo il pagamento sia caricato.
+          </Typography>
+        </>
+      )
+    },
+    {
       question: 'Come faccio a sapere quante ore rimangono in un pacchetto?',
       answer: (
         <>
@@ -149,8 +207,8 @@ function FAQSection3({ searchQuery = '' }) {
           </Typography>
           <Typography>
             Questa funzionalità è particolarmente utile quando uno studente ha saltato alcune lezioni
-            e ha ancora ore disponibili nel pacchetto che altrimenti andrebbero perse. 
-            </Typography>
+            e ha ancora ore disponibili nel pacchetto che altrimenti andrebbero perse.
+          </Typography>
           <Typography paragraph>
             <b>Attenzione</b>: la funzionalità di estensione
             diventa utilizzabile solo se il pacchetto sta per scadere ma ha ore rimanenti.
@@ -169,7 +227,7 @@ function FAQSection3({ searchQuery = '' }) {
         </Typography>
       )
     },
-    
+
   ];
 
   // If there's a search query, filter the items

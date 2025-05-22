@@ -6,9 +6,17 @@ import {
   Button,
   ButtonGroup,
   Card,
+  Chip,
+  Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
   CircularProgress,
   Paper,
   Typography,
+  Tooltip,
   useMediaQuery,
   useTheme
 } from '@mui/material';
@@ -25,6 +33,8 @@ import {
 import { it } from 'date-fns/locale';
 import { lessonService, packageService, studentService, professorService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import InfoIcon from '@mui/icons-material/Info';
+
 
 // Import our componentized modules
 import DesktopCalendarView from '../../components/payments/DesktopCalendarView';
@@ -58,6 +68,9 @@ function PaymentCalendarPage() {
   const [paymentDate, setPaymentDate] = useState(new Date());
   const [priceValue, setPriceValue] = useState(0);
   const [professors, setProfessors] = useState({});
+
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+
 
   // Verify admin access
   useEffect(() => {
@@ -460,6 +473,10 @@ function PaymentCalendarPage() {
   };
 
   // Get formatted student names for calendar display
+  // Nel file frontend/src/pages/payments/PaymentCalendarPage.jsx
+  // Trova la funzione getStudentNamesForDay e modifica la parte che genera le chip per i pacchetti scaduti/in scadenza
+
+  // Sostituisci questa parte nel codice esistente:
   const getStudentNamesForDay = (day) => {
     // If in payments mode, show only payments
     if (viewMode === 'payments') {
@@ -492,25 +509,41 @@ function PaymentCalendarPage() {
       const dayUnpaid = getUnpaidLessonsForDay(day);
       const dayExpired = getExpiredPackagesForDay(day);
 
-      // Sort expired packages alphabetically
+      // Sort expired packages: prima pacchetti normali, poi aperti, poi alfabeticamente
       const expiredPackages = dayExpired
-        .filter(pkg => pkg.type === 'expired-package') // Filtra solo i pacchetti già scaduti
+        .filter(pkg => pkg.type === 'expired-package')
         .map(pkg => ({
           id: pkg.id,
           name: formatStudentName(pkg.studentName),
-          type: 'expired-package'
+          type: 'expired-package',
+          isOpenPackage: pkg.isOpenPackage
         }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .sort((a, b) => {
+          // Prima ordina per tipo: pacchetti normali prima di quelli aperti
+          if (a.isOpenPackage !== b.isOpenPackage) {
+            return a.isOpenPackage ? 1 : -1; // false (normali) prima di true (aperti)
+          }
+          // Poi ordina alfabeticamente
+          return a.name.localeCompare(b.name);
+        });
 
-      // Aggiungi il supporto per i pacchetti in scadenza
+      // Sort expiring packages: prima pacchetti normali, poi aperti, poi alfabeticamente
       const expiringPackages = dayExpired
-        .filter(pkg => pkg.type === 'expiring-package') // Filtra i pacchetti in scadenza
+        .filter(pkg => pkg.type === 'expiring-package')
         .map(pkg => ({
           id: pkg.id,
           name: formatStudentName(pkg.studentName),
-          type: 'expiring-package'
+          type: 'expiring-package',
+          isOpenPackage: pkg.isOpenPackage
         }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .sort((a, b) => {
+          // Prima ordina per tipo: pacchetti normali prima di quelli aperti
+          if (a.isOpenPackage !== b.isOpenPackage) {
+            return a.isOpenPackage ? 1 : -1; // false (normali) prima di true (aperti)
+          }
+          // Poi ordina alfabeticamente
+          return a.name.localeCompare(b.name);
+        });
 
       // Sort unpaid lessons alphabetically
       const unpaidLessons = dayUnpaid.map(unpaid => ({
@@ -935,9 +968,23 @@ function PaymentCalendarPage() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom mb={3}>
-        Agenda Incassi
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" sx={{ mr: 2 }}>
+          Agenda Incassi
+        </Typography>
+        <Box display="flex" alignItems="center">
+
+          <Tooltip title="Informazioni sui colori del calendario">
+            <IconButton
+              color="primary"
+              onClick={() => setInfoDialogOpen(true)}
+              sx={{ mr: 1 }}
+            >
+              <InfoIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
 
       {/* Month navigation */}
       <Card sx={{ mb: 1, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
@@ -1053,6 +1100,144 @@ function PaymentCalendarPage() {
         setPriceValue={setPriceValue}
         onConfirm={handleConfirmPayment}
       />
+
+      {/* Info Dialog */}
+      <Dialog
+        open={infoDialogOpen}
+        onClose={() => setInfoDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Legenda colori calendario pagamenti</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" paragraph sx={{ fontWeight: 'bold', textAlign: 'justify' }}>
+            Modalità "Pagato" - Colori chip studenti:
+          </Typography>
+
+          <Box sx={{ mb: 3, ml: 1, mr: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '60px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="Nome"
+                  size="small"
+                  sx={{
+                    backgroundColor: 'darkviolet',
+                    color: 'white',
+                    fontSize: '0.65rem',
+                    height: 20
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                <b>Saldo pacchetto</b> - Pagamento finale che completa il pacchetto
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '60px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="Nome"
+                  size="small"
+                  sx={{
+                    backgroundColor: 'mediumpurple',
+                    color: 'white',
+                    fontSize: '0.65rem',
+                    height: 20
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                <b>Acconto pacchetto</b> - Pagamento parziale del pacchetto
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '60px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="Nome"
+                  size="small"
+                  sx={{
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    fontSize: '0.65rem',
+                    height: 20
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                <b>Lezione singola</b> - Pagamento per lezione individuale
+              </Typography>
+            </Box>
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Typography variant="body1" paragraph sx={{ fontWeight: 'bold', textAlign: 'justify' }}>
+            Modalità "Non pagato" - Colori chip studenti:
+          </Typography>
+
+          <Box sx={{ mb: 3, ml: 1, mr: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '60px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="Nome"
+                  size="small"
+                  sx={{
+                    backgroundColor: 'warning.main',
+                    color: 'white',
+                    fontSize: '0.65rem',
+                    height: 20
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                <b>Pacchetto scaduto/in scadenza</b> - Pacchetto non ancora saldato completamente
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '60px 1fr', alignItems: 'center', mb: 2 }}>
+              <Box>
+                <Chip
+                  label="Nome"
+                  size="small"
+                  sx={{
+                    backgroundColor: 'darkorange',
+                    color: 'white',
+                    fontSize: '0.65rem',
+                    height: 20
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                <b>Pacchetto aperto scaduto/in scadenza</b> - Pacchetto aperto, non ancora saldato completamente
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '60px 1fr', alignItems: 'center' }}>
+              <Box>
+                <Chip
+                  label="Nome"
+                  size="small"
+                  sx={{
+                    backgroundColor: 'secondary.main',
+                    color: 'white',
+                    fontSize: '0.65rem',
+                    height: 20
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ textAlign: 'justify' }}>
+                <b>Lezione singola non pagata</b> - Lezione individuale da saldare
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInfoDialogOpen(false)} color="primary">
+            Chiudi
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

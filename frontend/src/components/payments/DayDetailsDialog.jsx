@@ -206,7 +206,14 @@ function DayDetailsDialog({
               <>
                 <List dense>
                   {dayExpiredPackages
-                    .sort((a, b) => a.studentName.localeCompare(b.studentName))
+                    .sort((a, b) => {
+                      // Prima ordina per tipo: pacchetti normali prima di quelli aperti
+                      if (a.isOpenPackage !== b.isOpenPackage) {
+                        return a.isOpenPackage ? 1 : -1; // false (normali) prima di true (aperti)
+                      }
+                      // Poi ordina alfabeticamente per nome studente
+                      return a.studentName.localeCompare(b.studentName);
+                    })
                     .map((pkg) => (
                       <ListItem
                         key={pkg.id}
@@ -224,6 +231,7 @@ function DayDetailsDialog({
                           }
                         }}
                       >
+                        {/* resto del codice della ListItem rimane uguale */}
                         <ListItemText
                           primary={
                             <Typography variant="body2" sx={{ mb: -0.5 }}>

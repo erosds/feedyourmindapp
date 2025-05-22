@@ -200,7 +200,7 @@ function MobileCalendarView({
                               ? 'darkviolet'    // Saldo pacchetto 
                               : 'mediumpurple') // Acconto pacchetto
                             : student.type === 'expired-package' || student.type === 'expiring-package'
-                              ? 'warning.main'
+                              ? (student.isOpenPackage ? 'darkorange' : 'warning.main') // MODIFICA QUI
                               : student.type === 'unpaid'
                                 ? 'secondary.main'
                                 : 'primary.main',
