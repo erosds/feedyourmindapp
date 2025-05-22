@@ -267,26 +267,31 @@ function PaymentCalendarPage() {
 
         // Filter for expired and unpaid packages
         const expiredPackagesData = packagesResponse.data.filter(pkg => {
-          // Converti esplicitamente in numeri per un confronto affidabile
-          const totalPaid = parseFloat(pkg.total_paid || 0);
-          const packageCost = parseFloat(pkg.package_cost || 0);
+          // SOLO pacchetti con status 'expired' (non in_progress)
+          if (pkg.status !== 'expired') return false;
 
-          // Un pacchetto è considerato "non pagato" se il totale pagato è minore del costo
-          // e se il costo del pacchetto è maggiore di zero (per evitare pacchetti con costo zero)
-          const isNotFullyPaid = totalPaid < packageCost && packageCost > 0;
+          // Calcola quanto è stato pagato usando packagePaymentsMap
+          const packagePayments = packagePaymentsMap[pkg.id] || [];
+          const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
 
-          return isNotFullyPaid &&
-            pkg.status === 'expired' &&
-            pkg.expiry_date >= startDateStr &&
-            pkg.expiry_date <= endDateStr;
+          // Considera solo pacchetti non completamente pagati
+          if (totalPaid >= parseFloat(pkg.package_cost || 0)) return false;
+
+          // Filtra per data di scadenza nel periodo
+          return pkg.expiry_date >= startDateStr && pkg.expiry_date <= endDateStr;
         });
 
         // Also filter for packages expiring this week (still active)
         const expiringPackagesData = packagesResponse.data.filter(pkg => {
           const expiryDate = parseISO(pkg.expiry_date);
+
+          // Calcola quanto è stato pagato usando packagePaymentsMap (CONSISTENTE)
+          const packagePayments = packagePaymentsMap[pkg.id] || [];
+          const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
           return (
-            pkg.total_paid < pkg.package_cost && // Not fully paid
-            pkg.status === 'in_progress' &&
+            totalPaid < parseFloat(pkg.package_cost || 0) && // Usa totalPaid calcolato
+            pkg.status === 'in_progress' && // SOLO pacchetti attivi
             isPackageExpiring(pkg) &&
             expiryDate >= monthStart && expiryDate <= monthEnd
           );
@@ -294,26 +299,38 @@ function PaymentCalendarPage() {
 
         // Format expired packages, showing only the remaining amount to pay
         const formattedExpiredPackages = [
-          ...expiredPackagesData.map(pkg => ({
-            id: `expired-${pkg.id}`,
-            type: 'expired-package',
-            typeId: pkg.id,
-            date: pkg.expiry_date,
-            student_id: pkg.student_ids?.[0] || null,
-            amount: parseFloat(pkg.package_cost || 0) - parseFloat(pkg.total_paid || 0), // Only the remaining amount
-            hours: parseFloat(pkg.total_hours || 0),
-            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
-          })),
-          ...expiringPackagesData.map(pkg => ({
-            id: `expiring-${pkg.id}`,
-            type: 'expiring-package', // Modificato per distinguere i pacchetti in scadenza
-            typeId: pkg.id,
-            date: pkg.expiry_date,
-            student_id: pkg.student_ids?.[0] || null,
-            amount: parseFloat(pkg.package_cost || 0) - parseFloat(pkg.total_paid || 0), // Only the remaining amount
-            hours: parseFloat(pkg.total_hours || 0),
-            studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
-          }))
+          ...expiredPackagesData.map(pkg => {
+            // Calcola quanto è stato pagato usando packagePaymentsMap
+            const packagePayments = packagePaymentsMap[pkg.id] || [];
+            const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+            return {
+              id: `expired-${pkg.id}`,
+              type: 'expired-package',
+              typeId: pkg.id,
+              date: pkg.expiry_date,
+              student_id: pkg.student_ids?.[0] || null,
+              amount: Math.max(0, parseFloat(pkg.package_cost || 0) - totalPaid), // Usa totalPaid calcolato
+              hours: parseFloat(pkg.total_hours || 0),
+              studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+            };
+          }),
+          ...expiringPackagesData.map(pkg => {
+            // Calcola quanto è stato pagato usando packagePaymentsMap
+            const packagePayments = packagePaymentsMap[pkg.id] || [];
+            const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+            return {
+              id: `expiring-${pkg.id}`,
+              type: 'expiring-package',
+              typeId: pkg.id,
+              date: pkg.expiry_date,
+              student_id: pkg.student_ids?.[0] || null,
+              amount: Math.max(0, parseFloat(pkg.package_cost || 0) - totalPaid), // Usa totalPaid calcolato
+              hours: parseFloat(pkg.total_hours || 0),
+              studentName: students[pkg.student_ids?.[0]] || `Studente #${pkg.student_ids?.[0]}`
+            };
+          })
         ];
 
         setExpiredPackages(formattedExpiredPackages);
@@ -560,6 +577,8 @@ function PaymentCalendarPage() {
   };
 
   // Modifica della funzione handleConfirmPayment in PaymentCalendarPage.jsx
+  // Sostituisci COMPLETAMENTE la funzione handleConfirmPayment in PaymentCalendarPage.jsx
+
   const handleConfirmPayment = async () => {
     try {
       if (!selectedPaymentItem) return;
@@ -629,7 +648,7 @@ function PaymentCalendarPage() {
         studentName: students[lesson.student_id] || `Studente #${lesson.student_id}`
       }));
 
-      // Raccogli tutti i pagamenti di pacchetti nel periodo (AGGIORNATO)
+      // Raccogli tutti i pagamenti di pacchetti nel periodo
       const packagePaymentsInPeriod = [];
       packagesResponse.data.forEach(pkg => {
         const packageId = pkg.id;
@@ -724,11 +743,13 @@ function PaymentCalendarPage() {
 
       setUnpaidLessons(formattedUnpaidLessons);
 
-      // Aggiorna i pacchetti scaduti non pagati completamente
+      // *** QUI È LA CORREZIONE PRINCIPALE ***
+      // PACCHETTI SCADUTI - SOLO status === 'expired'
       const expiredPackagesData = packagesResponse.data.filter(pkg => {
-        if (pkg.status !== 'expired' && pkg.status !== 'in_progress') return false;
+        // SOLO pacchetti con status 'expired' (NON in_progress)
+        if (pkg.status !== 'expired') return false;
 
-        // Calcola quanto è stato pagato
+        // Calcola quanto è stato pagato usando packagePaymentsMap
         const packagePayments = packagePaymentsMap[pkg.id] || [];
         const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
 
@@ -739,12 +760,17 @@ function PaymentCalendarPage() {
         return pkg.expiry_date >= startDateStr && pkg.expiry_date <= endDateStr;
       });
 
-      // Also filter for packages expiring this week (still active)
+      // PACCHETTI IN SCADENZA - SOLO status === 'in_progress'
       const expiringPackagesData = packagesResponse.data.filter(pkg => {
         const expiryDate = parseISO(pkg.expiry_date);
+
+        // Calcola quanto è stato pagato usando packagePaymentsMap
+        const packagePayments = packagePaymentsMap[pkg.id] || [];
+        const totalPaid = packagePayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
         return (
-          pkg.total_paid < pkg.package_cost && // Not fully paid
-          pkg.status === 'in_progress' &&
+          totalPaid < parseFloat(pkg.package_cost || 0) && // Not fully paid
+          pkg.status === 'in_progress' && // SOLO pacchetti attivi
           isPackageExpiring(pkg) &&
           expiryDate >= monthStart && expiryDate <= monthEnd
         );

@@ -1139,8 +1139,7 @@ function PackageListPage() {
                       <TableCell
                         align="right"
                         sx={{
-                          fontWeight: parseFloat(pkg.total_paid) > 0 ? "bold" : "normal",
-                          color: parseFloat(pkg.total_paid) >= parseFloat(pkg.package_cost) ? "success.main" :
+                          color: parseFloat(pkg.total_paid) == parseFloat(pkg.package_cost) && parseFloat(pkg.package_cost) !== 0 ? "success.main" :
                             parseFloat(pkg.total_paid) > 0 ? "warning.main" : "text.secondary"
                         }}
                       >

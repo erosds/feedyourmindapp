@@ -554,7 +554,7 @@ function PackageFormPage() {
                           error={touched.total_hours && Boolean(errors.total_hours)}
                           helperText={
                             (touched.total_hours && errors.total_hours) ||
-                            (isEditMode ? `Ore già utilizzate: ${hoursUsed}` : '')
+                            (isEditMode ? `Ore già utilizzate: ${hoursUsed}` : 'Impostare 30 ore (o più) per pacchetto aperto')
                           }
                           inputProps={{
                             min: 0.5,
@@ -603,7 +603,7 @@ function PackageFormPage() {
                       onChange={handleChange}
                       onBlur={handleBlur}
                       error={touched.package_cost && Boolean(errors.package_cost)}
-                      helperText={(touched.package_cost && errors.package_cost) || "Il pacchetto sarà automaticamente segnato come pagato quando i pagamenti registrati raggiungeranno questo importo"}
+                      helperText={(touched.package_cost && errors.package_cost) || "Impostare 0 per pacchetto aperto"}
                       InputProps={{
                         startAdornment: <InputAdornment position="start">€</InputAdornment>,
                       }}

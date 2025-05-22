@@ -204,15 +204,30 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
         new Date(b.payment_date) - new Date(a.payment_date)
       )[0];
 
-      // Aggiorna il costo del pacchetto alla somma degli acconti e imposta come pagato
-      const updateData = {
+      // PRIMA: Aggiorna il costo del pacchetto alla somma degli acconti e imposta come pagato
+      const updateDataStep1 = {
         ...currentPackageData,
         package_cost: totalPaid,
         is_paid: true,
         payment_date: lastPayment ? lastPayment.payment_date : format(new Date(), 'yyyy-MM-dd')
       };
 
-      await packageService.update(packageId, updateData);
+      await packageService.update(packageId, updateDataStep1);
+
+      // Recupera nuovamente i dati del pacchetto dopo il primo aggiornamento
+      const updatedPackageResponse = await packageService.getById(packageId);
+      const updatedPackageData = updatedPackageResponse.data;
+
+      // Calcola le ore già svolte (total_hours - remaining_hours)
+      const hoursUsed = parseFloat(updatedPackageData.total_hours) - parseFloat(updatedPackageData.remaining_hours);
+
+      // SECONDA: Aggiorna le ore totali per far diventare il pacchetto completato
+      const updateDataStep2 = {
+        ...updatedPackageData,
+        total_hours: hoursUsed
+      };
+
+      await packageService.update(packageId, updateDataStep2);
 
       // Chiudi dialog e mostra messaggio di successo
       setConfirmDialogOpen(false);
@@ -509,10 +524,7 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
         <DialogTitle>Finalizza pacchetto</DialogTitle>
         <DialogContent>
           <Typography paragraph>
-            Stai per finalizzare questo pacchetto, impostando il prezzo totale pari alla somma degli acconti versati (€{totalPaid.toFixed(2)}).
-          </Typography>
-          <Typography>
-            Il pacchetto risulterà completamente pagato e non sarà più considerato "aperto". Confermi?
+            Stai per finalizzare questo pacchetto, impostando il prezzo totale pari alla somma degli acconti versati (€{totalPaid.toFixed(2)}) e le ore totali pari a quelle svolte.
           </Typography>
         </DialogContent>
         <DialogActions>
