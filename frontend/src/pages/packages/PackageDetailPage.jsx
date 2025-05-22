@@ -21,14 +21,10 @@ import {
   TableRow,
   Tooltip,
   Typography,
-  TextField,
-  InputAdornment
 } from '@mui/material';
 import {
   Edit as EditIcon,
   ArrowBack as ArrowBackIcon,
-  CheckCircle as CheckIcon,
-  Cancel as CancelIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { format, parseISO, isAfter, isEqual, differenceInDays, startOfWeek, addWeeks } from 'date-fns';
@@ -36,18 +32,19 @@ import { it } from 'date-fns/locale';
 import { packageService, studentService, lessonService } from '../../services/api';
 import PackageCalendar from '../../components/packages/PackageCalendar';
 import AddLessonDialog from '../../components/dashboard/AddLessonDialog';
-import { useAuth } from '../../context/AuthContext'; // Assicurati di importare useAuth
+import { useAuth } from '../../context/AuthContext';
 import getProfessorNameById from '../../utils/professorMapping';
 import PackageNotes from '../../components/packages/PackageNotes';
 import PackageCompletion from '../../components/packages/PackageCompletion';
 import PackagePayments from '../../components/packages/PackagePayments';
 
-
 function PackageDetailPage() {
   const { id } = useParams();
   const { currentUser, isAdmin } = useAuth();
-
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // States
   const [packageData, setPackageData] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [professors, setProfessors] = useState({});
@@ -56,63 +53,50 @@ function PackageDetailPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  // Aggiungi questi stati
   const [addLessonDialogOpen, setAddLessonDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
   const [students, setStudents] = useState([]);
   const [studentLessons, setStudentLessons] = useState([]);
-  // Modifiche al prezzo
-  const [isEditingPrice, setIsEditingPrice] = useState(false);
-  const [priceValue, setPriceValue] = useState(0);
+
   // Stato per il form della lezione
   const [lessonForm, setLessonForm] = useState({
     professor_id: currentUser?.id || '',
     student_id: '',
     lesson_date: new Date(),
-    start_time: new Date(new Date().setHours(14, 0, 0, 0)), // Default alle 14:00
+    start_time: new Date(new Date().setHours(14, 0, 0, 0)),
     duration: 1,
     is_package: true,
     package_id: null,
     hourly_rate: '12.5',
     is_paid: true,
-    payment_date: new Date(), // Default oggi
+    payment_date: new Date(),
   });
-  const location = useLocation();
 
   const handleBackToPackages = () => {
-    // Se c'è un URL di ritorno, usalo
     if (location.state?.returnUrl) {
       navigate(location.state.returnUrl);
     } else {
-      // Fallback al comportamento precedente
       navigate('/packages');
     }
   };
-
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        // Load package data
         const packageResponse = await packageService.getById(id);
         const packageData = packageResponse.data;
-
-        console.log("Package data loaded:", packageData);
         setPackageData(packageData);
 
-        // Make sure student_ids is an array
         const studentIds = Array.isArray(packageData.student_ids) ? packageData.student_ids : [];
 
         if (studentIds.length === 0) {
-          console.error("No student IDs found in package data");
           setError("Package data is incomplete. No students associated with this package.");
           setLoading(false);
           return;
         }
 
-        // Load details for all students in the package
         try {
           const studentPromises = studentIds.map(studentId =>
             studentService.getById(studentId)
@@ -122,10 +106,8 @@ function PackageDetailPage() {
           setStudents(studentsData);
         } catch (err) {
           console.error("Error loading students:", err);
-          // Continue even if we can't load student details
         }
 
-        // Set initial form data with the first student
         const firstStudentId = studentIds[0];
         setLessonForm(prev => ({
           ...prev,
@@ -134,23 +116,19 @@ function PackageDetailPage() {
           is_package: true
         }));
 
-        // Load lessons related to the package
         const lessonsResponse = await lessonService.getAll();
         const packageLessons = lessonsResponse.data.filter(
           lesson => lesson.package_id === parseInt(id) && lesson.is_package
         );
         setLessons(packageLessons);
 
-        // Load student lessons for overlap checks (use first student)
         try {
           const studentLessonsResponse = await lessonService.getByStudent(firstStudentId);
           setStudentLessons(studentLessonsResponse.data);
         } catch (err) {
           console.error("Error loading student lessons:", err);
-          // Continue even if we can't load student lessons
         }
 
-        // Set current month to the month of the first lesson or today if no lessons
         if (packageLessons.length > 0) {
           setCurrentMonth(parseISO(packageLessons[0].lesson_date));
         }
@@ -166,7 +144,6 @@ function PackageDetailPage() {
     fetchData();
   }, [id]);
 
-  // Funzione per gestire il click su un giorno del calendario
   const handleDayClick = (day) => {
     setSelectedDay(day);
     setLessonForm(prev => ({
@@ -181,24 +158,14 @@ function PackageDetailPage() {
   };
 
   const handleNotesUpdate = (updatedNotes) => {
-    // Use functional update to ensure we're working with the most recent state
-    setPackageData(prevData => {
-      // Create a new object with updated notes
-      const newData = {
-        ...prevData,
-        notes: updatedNotes,
-        student_ids: prevData.student_ids
-      };
-
-      // Optional: Log to help debug
-      console.log('Package data updated with new notes:', newData);
-
-      return newData;
-    });
+    setPackageData(prevData => ({
+      ...prevData,
+      notes: updatedNotes,
+      student_ids: prevData.student_ids
+    }));
   };
 
   const handleDeleteLesson = async (lesson, event) => {
-    // Previeni la navigazione quando si clicca sul pulsante di eliminazione
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -206,16 +173,10 @@ function PackageDetailPage() {
 
     if (window.confirm(`Sei sicuro di voler eliminare la lezione #${lesson.id}? Questa azione non può essere annullata.`)) {
       try {
-        // Chiama l'API per eliminare la lezione
         await lessonService.delete(lesson.id);
-
-        // Aggiorna lo stato delle lezioni rimuovendo la lezione eliminata
         setLessons(prevLessons => prevLessons.filter(l => l.id !== lesson.id));
-
-        // Ricarica i dati del pacchetto per aggiornare le ore rimanenti
         const packageResponse = await packageService.getById(id);
         setPackageData(packageResponse.data);
-
         alert('La lezione è stata eliminata con successo.');
       } catch (err) {
         console.error('Error deleting lesson:', err);
@@ -224,15 +185,11 @@ function PackageDetailPage() {
     }
   };
 
-  // Funzione per calcolare le ore disponibili nel pacchetto
   const calculatePackageHours = (packageId, totalHours) => {
     if (!packageId || !totalHours) return { usedHours: 0, availableHours: 0 };
 
-    // Calcola la somma delle ore di lezione già usate in questo pacchetto
     const usedHours = lessons.reduce((total, lesson) =>
       total + parseFloat(lesson.duration), 0);
-
-    // Calcola le ore disponibili
     const availableHours = parseFloat(totalHours) - usedHours;
 
     return {
@@ -241,25 +198,6 @@ function PackageDetailPage() {
     };
   };
 
-  const handleEditPrice = () => {
-    setPriceValue(parseFloat(packageData.package_cost || 0));
-    setIsEditingPrice(true);
-  };
-
-  const handleSavePrice = async () => {
-    try {
-      await packageService.update(id, { package_cost: priceValue });
-      // Reload package data
-      const response = await packageService.getById(id);
-      setPackageData(response.data);
-      setIsEditingPrice(false);
-    } catch (err) {
-      console.error('Error updating price:', err);
-      alert('Errore durante l\'aggiornamento del prezzo. Riprova più tardi.');
-    }
-  };
-
-  // Funzione per aggiornare le lezioni dopo un'aggiunta
   const updateLessons = async () => {
     try {
       const lessonsResponse = await lessonService.getAll();
@@ -268,7 +206,6 @@ function PackageDetailPage() {
       );
       setLessons(packageLessons);
 
-      // Aggiorna anche i dati del pacchetto per riflettere le ore aggiornate
       const packageResponse = await packageService.getById(id);
       setPackageData(packageResponse.data);
     } catch (err) {
@@ -278,22 +215,15 @@ function PackageDetailPage() {
 
   const isPackageExpiring = (pkg) => {
     const expiryDate = parseISO(pkg.expiry_date);
-
-    // Ottieni il lunedì della settimana corrente
     const today = new Date();
-    const dayOfWeek = today.getDay() || 7; // 0 per domenica, trasformato in 7
+    const dayOfWeek = today.getDay() || 7;
     const mondayThisWeek = new Date(today);
-    mondayThisWeek.setDate(today.getDate() - dayOfWeek + 1); // Lunedì della settimana corrente
-    mondayThisWeek.setHours(0, 0, 0, 0); // Inizio della giornata
-
-    // Ottieni il lunedì della settimana prossima (7 giorni dopo)
+    mondayThisWeek.setDate(today.getDate() - dayOfWeek + 1);
+    mondayThisWeek.setHours(0, 0, 0, 0);
     const mondayNextWeek = new Date(mondayThisWeek);
     mondayNextWeek.setDate(mondayThisWeek.getDate() + 7);
-
-    // Controlla se scade tra lunedì di questa settimana e lunedì della prossima
     return expiryDate > mondayThisWeek && expiryDate <= mondayNextWeek;
   };
-
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -308,17 +238,13 @@ function PackageDetailPage() {
     navigate(`/packages/edit/${id}`);
   };
 
-
   const handleExtendPackage = async () => {
     try {
       await packageService.extendPackage(id);
-      // Ricarica i dati del pacchetto
       const packageResponse = await packageService.getById(id);
       setPackageData(packageResponse.data);
     } catch (err) {
       console.error('Error extending package:', err);
-
-      // Handle specific error about future packages
       if (err.response?.status === 400 && err.response?.data?.detail) {
         alert(err.response.data.detail);
       } else {
@@ -327,30 +253,21 @@ function PackageDetailPage() {
     }
   };
 
-  // Funzione per verificare se un pacchetto è estendibile
   const isPackageExtendable = (pkg) => {
     if (!pkg) return false;
-
-    // Se il pacchetto non ha ore rimanenti, non è estendibile
     if (parseFloat(pkg.remaining_hours) <= 0) return false;
-
     const startDate = parseISO(pkg.start_date);
-    // Calcola il lunedì della prima settimana
     const mondayWeek1 = startOfWeek(startDate, { weekStartsOn: 1 });
-    // Calcola il lunedì della quarta settimana
     const mondayWeek4 = addWeeks(mondayWeek1, 3);
-    // Il pacchetto è estendibile se la data odierna è dopo o uguale al lunedì della quarta settimana
     return isAfter(new Date(), mondayWeek4) || isEqual(new Date(), mondayWeek4);
   };
 
   const handleCancelExtension = async () => {
     try {
-      // Calcola la settimana di estensione
       const expiryDate = parseISO(packageData.expiry_date);
       const lastWeekStart = new Date(expiryDate);
-      lastWeekStart.setDate(lastWeekStart.getDate() - 7); // 1 settimana prima della scadenza
+      lastWeekStart.setDate(lastWeekStart.getDate() - 7);
 
-      // Controlla se ci sono lezioni nella settimana da rimuovere
       const hasLessonsInLastWeek = lessons.some(lesson => {
         const lessonDate = parseISO(lesson.lesson_date);
         return lessonDate > lastWeekStart && lessonDate <= expiryDate;
@@ -361,7 +278,6 @@ function PackageDetailPage() {
         return;
       }
 
-      // Solo se non ci sono lezioni, prosegui con la cancellazione dell'estensione
       await packageService.cancelExtension(id);
       const packageResponse = await packageService.getById(id);
       setPackageData(packageResponse.data);
@@ -371,23 +287,19 @@ function PackageDetailPage() {
     }
   };
 
-
   const handleDeletePackage = async () => {
     try {
       let confirmMessage = `Sei sicuro di voler eliminare il pacchetto #${id}?`;
 
-      // Se ci sono lezioni associate, avvisa l'utente che verranno eliminate anche quelle
       if (lessons.length > 0) {
         confirmMessage += `\n\nATTENZIONE: Questo pacchetto contiene ${lessons.length} lezioni che verranno eliminate:`;
 
-        // Aggiungi informazioni sulle prime 5 lezioni
         const maxLessonsToShow = 5;
         lessons.slice(0, maxLessonsToShow).forEach(lesson => {
           const lessonDate = format(parseISO(lesson.lesson_date), 'dd/MM/yyyy', { locale: it });
           confirmMessage += `\n- Lezione #${lesson.id} del ${lessonDate} (${lesson.duration} ore)`;
         });
 
-        // Se ci sono più di 5 lezioni, indica che ce ne sono altre
         if (lessons.length > maxLessonsToShow) {
           confirmMessage += `\n...e altre ${lessons.length - maxLessonsToShow} lezioni`;
         }
@@ -396,15 +308,48 @@ function PackageDetailPage() {
       confirmMessage += "\n\nQuesta azione non può essere annullata.";
 
       if (window.confirm(confirmMessage)) {
-        const response = await packageService.delete(id);
-
-        // Naviga alla lista dei pacchetti
+        await packageService.delete(id);
         navigate('/packages');
       }
     } catch (err) {
       console.error('Errore nell\'eliminazione del pacchetto:', err);
       alert('Errore nell\'eliminazione del pacchetto. Riprova più tardi.');
     }
+  };
+
+  const calculateWeeklyLessons = () => {
+    const theoreticalHoursPerWeek = totalHours / 4;
+
+    if (lessons.length === 0) return { weeklyLessons: [0, 0, 0, 0], extraHours: 0 };
+
+    const weeklyLessons = [0, 0, 0, 0];
+    let extraHours = 0;
+    let hoursBeforeStart = 0;
+
+    const packageStartDate = parseISO(packageData.start_date);
+
+    lessons.forEach(lesson => {
+      const lessonDate = parseISO(lesson.lesson_date);
+      const daysDiff = differenceInDays(lessonDate, packageStartDate);
+
+      if (daysDiff < 28) {
+        const weekIndex = Math.min(3, Math.floor(daysDiff / 7));
+        if (weekIndex >= 0) {
+          weeklyLessons[weekIndex] += parseFloat(lesson.duration);
+        } else {
+          hoursBeforeStart += parseFloat(lesson.duration);
+        }
+      } else {
+        extraHours += parseFloat(lesson.duration);
+      }
+    });
+
+    return {
+      weeklyLessons,
+      extraHours,
+      theoreticalHoursPerWeek,
+      hoursBeforeStart,
+    };
   };
 
   if (loading) {
@@ -431,59 +376,8 @@ function PackageDetailPage() {
     );
   }
 
-  // Calculate package statistics
   const remainingHours = parseFloat(packageData.remaining_hours);
   const totalHours = parseFloat(packageData.total_hours);
-
-  // Aggiungi questa funzione che calcola le ore per settimana
-  const calculateWeeklyLessons = () => {
-    // Considera teoriche le ore totali diviso 4 settimane
-    const theoreticalHoursPerWeek = totalHours / 4;
-
-    // Solo se abbiamo lezioni
-    if (lessons.length === 0) return { weeklyLessons: [0, 0, 0, 0], extraHours: 0 };
-
-    // Inizializza gli array per le lezioni settimanali e ore extra
-    const weeklyLessons = [0, 0, 0, 0]; // Ore per settimana (4 settimane)
-    let extraHours = 0; // Ore extra oltre le 4 settimane
-
-    let hoursBeforeStart = 0;
-
-
-    // Calcola le settimane dal pacchetto
-    const packageStartDate = parseISO(packageData.start_date);
-
-    lessons.forEach(lesson => {
-      const lessonDate = parseISO(lesson.lesson_date);
-      // Calcola la differenza in giorni tra la data della lezione e l'inizio del pacchetto
-      const daysDiff = differenceInDays(lessonDate, packageStartDate);
-
-      // Se è entro le prime 4 settimane (28 giorni)
-      if (daysDiff < 28) {
-        // Determina in quale settimana cade (0-6 giorni = settimana 1, 7-13 = settimana 2, ecc.)
-        const weekIndex = Math.min(3, Math.floor(daysDiff / 7));
-        // Aggiungi le ore della lezione alla settimana corrispondente
-        if (weekIndex >= 0) {
-          weeklyLessons[weekIndex] += parseFloat(lesson.duration);
-        } else {
-          hoursBeforeStart += parseFloat(lesson.duration);
-        }
-      } else {
-        // Se la lezione è oltre le 4 settimane, aggiungi alle ore extra
-        extraHours += parseFloat(lesson.duration);
-      }
-    });
-
-    return {
-      weeklyLessons,
-      extraHours,
-      theoreticalHoursPerWeek,
-      hoursBeforeStart,
-    };
-  };
-
-
-  // Check if package is expired
   const expiryDate = parseISO(packageData.expiry_date);
   const isExpired = isAfter(new Date(), expiryDate);
 
@@ -517,7 +411,6 @@ function PackageDetailPage() {
             Modifica
           </Button>
 
-          {/* Pulsante per annullare l'estensione, visibile solo se ci sono estensioni */}
           {packageData.extension_count > 0 && (
             <Button
               variant="outlined"
@@ -529,7 +422,6 @@ function PackageDetailPage() {
             </Button>
           )}
 
-          {/* Aggiungi questo pulsante per l'estensione solo se il pacchetto è scaduto e ha ore rimanenti */}
           {isPackageExtendable(packageData) && (
             <Button
               variant="outlined"
@@ -552,20 +444,21 @@ function PackageDetailPage() {
         </Box>
       </Box>
 
-      {/* Main data */}
+      {/* Layout a due colonne */}
       <Grid container spacing={1}>
-        {/* PRIMO BLOCCO: Informazioni + Calendario/Annotazioni */}
-        <Grid container item xs={12} spacing={1}>
-          {/* Colonna sinistra: Informazioni pacchetto */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography variant="h6" color="primary">
+        {/* COLONNA SINISTRA: Informazioni + Pagamenti */}
+        <Grid item xs={12} md={6}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {/* Informazioni pacchetto */}
+            <Card>
+              <CardContent>
+                <Typography variant="h6" color="primary" gutterBottom>
                   Informazioni pacchetto
                 </Typography>
-                <Grid container spacing={2} sx={{ mt: 1 }}>
-                  {/* Left Column */}
-                  <Grid item xs={12} md={5}>
+                
+                <Grid container spacing={2}>
+                  {/* Studente/i */}
+                  <Grid item xs={5}>
                     <Typography variant="body2" color="text.secondary">
                       Studente/i
                     </Typography>
@@ -591,7 +484,8 @@ function PackageDetailPage() {
                     </Box>
                   </Grid>
 
-                  <Grid item xs={12} md={3}>
+                  {/* Stato e Pagamento */}
+                  <Grid item xs={4}>
                     <Typography variant="body2" color="text.secondary">
                       Stato
                     </Typography>
@@ -599,8 +493,7 @@ function PackageDetailPage() {
                       label={
                         packageData.status === 'in_progress' ? 'In corso' :
                           packageData.status === 'completed' ? 'Completato' :
-                            packageData.status === 'expired' ? 'Scaduto' :
-                              'In corso'
+                            packageData.status === 'expired' ? 'Scaduto' : 'In corso'
                       }
                       color={
                         packageData.status === 'in_progress'
@@ -615,55 +508,51 @@ function PackageDetailPage() {
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={3}>
+                  <Grid item xs={3}>
                     <Typography variant="body2" color="text.secondary">
                       Pagamento
                     </Typography>
                     {packageData.is_paid ? (
-                      <Typography variant="body1" fontWeight="medium" color="success.main">
+                      <Chip
+                        label="Saldato"
+                        color="success"
+                        size="small"
+                        variant="outlined"
+                      />
+                    ) : (
+                      parseFloat(packageData.total_paid) > 0 ? (
                         <Chip
-                          label="Saldato"
-                          color="success"
+                          label="Acconto"
+                          color="warning"
                           size="small"
                           variant="outlined"
                         />
-                      </Typography>
-                    ) : (
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        {parseFloat(packageData.total_paid) > 0 ? (
-                          <Chip
-                            label="Acconto"
-                            color="warning"
-                            size="small"
-                            variant="outlined"
-                          />
-                        ) : (
-                          <Chip
-                            label="Non pagato"
-                            color="error"
-                            size="small"
-                            variant="outlined"
-                          />
-                        )}
-                      </Box>
+                      ) : (
+                        <Chip
+                          label="Non pagato"
+                          color="error"
+                          size="small"
+                          variant="outlined"
+                        />
+                      )
                     )}
                   </Grid>
 
-                  {/* Dates and times */}
                   <Grid item xs={12}>
                     <Divider />
                   </Grid>
 
-                  <Grid item xs={12} md={5}>
+                  {/* Date */}
+                  <Grid item xs={5}>
                     <Typography variant="body2" color="text.secondary">
                       Data di inizio
                     </Typography>
-                    <Typography variant="body1" fontWeight="medium" gutterBottom>
-                      {format(parseISO(packageData.start_date), 'EEEE dd MMMM yyyy', { locale: it })}
+                    <Typography variant="body1" fontWeight="medium">
+                      {format(parseISO(packageData.start_date), 'dd/MM/yyyy', { locale: it })}
                     </Typography>
                   </Grid>
 
-                  <Grid item xs={12} md={3}>
+                  <Grid item xs={4}>
                     <Typography variant="body2" color="text.secondary">
                       Data di scadenza
                     </Typography>
@@ -671,9 +560,8 @@ function PackageDetailPage() {
                       variant="body1"
                       fontWeight="medium"
                       color={isExpired ? "error.main" : "inherit"}
-                      gutterBottom
                     >
-                      {format(parseISO(packageData.expiry_date), 'dd MMMM yyyy', { locale: it })}
+                      {format(parseISO(packageData.expiry_date), 'dd/MM/yyyy', { locale: it })}
                       {packageData.extension_count > 0 && (
                         <Chip
                           label={`+${packageData.extension_count}`}
@@ -685,7 +573,7 @@ function PackageDetailPage() {
                     </Typography>
                   </Grid>
 
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={3}>
                     <Typography variant="body2" color="text.secondary">
                       Data saldo
                     </Typography>
@@ -693,7 +581,7 @@ function PackageDetailPage() {
                       <Typography variant="body1" fontWeight="medium">
                         {packageData.payment_date ?
                           format(parseISO(packageData.payment_date), 'dd/MM/yyyy', { locale: it }) :
-                          'Non ancora saldato'}
+                          '-'}
                       </Typography>
                     ) : (
                       <Typography variant="body2" color="text.secondary" fontStyle="italic">
@@ -705,12 +593,11 @@ function PackageDetailPage() {
                   <Grid item xs={12}>
                     <Divider />
                   </Grid>
-                  <Grid item xs={12}>
-                    {/* Nuovo componente per la visualizzazione del completamento */}
-                    {(() => {
-                      // Calcola dati settimanali per il nuovo componente
-                      const weeklyData = calculateWeeklyLessons();
 
+                  {/* Completamento pacchetto */}
+                  <Grid item xs={12}>
+                    {(() => {
+                      const weeklyData = calculateWeeklyLessons();
                       return (
                         <PackageCompletion
                           totalHours={totalHours}
@@ -724,17 +611,33 @@ function PackageDetailPage() {
                 </Grid>
               </CardContent>
             </Card>
-          </Grid>
 
-          {/* Colonna destra: Calendario + Annotazioni */}
-          <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column' }}>
-            {/* Calendario lezioni - occupa più spazio */}
-            <Card sx={{ mb: 1, flex: '2' }}>
+            {/* Pagamenti pacchetto */}
+            <PackagePayments
+              packageId={packageData.id}
+              packageData={packageData}
+              onPaymentsUpdate={async () => {
+                try {
+                  const packageResponse = await packageService.getById(id);
+                  setPackageData(packageResponse.data);
+                } catch (err) {
+                  console.error('Error refreshing package data:', err);
+                }
+              }}
+            />
+          </Box>
+        </Grid>
+
+        {/* COLONNA DESTRA: Calendario + Annotazioni + Lista Lezioni */}
+        <Grid item xs={12} md={6}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {/* Calendario lezioni */}
+            <Card>
               <CardContent>
-                <Typography variant="h6" color="primary">
+                <Typography variant="h6" color="primary" gutterBottom>
                   Calendario lezioni
                 </Typography>
-                <Typography variant="body2" color="text.secondary" mb={1} fontStyle={'italic'}>
+                <Typography variant="body2" color="text.secondary" mb={2} fontStyle={'italic'}>
                   Clicca su un giorno per aggiungere una lezione
                 </Typography>
                 <PackageCalendar
@@ -747,53 +650,42 @@ function PackageDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Annotazioni pacchetto - occupa meno spazio */}
-            <Box sx={{ flex: '1' }}>
-              <PackageNotes
-                packageId={packageData.id}
-                initialNotes={packageData.notes}
-                onNotesUpdate={handleNotesUpdate}
-              />
-            </Box>
-          </Grid>
-        </Grid>
+            {/* Annotazioni pacchetto */}
+            <PackageNotes
+              packageId={packageData.id}
+              initialNotes={packageData.notes}
+              onNotesUpdate={handleNotesUpdate}
+            />
 
-        {/* SECONDO BLOCCO: Lezioni + Pagamenti */}
-        <Grid container item xs={12} spacing={1}>
-          {/* Colonna sinistra: Lezioni del pacchetto */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6" color="primary">
-                  Lezioni pacchetto
-                </Typography>
-              </Box>
+            {/* Lista lezioni del pacchetto */}
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" color="primary" gutterBottom>
+                Lezioni pacchetto ({lessons.length})
+              </Typography>
 
               {lessons.length === 0 ? (
                 <Typography align="center" color="text.secondary" sx={{ py: 3 }}>
                   Nessuna lezione ancora caricata
                 </Typography>
               ) : (
-                <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                  <TableContainer sx={{ flexGrow: 1 }}>
-                    <Table>
+                <Box>
+                  <TableContainer sx={{ maxHeight: 400 }}>
+                    <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell>ID</TableCell>
                           <TableCell>Data</TableCell>
                           {packageData.student_ids.length > 1 && (
                             <TableCell>Studente</TableCell>
                           )}
-                          <TableCell>Professore</TableCell>
-                          <TableCell>Durata (ore)</TableCell>
-                          <TableCell>Compenso Orario</TableCell>
-                          <TableCell>Totale</TableCell>
+                          <TableCell>Prof.</TableCell>
+                          <TableCell>Ore</TableCell>
+                          <TableCell>€</TableCell>
                           <TableCell align="right">Azioni</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {lessons
-                          .sort((a, b) => new Date(b.lesson_date) - new Date(a.lesson_date)) // Ordina dalla più recente alla meno recente
+                          .sort((a, b) => new Date(b.lesson_date) - new Date(a.lesson_date))
                           .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                           .map((lesson) => (
                             <TableRow
@@ -806,25 +698,22 @@ function PackageDetailPage() {
                                 cursor: 'pointer',
                               }}
                             >
-                              <TableCell>#{lesson.id}</TableCell>
                               <TableCell>
-                                {format(parseISO(lesson.lesson_date), 'EEEE dd/MM/yyyy', { locale: it })}
+                                {format(parseISO(lesson.lesson_date), 'dd/MM', { locale: it })}
                               </TableCell>
                               {packageData.student_ids.length > 1 && (
                                 <TableCell>
                                   {students.find(s => s.id === lesson.student_id)
-                                    ? `${students.find(s => s.id === lesson.student_id).first_name} ${students.find(s => s.id === lesson.student_id).last_name}`
-                                    : `Studente #${lesson.student_id}`}
+                                    ? `${students.find(s => s.id === lesson.student_id).first_name} ${students.find(s => s.id === lesson.student_id).last_name.charAt(0)}.`
+                                    : `#${lesson.student_id}`}
                                 </TableCell>
                               )}
                               <TableCell>
                                 {getProfessorNameById(lesson.professor_id)}
                               </TableCell>
                               <TableCell>{lesson.duration}</TableCell>
-                              <TableCell>€{parseFloat(lesson.hourly_rate).toFixed(2)}</TableCell>
-                              <TableCell>€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>
+                              <TableCell>€{parseFloat(lesson.total_payment).toFixed(0)}</TableCell>
                               <TableCell align="right">
-                                {/* Mostra il pulsante Elimina solo se l'utente è admin o è il professore della lezione */}
                                 {(isAdmin() || currentUser.id === lesson.professor_id) && (
                                   <Tooltip title="Elimina">
                                     <IconButton
@@ -832,7 +721,7 @@ function PackageDetailPage() {
                                       onClick={(e) => handleDeleteLesson(lesson, e)}
                                       size="small"
                                     >
-                                      <DeleteIcon />
+                                      <DeleteIcon fontSize="small" />
                                     </IconButton>
                                   </Tooltip>
                                 )}
@@ -843,40 +732,29 @@ function PackageDetailPage() {
                       </TableBody>
                     </Table>
                   </TableContainer>
-                  <TablePagination
-                    rowsPerPageOptions={[5, 10, 25]}
-                    component="div"
-                    count={lessons.length}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    labelRowsPerPage="Righe per pagina:"
-                    labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
-                  />
+                  
+                  {lessons.length > rowsPerPage && (
+                    <TablePagination
+                      rowsPerPageOptions={[5, 10, 25]}
+                      component="div"
+                      count={lessons.length}
+                      rowsPerPage={rowsPerPage}
+                      page={page}
+                      onPageChange={handleChangePage}
+                      onRowsPerPageChange={handleChangeRowsPerPage}
+                      labelRowsPerPage="Righe:"
+                      labelDisplayedRows={({ from, to, count }) => `${from}-${to} di ${count}`}
+                      size="small"
+                    />
+                  )}
                 </Box>
               )}
             </Paper>
-          </Grid>
-
-          {/* Colonna destra: Pagamenti pacchetto */}
-          <Grid item xs={12} md={6}>
-            <PackagePayments
-              packageId={packageData.id}
-              packageData={packageData}
-              onPaymentsUpdate={async () => {
-                // Ricarica i dati del pacchetto quando i pagamenti vengono aggiornati
-                try {
-                  const packageResponse = await packageService.getById(id);
-                  setPackageData(packageResponse.data);
-                } catch (err) {
-                  console.error('Error refreshing package data:', err);
-                }
-              }}
-            />
-          </Grid>
+          </Box>
         </Grid>
       </Grid>
+
+      {/* Dialog per aggiungere lezione */}
       <AddLessonDialog
         open={addLessonDialogOpen}
         onClose={() => setAddLessonDialogOpen(false)}
@@ -884,18 +762,18 @@ function PackageDetailPage() {
         lessonForm={lessonForm}
         setLessonForm={setLessonForm}
         students={students}
-        studentPackages={[packageData]} // Passa solo il pacchetto corrente
+        studentPackages={[packageData]}
         selectedPackage={packageData}
         formError={null}
         formSubmitting={false}
-        handlePackageChange={() => { }} // Funzione vuota perché il pacchetto è fisso
+        handlePackageChange={() => {}}
         calculatePackageHours={calculatePackageHours}
         currentUser={currentUser}
         selectedProfessor={null}
         updateLessons={updateLessons}
         lessons={studentLessons}
-        context="packageDetail" // Specifica il contesto
-        fixedPackageId={parseInt(id)} // Passa l'ID del pacchetto fisso
+        context="packageDetail"
+        fixedPackageId={parseInt(id)}
       />
     </Box>
   );

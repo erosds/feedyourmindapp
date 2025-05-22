@@ -227,7 +227,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
             {totalHours.toFixed(1)}
           </Typography>
         </Grid>
-        <Grid item xs={3}>
+        <Grid item xs={4}>
           <Typography variant="subtitle2" color="text.secondary">
             Ore utilizzate
           </Typography>
@@ -235,7 +235,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
             {totalUsedHours.toFixed(1)}
           </Typography>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={3}>
           <Typography variant="subtitle2" color="text.secondary">
             Ore rimanenti
           </Typography>
