@@ -82,7 +82,7 @@ function PaymentRemindersCard({
     <Card>
       <CardContent>
         <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6">Reminder Pagamenti</Typography>
+          <Typography variant="h6" color='primary'>Reminder Pagamenti</Typography>
           <IconButton color="primary" onClick={handleOpen}>
             <AddIcon />
           </IconButton>

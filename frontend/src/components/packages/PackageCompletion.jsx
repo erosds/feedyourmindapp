@@ -155,57 +155,53 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
 
   if (isOpenPackage) {
     return (
-      <Box>
-        <Box sx={{ mb: 2, position: 'relative', width: '100%', height: '16px' }}>
-          {/* Testo esplicativo sopra la barra */}
+      <Box sx={{ px: 2, py: 1 }}>
+        <Box sx={{ mb: 1, position: 'relative' }}>
           <Typography
             variant="caption"
             color="primary.main"
-            sx={{
-              position: 'absolute',
-              fontWeight: 'medium'
-            }}
+            sx={{ fontWeight: 'medium' }}
           >
             Pacchetto aperto
           </Typography>
         </Box>
-        {/* Barra con sfumatura per pacchetto aperto */}
-        <Box sx={{ position: 'relative', width: '100%' }}>
+
+        <Box sx={{ position: 'relative', height: '20px' }}>
           {/* Barra base grigia sfumata */}
           <Box sx={{
             position: 'absolute',
             width: '100%',
             height: '16px',
-            borderRadius: '8px',
-            top: '22px',
+            borderRadius: '2px',
             background: 'linear-gradient(90deg, rgba(240,240,240,1) 0%, rgba(240,240,240,1) 70%, rgba(240,240,240,0.2) 100%)'
           }} />
 
-          {/* Barra colorata solida che avanza */}
+          {/* Barra colorata solida */}
           <Box sx={{
             position: 'absolute',
             width: totalUsedHours > 0 ? `${Math.min(75, totalUsedHours * 4)}%` : '2%',
             height: '16px',
-            borderRadius: '8px',
-            top: '22px',
+            borderRadius: '2px',
             bgcolor: 'primary.main',
             transition: 'width 0.5s ease-in-out'
           }} />
 
-          {/* Indicatore di ore utilizzate sulla barra */}
+          {/* Indicatore */}
           <Box sx={{
             position: 'absolute',
-            left: totalUsedHours > 0 ? `${Math.min(73, totalUsedHours * 4.1)}%` : '2%',
-            top: '20px',
+            left: totalUsedHours > 0 ? `${Math.min(75, totalUsedHours * 4)}%` : '2%',
+            top: '40%',
+            transform: 'translateY(-50%)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            ml: 1,
           }}>
+
             <Typography
               variant="caption"
               fontWeight="bold"
               sx={{ color: 'primary.main' }}
+              ml={0.5}
             >
               {totalUsedHours.toFixed(1)}h
             </Typography>

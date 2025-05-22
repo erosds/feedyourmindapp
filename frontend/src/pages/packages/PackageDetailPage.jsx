@@ -660,7 +660,7 @@ function PackageDetailPage() {
             {/* Lista lezioni del pacchetto */}
             <Paper sx={{ p: 2 }}>
               <Typography variant="h6" color="primary" gutterBottom>
-                Lezioni pacchetto ({lessons.length})
+                Lezioni pacchetto
               </Typography>
 
               {lessons.length === 0 ? (
@@ -679,7 +679,7 @@ function PackageDetailPage() {
                           )}
                           <TableCell>Prof.</TableCell>
                           <TableCell>Ore</TableCell>
-                          <TableCell>€</TableCell>
+                          <TableCell>Compenso</TableCell>
                           <TableCell align="right">Azioni</TableCell>
                         </TableRow>
                       </TableHead>
@@ -699,7 +699,7 @@ function PackageDetailPage() {
                               }}
                             >
                               <TableCell>
-                                {format(parseISO(lesson.lesson_date), 'dd/MM', { locale: it })}
+                                {format(parseISO(lesson.lesson_date), 'dd/MM/yy', { locale: it })}
                               </TableCell>
                               {packageData.student_ids.length > 1 && (
                                 <TableCell>
@@ -712,7 +712,7 @@ function PackageDetailPage() {
                                 {getProfessorNameById(lesson.professor_id)}
                               </TableCell>
                               <TableCell>{lesson.duration}</TableCell>
-                              <TableCell>€{parseFloat(lesson.total_payment).toFixed(0)}</TableCell>
+                              <TableCell>€{parseFloat(lesson.total_payment).toFixed(2)}</TableCell>
                               <TableCell align="right">
                                 {(isAdmin() || currentUser.id === lesson.professor_id) && (
                                   <Tooltip title="Elimina">

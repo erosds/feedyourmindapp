@@ -52,7 +52,7 @@ function ProfessorWeeklyTable({
   return (
     <Paper sx={{ p: 2, height: '100%', mb: 2 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6">
+        <Typography variant="h6" color='primary'>
           {tableTitle}
         </Typography>
         <Box display="flex" alignItems="center">
