@@ -71,7 +71,7 @@ const PackageCalendar = ({ lessons, professors, onDayClick, expiryDate, startDat
   const packageStartDate = startDate ? parseISO(startDate) : null;
 
   return (
-    <Box sx={{ position: 'relative', overflow: 'visible' }}>
+    <Box sx={{ position: 'relative', overflow: 'visible' , mb: 3 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
         <IconButton size="small" onClick={() => changeMonth(-1)}>
           <ArrowBackIcon fontSize="small" />

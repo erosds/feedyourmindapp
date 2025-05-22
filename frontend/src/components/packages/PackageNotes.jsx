@@ -108,7 +108,7 @@ const PackageNotes = ({ packageId, initialNotes, onNotesUpdate }) => {
           <TextField
             fullWidth
             multiline
-            rows={3}
+            rows={1}
             variant="outlined"
             placeholder="Aggiungi qui le tue annotazioni sul pacchetto (es. informazioni sui pagamenti parziali, richieste specifiche, etc.)"
             value={notes}

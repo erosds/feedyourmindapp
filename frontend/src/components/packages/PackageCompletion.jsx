@@ -114,109 +114,6 @@ const ProgressArc = ({ value, max, label, index, isExtra = false }) => {
   );
 };
 
-// Un anello che rappresenta un pacchetto aperto
-const OpenPackageRing = ({ totalHours, usedHours }) => {
-  // Percentuale di utilizzo
-  const percentage = Math.min(100, (usedHours / totalHours) * 100);
-
-  // Determina il colore in base al completamento
-  const color = '#7986cb'; // Usa un colore consistente per i pacchetti aperti
-
-  // Raggio dell'anello
-  const radius = 40;
-  // Spessore dell'anello
-  const strokeWidth = 8;
-  // Circonferenza del cerchio
-  const circumference = 2 * Math.PI * radius;
-  // Angolo di apertura (in radianti)
-  const openingAngle = (Math.PI / 2);
-  // Angolo iniziale (in radianti)
-  const startAngle = (-Math.PI * 5 / 4);
-
-  // Calcola l'arco da disegnare (tenendo conto dell'apertura)
-  const arcAngle = (2 * Math.PI) - openingAngle;
-  // Lunghezza dell'arco
-  const arcLength = circumference * (arcAngle / (2 * Math.PI));
-  // Quanto dell'arco è colorato in base al progresso
-  const strokeDasharray = `${arcLength * (percentage / 100)} ${arcLength}`;
-
-  // Calcola punti di inizio e fine dell'arco
-  const startX = 50 + radius * Math.cos(startAngle);
-  const startY = 50 + radius * Math.sin(startAngle);
-  const endX = 50 + radius * Math.cos(startAngle + arcAngle);
-  const endY = 50 + radius * Math.sin(startAngle + arcAngle);
-
-  // Flag per determinare se l'arco è grande o piccolo
-  const largeArcFlag = arcAngle > Math.PI ? 1 : 0;
-
-  // Percorso SVG per l'arco
-  const path = `
-    M ${startX},${startY}
-    A ${radius},${radius} 0 ${largeArcFlag},1 ${endX},${endY}
-  `;
-
-  return (
-    <div
-      className="progress-arc-wrapper"
-      title={`Pacchetto aperto: ${usedHours.toFixed(1)} di ${totalHours.toFixed(1)} ore - ${percentage.toFixed(0)}% utilizzato`}
-      style={{
-        position: 'relative',
-        width: 100,
-        height: 100,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column'
-      }}
-    >
-      <svg width="100" height="100" viewBox="0 0 100 100">
-        {/* Sfondo grigio dell'arco */}
-        <path
-          d={path}
-          fill="none"
-          stroke="#e0e0e0"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-        />
-        {/* Arco colorato che rappresenta il progresso */}
-        <path
-          d={path}
-          fill="none"
-          stroke={color}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={strokeDasharray}
-          strokeDashoffset="0"
-        />
-      </svg>
-      {/* Ore svolte/ore teoriche al centro */}
-      <div
-        style={{
-          position: 'absolute',
-          textAlign: 'center',
-          fontWeight: 'bold',
-          fontSize: '0.7rem'
-        }}
-      >
-        {usedHours.toFixed(1)}/{totalHours.toFixed(1)} h
-      </div>
-      {/* Etichetta pacchetto aperto nell'apertura dell'anello */}
-      <div
-        style={{
-          position: 'absolute',
-          textAlign: 'center',
-          fontWeight: 'normal',
-          fontSize: '0.65rem',
-          bottom: '5px',
-          color: '#555'
-        }}
-      >
-        Pacchetto aperto
-      </div>
-    </div>
-  );
-};
-
 const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHours = 0, hoursBeforeStart = 0 }) => {
   // Usa il tema e i media query di Material-UI per rendere il componente responsive
   const theme = useTheme();
@@ -227,8 +124,6 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
   const totalUsedHours = weeklyLessons.reduce((total, hours) => total + hours, 0) + extraHours + hoursBeforeStart;
   // Calcola le ore rimanenti
   const remainingHours = Math.max(0, totalHours - totalUsedHours);
-  // Calcola la percentuale di completamento
-  const completionPercentage = Math.min(100, (totalUsedHours / totalHours) * 100);
 
   // Determina il numero di colonne in base alla dimensione dello schermo
   const getGridColumns = () => {
@@ -260,8 +155,8 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
 
   if (isOpenPackage) {
     return (
-      <Box sx={{ mb: 1 }}>
-        <Box sx={{mb: 1, position: 'relative', width: '100%', height: '16px' }}>
+      <Box>
+        <Box sx={{ mb: 2, position: 'relative', width: '100%', height: '16px' }}>
           {/* Testo esplicativo sopra la barra */}
           <Typography
             variant="caption"
@@ -289,7 +184,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
           {/* Barra colorata solida che avanza */}
           <Box sx={{
             position: 'absolute',
-            width: totalUsedHours > 0 ? `${Math.min(75, totalUsedHours * 4)}%` : '2%', // Limita a 75% della larghezza
+            width: totalUsedHours > 0 ? `${Math.min(75, totalUsedHours * 4)}%` : '2%',
             height: '16px',
             borderRadius: '8px',
             top: '22px',
@@ -297,7 +192,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
             transition: 'width 0.5s ease-in-out'
           }} />
 
-          {/* Indicatore di ore utilizzate sulla barra, ora senza il trattino */}
+          {/* Indicatore di ore utilizzate sulla barra */}
           <Box sx={{
             position: 'absolute',
             left: totalUsedHours > 0 ? `${Math.min(73, totalUsedHours * 4.1)}%` : '2%',
@@ -321,9 +216,9 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
   }
 
   return (
-    <Box sx={{ mb: -5 }}>
-      {/* Aggiungi indicatori testuali delle ore */}
-      <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
+    <Box>
+      {/* Indicatori testuali delle ore */}
+      <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
         <Grid item xs={5}>
           <Typography variant="subtitle2" color="text.secondary">
             Ore totali
@@ -353,9 +248,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
       <Box sx={{
         display: 'grid',
         gridTemplateColumns: getGridColumns(),
-        gap: '2px',
-        overflowX: 'auto',
-        py: 1,
+        gap: '2px'
       }}>
         {/* Anelli per le 4 settimane */}
         {weeklyLessons.map((hours, index) => (
@@ -392,8 +285,7 @@ const PackageCompletion = ({ totalHours, weeklyLessons = [0, 0, 0, 0], extraHour
           sx={{
             display: 'block',
             textAlign: 'center',
-            mt: 1,
-            mb: 3,
+            mt: 2,
             fontWeight: 'medium'
           }}
         >
