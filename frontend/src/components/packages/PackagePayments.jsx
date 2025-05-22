@@ -316,19 +316,6 @@ const PackagePayments = ({ packageId, packageData, onPaymentsUpdate }) => {
         }
       />
       <CardContent>
-        {/* Status messages */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {success}
-          </Alert>
-        )}
-
         {/* Payment summary */}
         <Grid container spacing={2} sx={{ mb: 2 }}>
           <Grid item xs={12} sm={4}>
