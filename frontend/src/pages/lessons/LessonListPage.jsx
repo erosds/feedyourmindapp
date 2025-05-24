@@ -733,7 +733,7 @@ function LessonListPage() {
                     color="primary"
                   />
                 }
-                label="Solo le mie lezioni"
+                label="Le mie lezioni"
               />
             </Grid>
           )}

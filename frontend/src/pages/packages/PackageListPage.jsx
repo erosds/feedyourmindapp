@@ -5,9 +5,11 @@ import {
   Box,
   Button,
   Chip,
+  Checkbox,
   CircularProgress,
   Divider,
   IconButton,
+  ListItemText,
   Paper,
   Table,
   TableBody,
@@ -71,7 +73,13 @@ function PackageListPage() {
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [timeFilter, setTimeFilter] = useState(searchParams.get('time') || 'all');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
-  const [paymentFilter, setPaymentFilter] = useState(searchParams.get('payment') || 'all');
+  const [paymentFilters, setPaymentFilters] = useState(() => {
+    const urlFilter = searchParams.get('payment');
+    if (urlFilter && urlFilter !== 'all') {
+      return urlFilter.split(',');
+    }
+    return ['paid', 'partial', 'unpaid']; // Default: tutte selezionate
+  });
   const [page, setPage] = useState(parseInt(searchParams.get('page') || '0', 10));
   const [rowsPerPage, setRowsPerPage] = useState(
     parseInt(searchParams.get('rows') || '10', 10)
@@ -90,6 +98,7 @@ function PackageListPage() {
     };
   });
   const [expiryFilter, setExpiryFilter] = useState(searchParams.get('expiry') || 'all');
+
 
   const formatDateForDisplay = () => {
     if (expiryFilter === 'custom') {
@@ -307,7 +316,7 @@ function PackageListPage() {
 
         // Se è specificato anche un filtro di pagamento, applicalo
         if (location.state.paymentFilter) {
-          setPaymentFilter(location.state.paymentFilter);
+          setPaymentFilters([location.state.paymentFilter]);
         }
       }
 
@@ -316,7 +325,7 @@ function PackageListPage() {
         setStatusFilter(location.state.statusFilter);
       }
       if (location.state.paymentFilter) {
-        setPaymentFilter(location.state.paymentFilter);
+        setPaymentFilters([location.state.paymentFilter]);
       }
     }
   }, [location.state]);
@@ -551,19 +560,18 @@ function PackageListPage() {
       });
     }
 
-    // Filtra per stato pagamento
-    if (paymentFilter !== 'all') {
+    // Filtra per stato pagamento (checkbox multiple)
+    if (paymentFilters.length > 0 && paymentFilters.length < 3) {
       filtered = filtered.filter(pkg => {
-        switch (paymentFilter) {
-          case 'paid':
-            return pkg.is_paid;
-          case 'partial':
-            return !pkg.is_paid && parseFloat(pkg.total_paid) > 0;
-          case 'unpaid':
-            return !pkg.is_paid && parseFloat(pkg.total_paid) <= 0;
-          default:
-            return true;
-        }
+        const isPaid = pkg.is_paid;
+        const hasPartial = !pkg.is_paid && parseFloat(pkg.total_paid) > 0;
+        const isUnpaid = !pkg.is_paid && parseFloat(pkg.total_paid) <= 0;
+
+        return (
+          (paymentFilters.includes('paid') && isPaid) ||
+          (paymentFilters.includes('partial') && hasPartial) ||
+          (paymentFilters.includes('unpaid') && isUnpaid)
+        );
       });
     }
 
@@ -600,12 +608,19 @@ function PackageListPage() {
     if (newPage !== page) {
       setPage(newPage);
     }
-  }, [searchTerm, packages, students, timeFilter, statusFilter, paymentFilter, order, orderBy]);
+  }, [searchTerm, packages, students, timeFilter, statusFilter, paymentFilters, order, orderBy]);
 
   // Funzione di utilità per aggiornare i parametri di ricerca
   const updateSearchParams = (key, value) => {
     const newParams = new URLSearchParams(searchParams);
-    if (value && value !== '' && value !== 'all' && value !== '0') {
+    if (key === 'payment') {
+      // Gestione speciale per filtri payment con checkbox
+      if (value && value.length > 0 && value.length < 3) {
+        newParams.set(key, value.join(','));
+      } else {
+        newParams.delete(key);
+      }
+    } else if (value && value !== '' && value !== 'all' && value !== '0') {
       newParams.set(key, value);
     } else {
       newParams.delete(key);
@@ -645,12 +660,6 @@ function PackageListPage() {
     const value = event.target.value;
     setStatusFilter(value);
     updateSearchParams('status', value);
-  };
-
-  const handlePaymentFilterChange = (event) => {
-    const value = event.target.value;
-    setPaymentFilter(value);
-    updateSearchParams('payment', value);
   };
 
   const handleChangePage = (event, newPage) => {
@@ -702,7 +711,12 @@ function PackageListPage() {
         setSearchTerm(searchParams.get('search') || '');
         setTimeFilter(searchParams.get('time') || 'all');
         setStatusFilter(searchParams.get('status') || 'all');
-        setPaymentFilter(searchParams.get('payment') || 'all');
+        const paymentParam = searchParams.get('payment');
+        if (paymentParam && paymentParam !== 'all') {
+          setPaymentFilters(paymentParam.split(','));
+        } else {
+          setPaymentFilters(['paid', 'partial', 'unpaid']);
+        }
 
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -954,19 +968,34 @@ function PackageListPage() {
               <InputLabel id="payment-filter-label">Pagamento</InputLabel>
               <Select
                 labelId="payment-filter-label"
-                value={paymentFilter}
-                onChange={handlePaymentFilterChange}
+                multiple
+                value={paymentFilters}
+                onChange={(e) => setPaymentFilters(e.target.value)}
+                onClose={() => updateSearchParams('payment', paymentFilters)}
                 label="Pagamento"
+                renderValue={(selected) =>
+                  selected.length === 3 ? 'Tutti' :
+                    selected.length === 0 ? 'Nessuno' :
+                      `${selected.length} selezionati`
+                }
                 startAdornment={
                   <InputAdornment position="start">
                     <PaymentIcon />
                   </InputAdornment>
                 }
               >
-                <MenuItem value="all">Tutti</MenuItem>
-                <MenuItem value="paid">Pagati</MenuItem>
-                <MenuItem value="partial">Con acconto</MenuItem>
-                <MenuItem value="unpaid">Non pagati</MenuItem>
+                <MenuItem value="paid">
+                  <Checkbox checked={paymentFilters.includes('paid')} />
+                  <ListItemText primary="Pagati" />
+                </MenuItem>
+                <MenuItem value="partial">
+                  <Checkbox checked={paymentFilters.includes('partial')} />
+                  <ListItemText primary="Con acconto" />
+                </MenuItem>
+                <MenuItem value="unpaid">
+                  <Checkbox checked={paymentFilters.includes('unpaid')} />
+                  <ListItemText primary="Non pagati" />
+                </MenuItem>
               </Select>
             </FormControl>
           </Grid>

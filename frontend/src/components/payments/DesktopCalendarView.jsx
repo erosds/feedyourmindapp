@@ -182,7 +182,19 @@ function DesktopCalendarView({
                         fontSize: '0.7rem',
                         mb: 1,
                         lineHeight: 1,
-                        mt: hasPayments ? 0 : 1.5 // mantieni il margine se non ci sono pagamenti
+                        // Cambia questa logica: se c'è un ammontare mostrato, mt: 0, altrimenti mt: 1.5
+                        mt: (() => {
+                          if (viewMode === 'payments' && hasPayments) {
+                            return 0; // C'è una cifra pagata mostrata
+                          } else if (viewMode === 'unpaid') {
+                            const unpaidAmount = getUnpaidLessonsForDay(day).reduce((sum, lesson) => sum + lesson.amount, 0);
+                            const expiredAmount = getExpiredPackagesForDay(day).reduce((sum, pkg) => sum + pkg.amount, 0);
+                            const totalToBePaid = unpaidAmount + expiredAmount;
+
+                            return totalToBePaid > 0 ? 0 : 1.5; // Se c'è una cifra da pagare mostrata: 0, altrimenti: 1.5
+                          }
+                          return 1.5; // Nessuna cifra mostrata, metti margine
+                        })()
                       }}
                     >
                       {/* Mostra sempre le informazioni sui pagamenti, in grassetto solo se viewMode === 'payments' */}
@@ -202,7 +214,6 @@ function DesktopCalendarView({
                         </>
                       )}
 
-                      {/* Modifica qui per distinguere tra pacchetti scaduti e in scadenza */}
                       {/* Modifica qui per distinguere tra pacchetti scaduti e in scadenza */}
                       {expiredCount > 0 && (
                         <>

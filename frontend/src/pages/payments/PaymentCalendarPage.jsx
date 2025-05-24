@@ -1111,7 +1111,7 @@ function PaymentCalendarPage() {
         <DialogTitle>Legenda colori calendario pagamenti</DialogTitle>
         <DialogContent>
           <Typography variant="body1" paragraph sx={{ fontWeight: 'bold', textAlign: 'justify' }}>
-            Modalità "Pagato" - Colori chip studenti:
+            Modalità "Pagato"
           </Typography>
 
           <Box sx={{ mb: 3, ml: 1, mr: 2 }}>
@@ -1173,7 +1173,7 @@ function PaymentCalendarPage() {
           <Divider sx={{ my: 2 }} />
 
           <Typography variant="body1" paragraph sx={{ fontWeight: 'bold', textAlign: 'justify' }}>
-            Modalità "Non pagato" - Colori chip studenti:
+            Modalità "Non pagato"
           </Typography>
 
           <Box sx={{ mb: 3, ml: 1, mr: 2 }}>
@@ -1191,7 +1191,7 @@ function PaymentCalendarPage() {
                 />
               </Box>
               <Typography variant="body2" sx={{ textAlign: 'justify' }}>
-                <b>Pacchetto scaduto/in scadenza</b> - Pacchetto non ancora saldato completamente
+                <b>Pacchetto scaduto</b> - Pacchetto non ancora saldato completamente
               </Typography>
             </Box>
 
@@ -1209,7 +1209,7 @@ function PaymentCalendarPage() {
                 />
               </Box>
               <Typography variant="body2" sx={{ textAlign: 'justify' }}>
-                <b>Pacchetto aperto scaduto/in scadenza</b> - Pacchetto aperto, non ancora saldato completamente
+                <b>Pacchetto aperto scaduto</b> - Pacchetto aperto, non ancora saldato completamente
               </Typography>
             </Box>
 
