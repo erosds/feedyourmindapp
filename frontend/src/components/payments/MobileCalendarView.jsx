@@ -64,7 +64,7 @@ function MobileCalendarView({
                 borderColor: 'divider'
               }}
             >
-              <Typography variant="subtitle1" sx={{ fontWeight: isCurrentDay ? 'bold' : 'normal' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: isCurrentDay ? 'bold' : 'normal', color: isCurrentDay ? 'primary.main' : 'inherit' }}>
                 {["lun", "mar", "mer", "gio", "ven", "sab", "dom"][(dayOfWeek - 1) % 7]} {format(day, 'd')}
               </Typography>
               {isCurrentDay && (

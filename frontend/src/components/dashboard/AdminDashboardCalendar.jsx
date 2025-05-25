@@ -423,15 +423,15 @@ function AdminDashboardCalendar({
               <DayComponent day={day} index={index - adjustedFirstDay} isMobile={false} />
             ) : (
               <Paper
-              sx={{
-                height: '100%',
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1,
-                boxShadow: 0,
-                backgroundColor: 'inherit'
-              }}
-            />
+                sx={{
+                  height: '100%',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  boxShadow: 0,
+                  backgroundColor: 'inherit'
+                }}
+              />
             )}
           </Grid>
         ))}
@@ -478,14 +478,135 @@ function AdminDashboardCalendar({
         </>
       )}
 
-      {/* Layout Mobile - giorni in verticale */}
       {isMobile && (
         <Box>
-          {daysOfPeriod.map((day, index) => (
-            <Box key={`day-mobile-${index}`} sx={{ mb: 2 }}>
-              <DayComponent day={day} index={index} isMobile={true} />
-            </Box>
-          ))}
+          {daysOfPeriod.map((day, index) => {
+            const isCurrentDay = isToday(day);
+            const dayProfessors = getProfessorChipsForDay(day);
+            const hasProfessors = dayProfessors.length > 0;
+            const dayOfWeek = day.getDay() || 7; // 0 for Sunday, transformed to 7
+
+            return (
+              <Box
+                key={`day-mobile-${index}`}
+                sx={{
+                  mb: 2,
+                  border: '1px solid',
+                  borderColor: isCurrentDay ? 'primary.main' : 'divider',
+                  borderRadius: 1,
+                  p: 1,
+                  cursor: hasProfessors ? 'pointer' : 'default',
+                  '&:hover': hasProfessors ? {
+                    backgroundColor: 'action.hover',
+                    transform: 'scale(1.02)',
+                    transition: 'transform 0.2s'
+                  } : {},
+                  minHeight: '80px'
+                }}
+                onClick={hasProfessors ? () => handleDayClick(day) : undefined}
+              >
+                {/* Intestazione del giorno uniforme con il calendario pagamenti */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 1,
+                    pb: 1,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider'
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ fontWeight: isCurrentDay ? 'bold' : 'normal', color: isCurrentDay ? 'primary.main' : 'inherit' }}>
+                    {["lun", "mar", "mer", "gio", "ven", "sab", "dom"][(dayOfWeek - 1) % 7]} {format(day, 'd')}
+                  </Typography>
+                  {isCurrentDay && (
+                    <Chip
+                      label="Oggi"
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      sx={{ height: 20 }}
+                    />
+                  )}
+                </Box>
+
+                {/* Resto del contenuto rimane uguale */}
+                {hasProfessors ? (
+                  <>
+                    <Typography
+                      variant="subtitle2"
+                      color="text.secondary"
+                      sx={{ fontSize: '0.75rem', mb: 0.5 }}
+                    >
+                      {dayProfessors.length} professor{dayProfessors.length === 1 ? 'e' : 'i'}
+                    </Typography>
+
+                    <ScrollableChipsContainer>
+                      {dayProfessors.map((professor) => (
+                        <Chip
+                          key={professor.id}
+                          label={professor.name}
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleProfessorClick(professor.id);
+                          }}
+                          sx={{
+                            height: 16,
+                            margin: '1px',
+                            backgroundColor: professor.isOnline ? 'secondary.main' : 'primary.main',
+                            color: 'white',
+                            '& .MuiChip-label': {
+                              px: 0.6,
+                              fontSize: '0.65rem',
+                              fontWeight: 'medium',
+                              whiteSpace: 'nowrap'
+                            }
+                          }}
+                        />
+                      ))}
+                    </ScrollableChipsContainer>
+
+                    <Button
+                      variant="text"
+                      size="small"
+                      startIcon={<ViewTimelineIcon fontSize="small" />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDayClick(day);
+                      }}
+                      sx={{
+                        mt: 'auto',
+                        mx: 'auto',
+                        padding: '3px 8px',
+                        minHeight: '28px',
+                        width: 'calc(100% - 4px)',
+                        justifyContent: 'center',
+                        fontSize: '0.7rem',
+                        color: 'text.primary',
+                        opacity: 0.85,
+                        backgroundColor: 'rgba(0, 0, 0, 0.03)',
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                          boxShadow: 1,
+                          opacity: 1,
+                        }
+                      }}
+                    >
+                      Timeline
+                    </Button>
+                  </>
+                ) : (
+                  <Box sx={{ minHeight: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      Nessun professore
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            );
+          })}
         </Box>
       )}
     </Card>
