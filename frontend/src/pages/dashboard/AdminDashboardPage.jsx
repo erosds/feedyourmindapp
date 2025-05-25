@@ -464,7 +464,7 @@ function AdminDashboardPage() {
         </Grid>
 
         {/* Weekly/Monthly professors summary table */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={12/7 * 4}>
           <ProfessorWeeklyTable
             currentWeekStart={periodStartDate}
             endOfWeek={periodEnd}
@@ -476,7 +476,7 @@ function AdminDashboardPage() {
         </Grid>
 
         {/* Financial summary and stats */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={12/7 * 3}>
           <PaymentRemindersCard
             professors={professors}
             onNotesUpdate={fetchProfessors}
