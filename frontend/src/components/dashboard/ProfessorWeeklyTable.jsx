@@ -21,9 +21,9 @@ import {
 } from '@mui/material';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { ArrowForward as ArrowForwardIcon } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers';
 import { professorWeeklyPaymentService } from '../../services/api';
+import { useTheme } from '@mui/material/styles';
 
 function ProfessorWeeklyTable({
   currentWeekStart,
@@ -35,7 +35,8 @@ function ProfessorWeeklyTable({
 }) {
   const [weeklyPayments, setWeeklyPayments] = useState({});
   const [loading, setLoading] = useState(false);
-  
+  const theme = useTheme();
+
   // Stati per il dialog di selezione data
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedProfessor, setSelectedProfessor] = useState(null);
@@ -89,7 +90,7 @@ function ProfessorWeeklyTable({
   const handlePaymentToggle = async (professorId, customDate = null) => {
     try {
       console.log('Toggling payment for professor:', professorId, 'week:', currentWeekStart, 'date:', customDate);
-      
+
       // Se è fornita una data personalizzata, passa quella nel body della richiesta
       const requestBody = {
         professor_id: professorId,
@@ -162,17 +163,38 @@ function ProfessorWeeklyTable({
             Nessun professore attivo in {isMonthView ? "questo mese" : "questa settimana"}
           </Typography>
         ) : (
-          <TableContainer sx={{ mb: 2 }}>
+          // Sostituisci la sezione TableContainer in ProfessorWeeklyTable.jsx con questo:
+
+          // Sostituisci la sezione TableContainer in ProfessorWeeklyTable.jsx con questo:
+
+          <TableContainer sx={{
+            mb: 2,
+            // Stili per colonna fissa sempre attivi quando serve scroll orizzontale
+            '& .MuiTable-root': {
+              '& .fixed-column': {
+                position: 'sticky',
+                left: 0,
+                backgroundColor: 'background.paper',
+                zIndex: 1,
+                minWidth: '140px', // Aumentato per contenere avatar + nome
+                maxWidth: '140px',
+                // Rimossa la riga separatrice
+                '& .MuiBox-root': {
+                  width: '100%'
+                }
+              }
+            }
+          }}>
             <Table size='small'>
               <TableHead>
                 <TableRow>
-                  <TableCell>Professore</TableCell>
-                  <TableCell align="center">Ore</TableCell>
-                  <TableCell align="right">Ultimo giorno</TableCell>
-                  <TableCell align="right">Pagamento</TableCell>
+                  <TableCell className="fixed-column">Professore</TableCell>
+                  <TableCell align="center" sx={{ minWidth: '60px' }}>Ore</TableCell>
+                  <TableCell align="right" sx={{ minWidth: '100px' }}>Ultimo giorno</TableCell>
+                  <TableCell align="right" sx={{ minWidth: '80px' }}>Pagamento</TableCell>
                   {/* Aggiungi la colonna checkbox solo per la vista settimanale */}
                   {!isMonthView && (
-                    <TableCell align="center" sx={{ width: '50px' }}>
+                    <TableCell align="center" sx={{ width: '50px', minWidth: '50px' }}>
                       <Tooltip title="Segna come pagato">
                         <Typography variant="caption">Pagato</Typography>
                       </Tooltip>
@@ -197,7 +219,7 @@ function ProfessorWeeklyTable({
                       onClick={() => handleProfessorClick(prof.id)}
                       sx={{ cursor: 'pointer', height: 20 }}
                     >
-                      <TableCell>
+                      <TableCell className="fixed-column">
                         <Box display="flex" alignItems="center">
                           <Avatar
                             sx={{
@@ -212,10 +234,16 @@ function ProfessorWeeklyTable({
                             {prof.first_name.charAt(0)}
                           </Avatar>
                           <Box>
-                            <Typography variant="body1" sx={{ lineHeight: 1.2 }}>
+                            <Typography variant="body1" sx={{
+                              lineHeight: 1.2,
+                              whiteSpace: 'nowrap'
+                            }}>
                               {prof.first_name}
                             </Typography>
-                            <Typography variant="body1" sx={{ lineHeight: 1.2 }}>
+                            <Typography variant="body1" sx={{
+                              lineHeight: 1.2,
+                              whiteSpace: 'nowrap'
+                            }}>
                               {prof.last_name}
                             </Typography>
                           </Box>
@@ -242,7 +270,7 @@ function ProfessorWeeklyTable({
                           <Tooltip title={isPaid ? "Segna come non pagato" : "Segna come pagato"}>
                             <Checkbox
                               checked={isPaid}
-                              onChange={(e) => handlePaymentCheckboxClick(prof, isPaid, e)}
+                              onChange={(e) => handlePaymentToggle(prof.id, e)}
                               disabled={loading}
                               size="small"
                               color="success"
@@ -255,7 +283,7 @@ function ProfessorWeeklyTable({
                   );
                 })}
                 <TableRow>
-                  <TableCell colSpan={!isMonthView ? 2 : 1} sx={{ fontWeight: 'bold' }}>
+                  <TableCell className="fixed-column" sx={{ fontWeight: 'bold' }}>
                     <Typography variant="subtitle1" fontWeight="medium">Totale</Typography>
                   </TableCell>
                   <TableCell align="center" sx={{ fontWeight: 'bold' }}>
@@ -269,6 +297,7 @@ function ProfessorWeeklyTable({
                       €{totalProfessorPayments.toFixed(2)}
                     </Typography>
                   </TableCell>
+                  {!isMonthView && <TableCell></TableCell>}
                 </TableRow>
               </TableBody>
             </Table>
@@ -310,7 +339,7 @@ function ProfessorWeeklyTable({
           <Button onClick={handleCancelPaymentDate}>
             Annulla
           </Button>
-          <Button 
+          <Button
             onClick={handleConfirmPaymentDate}
             variant="contained"
             color="primary"

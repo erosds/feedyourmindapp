@@ -29,6 +29,9 @@ import {
 } from '@mui/icons-material';
 import { professorService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { startOfWeek } from 'date-fns';
+import { professorWeeklyPaymentService } from '../../services/api';
+import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 
 function ProfessorListPage() {
   const navigate = useNavigate();
@@ -45,6 +48,9 @@ function ProfessorListPage() {
   const [order, setOrder] = useState('asc');
   const [orderBy, setOrderBy] = useState('first_name');
 
+  const [weeklyPayments, setWeeklyPayments] = useState({});
+  const [currentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+
   // Funzione per gestire la richiesta di cambio dell'ordinamento
   const handleRequestSort = (property) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -52,34 +58,51 @@ function ProfessorListPage() {
     setOrderBy(property);
   };
 
+  // Carica lo stato dei pagamenti settimanali
+  useEffect(() => {
+    const loadWeeklyPayments = async () => {
+      if (!professors.length) return;
+
+      try {
+        const response = await professorWeeklyPaymentService.getWeeklyPaymentsStatus(currentWeekStart);
+        setWeeklyPayments(response.data || {});
+      } catch (err) {
+        console.error('Error loading weekly payment status:', err);
+        setWeeklyPayments({});
+      }
+    };
+
+    loadWeeklyPayments();
+  }, [professors, currentWeekStart]);
+
   // Funzione helper per l'ordinamento stabile
   const descendingComparator = (a, b, orderBy) => {
     // Ordinamento speciale per ruolo (admin prima)
     if (orderBy === 'is_admin') {
       return (b.is_admin === a.is_admin) ? 0 : b.is_admin ? -1 : 1;
     }
-    
+
     // Ordinamento speciale per annotazioni
     if (orderBy === 'notes') {
       // Se entrambi hanno note
       if (a.notes && b.notes) {
         return b.notes.localeCompare(a.notes);
       }
-      
+
       // Se solo a ha note, va prima
       if (a.notes && !b.notes) {
         return -1;
       }
-      
+
       // Se solo b ha note, va prima
       if (!a.notes && b.notes) {
         return 1;
       }
-      
+
       // Se nessuno ha note, sono uguali
       return 0;
     }
-    
+
     // Per altri campi
     if (b[orderBy] < a[orderBy]) {
       return -1;
@@ -177,7 +200,7 @@ function ProfessorListPage() {
 
   const handleDeleteProfessor = async (id, name, event) => {
     event.stopPropagation(); // Impedisce la navigazione alla vista dettagli
-    
+
     if (window.confirm(`Sei sicuro di voler eliminare il professore "${name}"? Questa azione non può essere annullata.`)) {
       try {
         await professorService.delete(id);
@@ -191,11 +214,11 @@ function ProfessorListPage() {
       }
     }
   };
-  
+
   // Componente SortableTableCell per le intestazioni delle colonne
   const SortableTableCell = ({ id, label, numeric }) => {
     const isActive = orderBy === id;
-    
+
     return (
       <TableCell
         align={numeric ? "right" : "left"}
@@ -278,13 +301,14 @@ function ProfessorListPage() {
               <SortableTableCell id="username" label="Username" />
               <SortableTableCell id="is_admin" label="Ruolo" />
               <SortableTableCell id='notes' label='Annotazioni' />
+              <TableCell align="center">Pagamento Settimana</TableCell>
               <TableCell align="right">Azioni</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredProfessors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   Nessun professore trovato
                 </TableCell>
               </TableRow>
@@ -292,11 +316,11 @@ function ProfessorListPage() {
               filteredProfessors
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((professor) => (
-                  <TableRow 
+                  <TableRow
                     key={professor.id}
                     hover
                     onClick={() => handleViewProfessor(professor.id)}
-                    sx={{ 
+                    sx={{
                       cursor: 'pointer',
                       '&:hover': {
                         backgroundColor: 'rgba(0, 0, 0, 0.04)'
@@ -325,6 +349,13 @@ function ProfessorListPage() {
                       )}
                     </TableCell>
                     <TableCell>{professor.notes}</TableCell>
+                    <TableCell align="center">
+                      {weeklyPayments[professor.id]?.is_paid && (
+                        <Tooltip title="Settimana in corso pagata">
+                          <CheckCircleIcon color="success" fontSize="small" />
+                        </Tooltip>
+                      )}
+                    </TableCell>
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       {isAdmin() && (
                         <>
