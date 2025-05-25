@@ -46,6 +46,12 @@ const LessonSchema = Yup.object().shape({
     then: () => Yup.date().required('Data di pagamento obbligatoria'),
     otherwise: () => Yup.date().nullable(),
   }),
+  // Modifica la validazione del prezzo per essere più flessibile
+  price: Yup.number().when(['is_package', 'is_paid'], {
+    is: (is_package, is_paid) => !is_package && is_paid,
+    then: () => Yup.number().min(0, 'Il prezzo deve essere maggiore o uguale a 0'),
+    otherwise: () => Yup.number().nullable(),
+  }),
 });
 
 function LessonForm({
@@ -72,7 +78,21 @@ function LessonForm({
     <Formik
       initialValues={initialValues}
       validationSchema={LessonSchema}
-      onSubmit={async (values, { setSubmitting }) => {
+      onSubmit={async (values, { setSubmitting, setFieldError }) => {
+        // Validazione custom del prezzo prima del submit
+        if (!values.is_package && values.is_paid) {
+          const priceValue = parseFloat(values.price);
+          if (isNaN(priceValue) || priceValue < 0) {
+            setFieldError('price', 'Il prezzo deve essere maggiore o uguale a 0');
+            setSubmitting(false);
+            return;
+          }
+          // Se il prezzo è vuoto ma la lezione è pagata, usa il default
+          if (values.price === '' || values.price === null || values.price === undefined) {
+            values.price = 20 * values.duration;
+          }
+        }
+
         const success = await onSubmit(values);
         if (!success) {
           setSubmitting(false);
@@ -355,20 +375,32 @@ function LessonForm({
                         name="price"
                         label="Prezzo studente"
                         type="number"
-                        value={values.price || 20 * values.duration}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
+                        value={values.price || ''} // Permetti valori vuoti
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Permetti valori vuoti durante la digitazione
+                          if (value === '') {
+                            setFieldValue('price', '');
+                          } else {
+                            const numValue = parseFloat(value);
+                            // Permetti anche valori negativi durante la digitazione per la UX
+                            setFieldValue('price', isNaN(numValue) ? '' : numValue);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          // Al blur, se il valore è vuoto, imposta il default
+                          const value = e.target.value;
+                          if (value === '') {
+                            setFieldValue('price', 20 * values.duration);
+                          }
+                        }}
                         InputProps={{
                           startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                          // Rimuovi min e step per permettere editing libero
                         }}
-                        inputProps={{
-                          min: 0,
-                          step: 0.5,
-                        }}
+                        error={touched.price && Boolean(errors.price)}
+                        helperText={touched.price && errors.price || "Prezzo pagato dallo studente all'associazione"}
                       />
-                      <FormHelperText>
-                        Prezzo pagato dallo studente all'associazione
-                      </FormHelperText>
                     </Grid>
                   )}
                 </>

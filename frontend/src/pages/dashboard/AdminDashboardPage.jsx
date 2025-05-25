@@ -397,14 +397,28 @@ function AdminDashboardPage() {
         <Box
           sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
+            flexDirection: { xs: 'column', sm: 'column', md: 'row' },
             alignItems: 'center',
             justifyContent: 'space-between',
-            p: 2
+            p: 2,
+            gap: { xs: 2, sm: 2, md: 0 }
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 2, sm: 0 } }}>
+          {/* Prima riga: Toggle View */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            width: { xs: '100%', md: 'auto' },
+            justifyContent: { xs: 'center', md: 'flex-start' }
+          }}>
             <ViewToggleComponent viewMode={viewMode} setViewMode={setViewMode} />
+          </Box>
+
+          {/* Seconda riga: Periodo selezionato */}
+          <Box sx={{
+            width: { xs: '100%', md: 'auto' },
+            textAlign: 'center'
+          }}>
             <Typography
               variant="subtitle1"
               sx={{
@@ -417,8 +431,14 @@ function AdminDashboardPage() {
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <ButtonGroup size="small" sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}>
+          {/* Terza riga: Navigazione */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            width: { xs: '100%', md: 'auto' },
+            justifyContent: { xs: 'center', md: 'flex-end' }
+          }}>
+            <ButtonGroup size="small">
               <Button
                 onClick={() => handlePeriodChange('prev')}
                 sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
@@ -464,7 +484,7 @@ function AdminDashboardPage() {
         </Grid>
 
         {/* Weekly/Monthly professors summary table */}
-        <Grid item xs={12} md={12/7 * 4}>
+        <Grid item xs={12} md={12 / 7 * 4}>
           <ProfessorWeeklyTable
             currentWeekStart={periodStartDate}
             endOfWeek={periodEnd}
@@ -476,7 +496,7 @@ function AdminDashboardPage() {
         </Grid>
 
         {/* Financial summary and stats */}
-        <Grid item xs={12} md={12/7 * 3}>
+        <Grid item xs={12} md={12 / 7 * 3}>
           <PaymentRemindersCard
             professors={professors}
             onNotesUpdate={fetchProfessors}
