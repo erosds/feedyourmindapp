@@ -104,6 +104,50 @@ class ProfessorResponse(ProfessorBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+# Aggiungi questa classe al file backend/app/models.py
+
+class ProfessorWeeklyPayment(Base):
+    __tablename__ = "professor_weekly_payments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    professor_id = Column(Integer, ForeignKey("professors.id", ondelete="CASCADE"), nullable=False)
+    week_start_date = Column(Date, nullable=False)  # Lunedì della settimana
+    is_paid = Column(Boolean, default=False)
+    marked_by = Column(Integer, ForeignKey("professors.id"), nullable=True)  # Chi ha spuntato la checkbox
+    marked_at = Column(TIMESTAMP, nullable=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    # Relazioni
+    professor = relationship("Professor", foreign_keys=[professor_id])
+    marked_by_professor = relationship("Professor", foreign_keys=[marked_by])
+    
+    # Constraint per evitare duplicati (un professore può avere solo un record per settimana)
+    __table_args__ = (
+        CheckConstraint("professor_id IS NOT NULL", name="professor_id_not_null"),
+    )
+
+# Aggiungi anche i modelli Pydantic per l'API
+
+class ProfessorWeeklyPaymentBase(BaseModel):
+    professor_id: int
+    week_start_date: date
+    is_paid: bool = False
+
+class ProfessorWeeklyPaymentCreate(ProfessorWeeklyPaymentBase):
+    pass
+
+class ProfessorWeeklyPaymentUpdate(BaseModel):
+    is_paid: bool
+
+class ProfessorWeeklyPaymentResponse(ProfessorWeeklyPaymentBase):
+    id: int
+    marked_by: Optional[int] = None
+    marked_at: Optional[datetime] = None
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+    
 # Modifica agli schemi Pydantic
 class StudentBase(BaseModel):
     first_name: str

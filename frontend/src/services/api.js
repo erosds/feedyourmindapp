@@ -90,6 +90,38 @@ export const professorService = {
   },
 };
 
+export const professorWeeklyPaymentService = {
+  getWeeklyPaymentsStatus: async (weekStartDate) => {
+    const formattedDate = weekStartDate instanceof Date 
+      ? weekStartDate.toISOString().split('T')[0] 
+      : weekStartDate;
+    return api.get(`/professor-weekly-payments/week/${formattedDate}`);
+  },
+  
+  getProfessorWeeklyPayment: async (professorId, weekStartDate) => {
+    const formattedDate = weekStartDate instanceof Date 
+      ? weekStartDate.toISOString().split('T')[0] 
+      : weekStartDate;
+    return api.get(`/professor-weekly-payments/professor/${professorId}/week/${formattedDate}`);
+  },
+  
+  togglePaymentStatus: async (professorId, weekStartDate) => {
+    const formattedDate = weekStartDate instanceof Date 
+      ? weekStartDate.toISOString().split('T')[0] 
+      : weekStartDate;
+    
+    // Invia i dati nel body della richiesta POST
+    return api.post('/professor-weekly-payments/toggle', {
+      professor_id: professorId,
+      week_start_date: formattedDate
+    });
+  },
+  
+  deletePaymentRecord: async (paymentId) => {
+    return api.delete(`/professor-weekly-payments/${paymentId}`);
+  }
+};
+
 // Student service - Usa l'istanza api comune
 export const studentService = {
   getAll: async () => {

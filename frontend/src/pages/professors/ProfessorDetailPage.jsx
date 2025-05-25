@@ -36,21 +36,22 @@ import {
   School as SchoolIcon,
   Event as EventIcon,
   Euro as EuroIcon,
-  CalendarMonth as CalendarIcon
+  CalendarMonth as CalendarIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
-import { 
+import {
   format,
   addMonths,
-  subMonths, 
-  parseISO, 
-  startOfWeek, 
-  endOfWeek, 
-  addWeeks, 
-  subWeeks, 
-  isWithinInterval 
+  subMonths,
+  parseISO,
+  startOfWeek,
+  endOfWeek,
+  addWeeks,
+  subWeeks,
+  isWithinInterval
 } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { professorService, lessonService, studentService } from '../../services/api';
+import { professorService, lessonService, studentService, professorWeeklyPaymentService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import ProfessorNotes from '../../components/professors/ProfessorNotes';
 
@@ -59,11 +60,13 @@ import ProfessorNotes from '../../components/professors/ProfessorNotes';
 
 const ProfessorProfile = ({ professor }) => (
   <Card>
-    <CardContent sx={{ textAlign: 'center', 
-      display: 'flex', 
-      flexDirection: 'column', 
+    <CardContent sx={{
+      textAlign: 'center',
+      display: 'flex',
+      flexDirection: 'column',
       justifyContent: 'center',
-      flexGrow: 1}}>
+      flexGrow: 1
+    }}>
       <Typography variant="h5">
         {professor.first_name} {professor.last_name}
       </Typography>
@@ -88,44 +91,103 @@ const ProfessorProfile = ({ professor }) => (
   </Card>
 );
 
-const WeeklyStatsCard = ({ weeklyLessons, weeklyHours, weeklyEarnings }) => (
-  <Card>
-    <CardContent>
-      <Typography variant="h6" gutterBottom>
-        Statistiche Settimanali
-      </Typography>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={4}>
-          <Box textAlign="center" p={1}>
-            <EventIcon />
-            <Typography variant="h6">{weeklyLessons}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Lezioni settimana
+const WeeklyStatsCard = ({ weeklyLessons, weeklyHours, weeklyEarnings, professorId, currentWeekStart }) => {
+  const [paymentInfo, setPaymentInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Carica le informazioni sul pagamento settimanale
+  useEffect(() => {
+    const loadPaymentInfo = async () => {
+      if (!professorId || !currentWeekStart) return;
+
+      try {
+        setLoading(true);
+        const response = await professorWeeklyPaymentService.getProfessorWeeklyPayment(professorId, currentWeekStart);
+        setPaymentInfo(response.data);
+      } catch (err) {
+        // Se il record non esiste (404), non è un errore grave
+        if (err.response?.status !== 404) {
+          console.error('Error loading payment info:', err);
+        }
+        setPaymentInfo(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPaymentInfo();
+  }, [professorId, currentWeekStart]);
+
+  // Formatta la data di pagamento
+  const formatPaymentDate = (markedAt) => {
+    if (!markedAt) return null;
+
+    try {
+      const date = parseISO(markedAt);
+      return format(date, "EEEE dd/MM/yyyy", { locale: it });
+    } catch (err) {
+      console.error('Error formatting payment date:', err);
+      return null;
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
+          Statistiche Settimanali
+        </Typography>
+
+        {/* Indicatore di pagamento se esiste e è pagato */}
+        {paymentInfo && paymentInfo.is_paid && paymentInfo.marked_at && (
+          <Box sx={{
+            mb: 2,
+            p: 1,
+            bgcolor: 'success.light',
+            borderRadius: 1,
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <CheckCircleIcon sx={{ color: 'success.main', mr: 1, fontSize: '1rem' }} />
+            <Typography variant="caption" sx={{ color: 'success.dark', fontWeight: 'medium' }}>
+              Pagato {formatPaymentDate(paymentInfo.marked_at)}
             </Typography>
           </Box>
+        )}
+
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={4}>
+            <Box textAlign="center" p={1}>
+              <EventIcon />
+              <Typography variant="h6">{weeklyLessons}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Lezioni settimana
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Box textAlign="center" p={1}>
+              <EventIcon />
+              <Typography variant="h6">{weeklyHours.toFixed(1)}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Ore settimana
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Box textAlign="center" p={1}>
+              <EuroIcon />
+              <Typography variant="h6">€{weeklyEarnings.toFixed(2)}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Guadagni settimanali
+              </Typography>
+            </Box>
+          </Grid>
         </Grid>
-        <Grid item xs={12} md={4}>
-          <Box textAlign="center" p={1}>
-            <EventIcon />
-            <Typography variant="h6">{weeklyHours.toFixed(1)}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Ore settimana
-            </Typography>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Box textAlign="center" p={1}>
-            <EuroIcon />
-            <Typography variant="h6">€{weeklyEarnings.toFixed(2)}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Guadagni settimanali
-            </Typography>
-          </Box>
-        </Grid>
-      </Grid>
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
+};
 
 const ProfessorCalendar = ({ currentMonth, lessons, studentsMap }) => {
   const [displayMonth, setDisplayMonth] = useState(currentMonth);
@@ -261,25 +323,49 @@ const ProfessorCalendar = ({ currentMonth, lessons, studentsMap }) => {
 };
 
 const WeekSelector = ({ currentWeekStart, onChangeWeek }) => (
-  <Box display="flex" alignItems="center" justifyContent="space-between">
-    <Typography
-      variant="subtitle1"
+  <Card sx={{ mb: 1, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+    <Box
       sx={{
-        fontWeight: 'bold',
-        fontSize: '1rem',
-        p: 1,
-        borderRadius: 1,
-        flexGrow: 1,
-        textAlign: 'center'
-      }}>
-      {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
-    </Typography>
-    <ButtonGroup size="small" sx={{ ml: 2 }}>
-      <Button onClick={() => onChangeWeek('prev')}>Precedente</Button>
-      <Button onClick={() => onChangeWeek('current')}>Corrente</Button>
-      <Button onClick={() => onChangeWeek('next')}>Successiva</Button>
-    </ButtonGroup>
-  </Box>
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        p: 2
+      }}
+    >
+      <Typography
+        variant="subtitle1"
+        sx={{
+          fontWeight: 'bold',
+          color: 'primary.contrastText',
+          fontSize: '1.2rem',
+          mb: { xs: 2, sm: 0 }
+        }}
+      >
+        {format(currentWeekStart, "d MMMM yyyy", { locale: it })} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "d MMMM yyyy", { locale: it })}
+      </Typography>
+      <ButtonGroup size="small">
+        <Button
+          onClick={() => onChangeWeek('prev')}
+          sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+        >
+          Precedente
+        </Button>
+        <Button
+          onClick={() => onChangeWeek('current')}
+          sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+        >
+          Corrente
+        </Button>
+        <Button
+          onClick={() => onChangeWeek('next')}
+          sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+        >
+          Successiva
+        </Button>
+      </ButtonGroup>
+    </Box>
+  </Card>
 );
 
 const LessonsTable = ({ lessons, studentsMap, page, rowsPerPage, orderBy, order, onSort, onChangePage, onChangeRowsPerPage }) => (
@@ -345,11 +431,11 @@ const LessonsTable = ({ lessons, studentsMap, page, rowsPerPage, orderBy, order,
           lessons
             .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
             .map((lesson) => (
-              <TableRow 
+              <TableRow
                 key={lesson.id}
                 component={Link}
                 to={`/lessons/${lesson.id}`}
-                sx={{ 
+                sx={{
                   textDecoration: 'none',
                   '&:hover': { bgcolor: 'action.hover' },
                   cursor: 'pointer',
@@ -390,16 +476,18 @@ function ProfessorDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, isAdmin } = useAuth();
-  const [professor, setProfessor] = useState(null);
-  const [lessons, setLessons] = useState([]);
+  const isEditMode = !!id;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [professor, setProfessor] = useState(null);
+  const [lessons, setLessons] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [studentsMap, setStudentsMap] = useState({});
   const [professorNotes, setProfessorNotes] = useState(null);
 
-  
+
   // Ordinamento e filtri
   const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('lesson_date');
@@ -590,18 +678,18 @@ function ProfessorDetailPage() {
           <ProfessorProfile professor={professor} />
         </Grid>
         <Grid item xs={12} md={8}>
-        <ProfessorNotes
-          professorId={professor.id}
-          initialNotes={professorNotes}
-          onNotesUpdate={(updatedNotes) => setProfessorNotes(updatedNotes)}
-        />
+          <ProfessorNotes
+            professorId={professor.id}
+            initialNotes={professorNotes}
+            onNotesUpdate={(updatedNotes) => setProfessorNotes(updatedNotes)}
+          />
         </Grid>
       </Grid>
 
       {/* Middle Row: Calendario a sinistra e Selettore Settimana con Statistiche Settimanali a destra */}
       <Grid container spacing={2} mt={2}>
         <Grid item xs={12} md={4}>
-          <ProfessorCalendar 
+          <ProfessorCalendar
             currentMonth={currentWeekStart}
             lessons={lessons}
             studentsMap={studentsMap}
@@ -609,10 +697,12 @@ function ProfessorDetailPage() {
         </Grid>
         <Grid item xs={12} md={8}>
           <WeekSelector currentWeekStart={currentWeekStart} onChangeWeek={handleChangeWeek} />
-          <WeeklyStatsCard 
+          <WeeklyStatsCard
             weeklyLessons={weeklyLessonsCount}
             weeklyHours={weeklyHours}
             weeklyEarnings={weeklyEarnings}
+            professorId={professor.id}
+            currentWeekStart={currentWeekStart}
           />
         </Grid>
       </Grid>
@@ -637,7 +727,7 @@ function ProfessorDetailPage() {
             </FormControl>
           </Grid>
           <Grid item xs={12} md={8}>
-            <LessonsTable 
+            <LessonsTable
               lessons={filteredLessons}
               studentsMap={studentsMap}
               page={page}

@@ -111,11 +111,21 @@ function MainLayout() {
       }}
     >
       <Toolbar sx={{ my: 1.5 }}>
-        <img src={logo} alt="Logo" style={{ height: 46, marginRight: 12, borderRadius: 8 }} />
-        <Typography variant="h6" noWrap component="div" fontWeight="bold">
-          FeedYourMind
-        </Typography>
+        <img
+          src={logo}
+          alt="Logo"
+          style={{ height: 46, marginRight: 12, borderRadius: 8 }}
+        />
+        <Box sx={{ display: 'flex', flexDirection: 'column'}}>
+          <Typography variant="h6" component="div" fontWeight="bold">
+            Feed
+          </Typography>
+          <Typography variant="h6" component="div" fontWeight="bold" mt={-1.5}>
+            YourMind
+          </Typography>
+        </Box>
       </Toolbar>
+
       <Divider sx={{ mx: 2, opacity: 0.6 }} />
       <List sx={{ flex: 1, px: 1, py: 2 }}>
         {menuItems.map((item) => {
