@@ -105,16 +105,27 @@ export const professorWeeklyPaymentService = {
     return api.get(`/professor-weekly-payments/professor/${professorId}/week/${formattedDate}`);
   },
   
-  togglePaymentStatus: async (professorId, weekStartDate) => {
+  togglePaymentStatus: async (professorId, weekStartDate, customPaymentDate = null) => {
     const formattedDate = weekStartDate instanceof Date 
       ? weekStartDate.toISOString().split('T')[0] 
       : weekStartDate;
-    
-    // Invia i dati nel body della richiesta POST
-    return api.post('/professor-weekly-payments/toggle', {
+
+    // Prepara il body della richiesta
+    const requestBody = {
       professor_id: professorId,
       week_start_date: formattedDate
-    });
+    };
+
+    // Se è fornita una data personalizzata, aggiungila al body
+    if (customPaymentDate) {
+      const formattedPaymentDate = customPaymentDate instanceof Date 
+        ? customPaymentDate.toISOString().split('T')[0] 
+        : customPaymentDate;
+      requestBody.payment_date = formattedPaymentDate;
+    }
+    
+    // Invia i dati nel body della richiesta POST
+    return api.post('/professor-weekly-payments/toggle', requestBody);
   },
   
   deletePaymentRecord: async (paymentId) => {

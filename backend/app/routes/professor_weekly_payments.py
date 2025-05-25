@@ -1,15 +1,18 @@
-# Crea un nuovo file: backend/app/routes/professor_weekly_payments.py
+# backend/app/routes/professor_weekly_payments.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Dict, Any
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 from .. import models
 from ..database import get_db
 from ..auth import get_current_admin
 from app.routes.activity import log_activity
+
+from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter(
     prefix="/professor-weekly-payments",
@@ -22,6 +25,12 @@ def get_monday_of_week(target_date: date) -> date:
     days_since_monday = target_date.weekday()
     monday = target_date - timedelta(days=days_since_monday)
     return monday
+
+# Modello Pydantic per la richiesta di toggle
+class PaymentToggleRequest(BaseModel):
+    professor_id: int
+    week_start_date: str
+    payment_date: Optional[str] = None  # Data personalizzata opzionale
 
 @router.get("/professor/{professor_id}/week/{week_start_date}", response_model=models.ProfessorWeeklyPaymentResponse)
 def get_professor_weekly_payment(
@@ -77,87 +86,108 @@ def get_weekly_payments_status(
 
 @router.post("/toggle", response_model=models.ProfessorWeeklyPaymentResponse)
 def toggle_professor_payment_status(
-    request_data: dict,
+    request: PaymentToggleRequest,  # Usa il modello Pydantic invece di dict
     db: Session = Depends(get_db),
     current_user: models.Professor = Depends(get_current_admin)
 ):
     """
-    Cambia lo stato del pagamento per un professore in una settimana specifica.
-    Se non esiste un record, lo crea. Se esiste, inverte lo stato is_paid.
+    Cambia lo stato di pagamento di un professore per una determinata settimana.
+    Se viene fornita una payment_date, la usa come data di pagamento.
     """
-    professor_id = request_data.get('professor_id')
-    week_start_date_str = request_data.get('week_start_date')
-    
-    if not professor_id or not week_start_date_str:
-        raise HTTPException(status_code=400, detail="professor_id e week_start_date sono richiesti")
-    
-    # Converti la stringa in data
     try:
-        from datetime import datetime
-        week_start_date = datetime.strptime(week_start_date_str, '%Y-%m-%d').date()
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Formato data non valido. Usa YYYY-MM-DD")
-    
-    # Assicurati che la data sia un lunedì
-    monday = get_monday_of_week(week_start_date)
-    
-    # Verifica che il professore esista
-    professor = db.query(models.Professor).filter(models.Professor.id == professor_id).first()
-    if not professor:
-        raise HTTPException(status_code=404, detail="Professore non trovato")
-    
-    # Cerca un record esistente
-    existing_payment = db.query(models.ProfessorWeeklyPayment).filter(
-        models.ProfessorWeeklyPayment.professor_id == professor_id,
-        models.ProfessorWeeklyPayment.week_start_date == monday
-    ).first()
-    
-    if existing_payment:
-        # Inverte lo stato
-        existing_payment.is_paid = not existing_payment.is_paid
-        existing_payment.marked_by = current_user.id
-        existing_payment.marked_at = func.now()
+        # Parsing delle date
+        week_start_date = datetime.strptime(request.week_start_date, '%Y-%m-%d').date()
         
-        db.commit()
-        db.refresh(existing_payment)
+        # Se è fornita una data di pagamento personalizzata, usala
+        custom_payment_date = None
+        if request.payment_date:
+            custom_payment_date = datetime.strptime(request.payment_date, '%Y-%m-%d')
         
-        # Log dell'attività
-        status_text = "pagato" if existing_payment.is_paid else "non pagato"
-        log_activity(
-            db=db,
-            professor_id=current_user.id,
-            action_type="update",
-            entity_type="professor_weekly_payment",
-            entity_id=existing_payment.id,
-            description=f"Marcato {professor.first_name} {professor.last_name} come {status_text} per la settimana del {monday.strftime('%d/%m/%Y')}"
+        # Assicurati che la data sia un lunedì
+        monday = get_monday_of_week(week_start_date)
+        
+        # Verifica che il professore esista
+        professor = db.query(models.Professor).filter(models.Professor.id == request.professor_id).first()
+        if not professor:
+            raise HTTPException(status_code=404, detail="Professore non trovato")
+        
+        # Cerca un record esistente
+        existing_payment = db.query(models.ProfessorWeeklyPayment).filter(
+            models.ProfessorWeeklyPayment.professor_id == request.professor_id,
+            models.ProfessorWeeklyPayment.week_start_date == monday
+        ).first()
+        
+        if existing_payment:
+            # Cambia lo stato esistente
+            existing_payment.is_paid = not existing_payment.is_paid
+            existing_payment.marked_by = current_user.id
+            
+            if existing_payment.is_paid:
+                # Se stiamo marcando come pagato, usa la data personalizzata o quella odierna
+                existing_payment.marked_at = custom_payment_date or datetime.utcnow()
+            else:
+                # Se stiamo togliendo il pagamento, rimuovi la data
+                existing_payment.marked_at = None
+            
+            db.commit()
+            db.refresh(existing_payment)
+            
+            # Log dell'attività
+            status_text = "pagato" if existing_payment.is_paid else "non pagato"
+            date_info = ""
+            if existing_payment.is_paid and existing_payment.marked_at:
+                date_info = f" in data {existing_payment.marked_at.strftime('%d/%m/%Y')}"
+            
+            log_activity(
+                db=db,
+                professor_id=current_user.id,
+                action_type="update",
+                entity_type="professor_weekly_payment",
+                entity_id=existing_payment.id,
+                description=f"Marcato {professor.first_name} {professor.last_name} come {status_text}{date_info} per la settimana del {monday.strftime('%d/%m/%Y')}"
+            )
+            
+            return existing_payment
+        else:
+            # Crea un nuovo record (sempre marcato come pagato quando viene creato)
+            new_payment = models.ProfessorWeeklyPayment(
+                professor_id=request.professor_id,
+                week_start_date=monday,
+                is_paid=True,
+                marked_by=current_user.id,
+                marked_at=custom_payment_date or datetime.utcnow()
+            )
+            
+            db.add(new_payment)
+            db.commit()
+            db.refresh(new_payment)
+            
+            # Log dell'attività
+            date_info = ""
+            if new_payment.marked_at:
+                date_info = f" in data {new_payment.marked_at.strftime('%d/%m/%Y')}"
+            
+            log_activity(
+                db=db,
+                professor_id=current_user.id,
+                action_type="create",
+                entity_type="professor_weekly_payment",
+                entity_id=new_payment.id,
+                description=f"Marcato {professor.first_name} {professor.last_name} come pagato{date_info} per la settimana del {monday.strftime('%d/%m/%Y')}"
+            )
+            
+            return new_payment
+            
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Formato data non valido: {str(e)}"
         )
-        
-        return existing_payment
-    else:
-        # Crea nuovo record (di default is_paid=True quando viene creato tramite toggle)
-        new_payment = models.ProfessorWeeklyPayment(
-            professor_id=professor_id,
-            week_start_date=monday,
-            is_paid=True,  # Quando si clicca per la prima volta, assumiamo che sia per marcarlo come pagato
-            marked_by=current_user.id,
-            marked_at=func.now()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Errore interno del server: {str(e)}"
         )
-        
-        db.add(new_payment)
-        db.commit()
-        db.refresh(new_payment)
-        
-        # Log dell'attività
-        log_activity(
-            db=db,
-            professor_id=current_user.id,
-            action_type="create",
-            entity_type="professor_weekly_payment",
-            entity_id=new_payment.id,
-            description=f"Marcato {professor.first_name} {professor.last_name} come pagato per la settimana del {monday.strftime('%d/%m/%Y')}"
-        )
-        
-        return new_payment
 
 @router.delete("/{payment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_weekly_payment_record(
