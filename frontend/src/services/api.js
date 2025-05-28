@@ -319,19 +319,29 @@ export const activityService = {
     if (params.skip) queryParams.append('skip', params.skip);
     if (params.limit) queryParams.append('limit', params.limit);
     if (params.days) queryParams.append('days', params.days);
+    if (params.action_type) queryParams.append('action_type', params.action_type);
+    if (params.entity_type) queryParams.append('entity_type', params.entity_type);
+    if (params.professor_id) queryParams.append('professor_id', params.professor_id);
+    if (params.search) queryParams.append('search', params.search);
     
-    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return api.get(`/activities/${queryString}`);
+    const queryString = queryParams.toString();
+    const url = queryString ? `?${queryString}` : '';
+    return api.get(`/activities/${url}`);
   },
   
   getUsersActivity: async (params = {}) => {
     const queryParams = new URLSearchParams();
     
-    if (params.limit_per_user) queryParams.append('limit_per_user', params.limit_per_user);
     if (params.days) queryParams.append('days', params.days);
+    if (params.action_type) queryParams.append('action_type', params.action_type);
+    if (params.entity_type) queryParams.append('entity_type', params.entity_type);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.search_type) queryParams.append('search_type', params.search_type);
+    if (params.limit_per_user) queryParams.append('limit_per_user', params.limit_per_user);
     
-    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return api.get(`/activities/users${queryString}`);
+    const queryString = queryParams.toString();
+    const url = queryString ? `?${queryString}` : '';
+    return api.get(`/activities/users${url}`);
   },
   
   getUserActivity: async (professorId, params = {}) => {
@@ -340,9 +350,17 @@ export const activityService = {
     if (params.skip) queryParams.append('skip', params.skip);
     if (params.limit) queryParams.append('limit', params.limit);
     if (params.days) queryParams.append('days', params.days);
+    if (params.action_type) queryParams.append('action_type', params.action_type);
+    if (params.entity_type) queryParams.append('entity_type', params.entity_type);
+    if (params.search) queryParams.append('search', params.search);
     
-    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return api.get(`/activities/user/${professorId}${queryString}`);
+    const queryString = queryParams.toString();
+    const url = queryString ? `?${queryString}` : '';
+    return api.get(`/activities/user/${professorId}${url}`);
+  },
+
+  getActivityStats: async (days = 30) => {
+    return api.get(`/activities/stats/summary?days=${days}`);
   }
 };
 

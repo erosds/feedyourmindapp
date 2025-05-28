@@ -102,11 +102,11 @@ function ActivityItem({ activity }) {
   );
 }
 
-function ActivitySummaryCard({ 
-  activityData, 
-  title, 
-  showViewAll = true, 
-  maxItems = 3, 
+function ActivitySummaryCard({
+  activityData,
+  title,
+  showViewAll = true,
+  maxItems = 3,
   isSearchActive = false,
   searchFilters = {}
 }) {
@@ -129,7 +129,7 @@ function ActivitySummaryCard({
     if (isSearchActive) {
       // Se siamo in modalità ricerca, costruisci l'URL con i filtri
       const queryParams = new URLSearchParams();
-      
+
       if (searchFilters.searchTerm) {
         queryParams.append('search', searchFilters.searchTerm);
       }
@@ -142,12 +142,12 @@ function ActivitySummaryCard({
       if (searchFilters.timeRange) {
         queryParams.append('days', searchFilters.timeRange);
       }
-      
+
       const queryString = queryParams.toString();
-      const url = queryString 
+      const url = queryString
         ? `/activities/user/${professor_id}?${queryString}`
         : `/activities/user/${professor_id}`;
-      
+
       navigate(url);
     } else {
       // Modalità normale, vai alla pagina senza filtri
@@ -175,7 +175,7 @@ function ActivitySummaryCard({
             </Box>
           </Box>
           <Chip
-            label={`${activities_count} attività`}
+            label={`${activityData.filtered_activities_count || activities_count} attività${activityData.filtered_activities_count ? ` (di ${activities_count})` : ''}`}
             size="small"
             color="primary"
             variant="outlined"
@@ -207,9 +207,9 @@ function ActivitySummaryCard({
               size="small"
               onClick={handleViewAll}
             >
-              {isSearchActive 
-                ? `Visualizza tutte le ${activities_count} attività filtrate`
-                : hasMoreActivities 
+              {isSearchActive
+                ? `Visualizza tutte le ${activityData.filtered_activities_count || activities_count} attività filtrate`
+                : hasMoreActivities
                   ? `Visualizza tutte (${activities_count})`
                   : 'Visualizza dettagli'
               }

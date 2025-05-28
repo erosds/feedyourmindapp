@@ -58,12 +58,27 @@ function ActivityLogPage() {
       try {
         setLoading(true);
 
-        // Carica i dati aggregati per utente
-        const response = await activityService.getUsersActivity({
-          limit_per_user: 50, // Aumentato per avere più dati disponibili
+        // Passa tutti i filtri al backend
+        const params = {
           days: timeRange,
-        });
+          limit_per_user: 50,
+        };
 
+        // Aggiungi filtri solo se diversi da 'all'
+        if (actionTypeFilter !== 'all') {
+          params.action_type = actionTypeFilter;
+        }
+
+        if (entityTypeFilter !== 'all') {
+          params.entity_type = entityTypeFilter;
+        }
+
+        if (searchTerm.trim() !== '') {
+          params.search = searchTerm.trim();
+          params.search_type = searchType;
+        }
+
+        const response = await activityService.getUsersActivity(params);
         setUsersActivity(response.data || []);
       } catch (err) {
         console.error('Errore nel caricamento dei dati di attività:', err);
@@ -74,60 +89,11 @@ function ActivityLogPage() {
     };
 
     fetchActivityData();
-  }, [timeRange]);
+  }, [timeRange, searchTerm, searchType, actionTypeFilter, entityTypeFilter]);
 
   // Funzione per filtrare e cercare nelle attività
   const filteredAndSearchedUsers = useMemo(() => {
     let filtered = [...usersActivity];
-
-    // Sempre applica i filtri per tipo di entità e azione
-    if (entityTypeFilter !== 'all' || actionTypeFilter !== 'all' || searchTerm.trim() !== '') {
-      const lowercaseSearch = searchTerm.toLowerCase();
-
-      filtered = filtered.map(user => {
-        // Filtra le attività del singolo utente
-        const filteredActivities = user.recent_activities.filter(activity => {
-          // Filtro per tipo di entità
-          if (entityTypeFilter !== 'all' && activity.entity_type !== entityTypeFilter) {
-            return false;
-          }
-
-          // Filtro per tipo di azione
-          if (actionTypeFilter !== 'all' && activity.action_type !== actionTypeFilter) {
-            return false;
-          }
-
-          // Filtro per ricerca testuale (solo se c'è un termine di ricerca)
-          if (searchTerm.trim() !== '') {
-            switch (searchType) {
-              case 'professor':
-                return user.professor_name.toLowerCase().includes(lowercaseSearch);
-              case 'description':
-                return activity.description.toLowerCase().includes(lowercaseSearch);
-              case 'entity':
-                return activity.entity_type.toLowerCase().includes(lowercaseSearch);
-              case 'all':
-              default:
-                return (
-                  user.professor_name.toLowerCase().includes(lowercaseSearch) ||
-                  activity.description.toLowerCase().includes(lowercaseSearch) ||
-                  activity.entity_type.toLowerCase().includes(lowercaseSearch) ||
-                  activity.action_type.toLowerCase().includes(lowercaseSearch)
-                );
-            }
-          }
-
-          return true;
-        });
-
-        // Ritorna l'utente con le attività filtrate
-        return {
-          ...user,
-          recent_activities: filteredActivities,
-          activities_count: filteredActivities.length
-        };
-      }).filter(user => user.activities_count > 0);
-    }
 
     // Applica l'ordinamento
     if (sortOrder === 'alphabetical') {
@@ -139,7 +105,7 @@ function ActivityLogPage() {
         return new Date(b.last_activity_time) - new Date(a.last_activity_time);
       });
     }
-  }, [usersActivity, searchTerm, searchType, entityTypeFilter, actionTypeFilter, sortOrder]);
+  }, [usersActivity, sortOrder]);
 
   // Handler per pulire la ricerca
   const handleClearSearch = () => {
@@ -167,8 +133,7 @@ function ActivityLogPage() {
     const totalUsers = usersActivity.length;
     const filteredUsers = filteredAndSearchedUsers.length;
     const totalActivities = usersActivity.reduce((sum, user) => sum + user.activities_count, 0);
-    const filteredActivities = filteredAndSearchedUsers.reduce((sum, user) => sum + user.activities_count, 0);
-
+    const filteredActivities = filteredAndSearchedUsers.reduce((sum, user) => sum + (user.filtered_activities_count || user.activities_count), 0);
     return {
       totalUsers,
       filteredUsers,
