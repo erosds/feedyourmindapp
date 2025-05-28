@@ -199,8 +199,8 @@ function ActivitySummaryCard({
           </Box>
         )}
 
-        {/* Pulsante "Visualizza tutte" - mostra sempre quando ci sono più attività */}
-        {hasMoreActivities && showViewAll && (
+        {/* CORREZIONE: Mostra il pulsante solo se ci sono effettivamente più attività da visualizzare */}
+        {showViewAll && (hasMoreActivities || isSearchActive) && (
           <Box mt={1} display="flex" justifyContent="center">
             <Button
               variant="text"
@@ -208,8 +208,10 @@ function ActivitySummaryCard({
               onClick={handleViewAll}
             >
               {isSearchActive 
-                ? `Visualizza tutte le ${activities_count} attività che corrispondono ai filtri`
-                : `Visualizza tutte (${activities_count})`
+                ? `Visualizza tutte le ${activities_count} attività filtrate`
+                : hasMoreActivities 
+                  ? `Visualizza tutte (${activities_count})`
+                  : 'Visualizza dettagli'
               }
             </Button>
           </Box>

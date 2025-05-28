@@ -33,13 +33,14 @@ function UserActivityPage() {
   // Stati
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activities, setActivities] = useState([]);
+  const [allActivities, setAllActivities] = useState([]); // Tutte le attività caricate
+  const [activities, setActivities] = useState([]); // Attività filtrate
   const [professor, setProfessor] = useState(null);
   const [timeRange, setTimeRange] = useState(30);
   const [loadingMore, setLoadingMore] = useState(false);
   const [canLoadMore, setCanLoadMore] = useState(true);
   const [page, setPage] = useState(0);
-  const limit = 50; // Aumentato per gestire meglio i filtri
+  const limit = 200; // Carica più attività per gestire meglio i filtri
   
   // Estrai i parametri di ricerca dall'URL
   const searchParams = new URLSearchParams(location.search);
@@ -109,6 +110,14 @@ function UserActivityPage() {
     });
   };
   
+  // Applica i filtri ogni volta che cambiano i parametri o le attività
+  useEffect(() => {
+    if (allActivities.length > 0) {
+      const filteredActivities = filterActivities(allActivities);
+      setActivities(filteredActivities);
+    }
+  }, [allActivities, searchTerm, actionFilter, entityFilter]);
+  
   // Carica le attività dell'utente
   useEffect(() => {
     const fetchUserActivities = async () => {
@@ -117,23 +126,18 @@ function UserActivityPage() {
         setCanLoadMore(true);
         setPage(0);
         
+        // Carica TUTTE le attività del periodo per poter applicare correttamente i filtri
         const response = await activityService.getUserActivity(professorId, {
           skip: 0,
-          limit: 200, // Carica più attività per gestire meglio i filtri
+          limit: 1000, // Carica molte più attività
           days: timeRange,
         });
         
-        const allActivities = response.data || [];
-        const filteredActivities = filterActivities(allActivities);
+        const loadedActivities = response.data || [];
+        setAllActivities(loadedActivities);
         
-        setActivities(filteredActivities);
-        
-        // Per ora disabiliamo il caricamento progressivo quando ci sono filtri
-        if (hasActiveFilters) {
-          setCanLoadMore(false);
-        } else {
-          setCanLoadMore(allActivities.length >= limit);
-        }
+        // I filtri verranno applicati nell'useEffect successivo
+        setCanLoadMore(false); // Disabilita il caricamento progressivo per ora
       } catch (err) {
         console.error('Errore nel caricamento delle attività dell\'utente:', err);
         setError('Impossibile caricare le attività. Riprova più tardi.');
@@ -145,35 +149,12 @@ function UserActivityPage() {
     if (professorId) {
       fetchUserActivities();
     }
-  }, [professorId, timeRange, searchTerm, actionFilter, entityFilter]);
+  }, [professorId, timeRange]);
   
-  // Funzione per caricare più attività (solo quando non ci sono filtri)
+  // Funzione per caricare più attività (disabilitata per ora)
   const loadMoreActivities = async () => {
-    if (hasActiveFilters) return; // Non caricare più attività se ci sono filtri
-    
-    try {
-      setLoadingMore(true);
-      const nextPage = page + 1;
-      
-      const response = await activityService.getUserActivity(professorId, {
-        skip: nextPage * limit,
-        limit: limit,
-        days: timeRange,
-      });
-      
-      if (response.data && response.data.length > 0) {
-        setActivities(prev => [...prev, ...response.data]);
-        setPage(nextPage);
-      }
-      
-      if (!response.data || response.data.length < limit) {
-        setCanLoadMore(false);
-      }
-    } catch (err) {
-      console.error('Errore nel caricamento di altre attività:', err);
-    } finally {
-      setLoadingMore(false);
-    }
+    // Disabilitato per ora per evitare problemi con i filtri
+    return;
   };
   
   // Handler per il cambio di periodo
@@ -255,7 +236,7 @@ function UserActivityPage() {
               Cronologia Attività
               {hasActiveFilters && (
                 <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                  (filtrata)
+                  (filtrata - {activities.length} di {allActivities.length} attività)
                 </Typography>
               )}
             </Typography>
@@ -367,18 +348,6 @@ function UserActivityPage() {
                   </Box>
                 );
               })}
-              
-              {canLoadMore && !hasActiveFilters && (
-                <Box display="flex" justifyContent="center" mt={2}>
-                  <Button 
-                    variant="outlined" 
-                    onClick={loadMoreActivities}
-                    disabled={loadingMore}
-                  >
-                    {loadingMore ? 'Caricamento...' : 'Carica altre attività'}
-                  </Button>
-                </Box>
-              )}
             </Box>
           ) : (
             <Box py={4} textAlign="center">

@@ -38,7 +38,7 @@ function ActivityLogPage() {
   const [usersActivity, setUsersActivity] = useState([]);
   const [timeRange, setTimeRange] = useState(30);
   const [sortOrder, setSortOrder] = useState('recent');
-  
+
   // Stati per la ricerca
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('all');
@@ -80,70 +80,53 @@ function ActivityLogPage() {
   const filteredAndSearchedUsers = useMemo(() => {
     let filtered = [...usersActivity];
 
-    // Applica la ricerca se c'è un termine
-    if (searchTerm.trim() !== '') {
+    // Sempre applica i filtri per tipo di entità e azione
+    if (entityTypeFilter !== 'all' || actionTypeFilter !== 'all' || searchTerm.trim() !== '') {
       const lowercaseSearch = searchTerm.toLowerCase();
-      
+
       filtered = filtered.map(user => {
         // Filtra le attività del singolo utente
         const filteredActivities = user.recent_activities.filter(activity => {
-          // Ricerca per tipo di entità
+          // Filtro per tipo di entità
           if (entityTypeFilter !== 'all' && activity.entity_type !== entityTypeFilter) {
             return false;
           }
-          
-          // Ricerca per tipo di azione
+
+          // Filtro per tipo di azione
           if (actionTypeFilter !== 'all' && activity.action_type !== actionTypeFilter) {
             return false;
           }
 
-          // Ricerca testuale
-          switch (searchType) {
-            case 'professor':
-              return user.professor_name.toLowerCase().includes(lowercaseSearch);
-            case 'description':
-              return activity.description.toLowerCase().includes(lowercaseSearch);
-            case 'entity':
-              return activity.entity_type.toLowerCase().includes(lowercaseSearch);
-            case 'all':
-            default:
-              return (
-                user.professor_name.toLowerCase().includes(lowercaseSearch) ||
-                activity.description.toLowerCase().includes(lowercaseSearch) ||
-                activity.entity_type.toLowerCase().includes(lowercaseSearch) ||
-                activity.action_type.toLowerCase().includes(lowercaseSearch)
-              );
+          // Filtro per ricerca testuale (solo se c'è un termine di ricerca)
+          if (searchTerm.trim() !== '') {
+            switch (searchType) {
+              case 'professor':
+                return user.professor_name.toLowerCase().includes(lowercaseSearch);
+              case 'description':
+                return activity.description.toLowerCase().includes(lowercaseSearch);
+              case 'entity':
+                return activity.entity_type.toLowerCase().includes(lowercaseSearch);
+              case 'all':
+              default:
+                return (
+                  user.professor_name.toLowerCase().includes(lowercaseSearch) ||
+                  activity.description.toLowerCase().includes(lowercaseSearch) ||
+                  activity.entity_type.toLowerCase().includes(lowercaseSearch) ||
+                  activity.action_type.toLowerCase().includes(lowercaseSearch)
+                );
+            }
           }
+
+          return true;
         });
 
-        // Ritorna l'utente solo se ha attività che matchano i criteri
+        // Ritorna l'utente con le attività filtrate
         return {
           ...user,
           recent_activities: filteredActivities,
           activities_count: filteredActivities.length
         };
       }).filter(user => user.activities_count > 0);
-    } else {
-      // Se non c'è ricerca testuale, applica solo i filtri per tipo
-      if (entityTypeFilter !== 'all' || actionTypeFilter !== 'all') {
-        filtered = filtered.map(user => {
-          const filteredActivities = user.recent_activities.filter(activity => {
-            if (entityTypeFilter !== 'all' && activity.entity_type !== entityTypeFilter) {
-              return false;
-            }
-            if (actionTypeFilter !== 'all' && activity.action_type !== actionTypeFilter) {
-              return false;
-            }
-            return true;
-          });
-
-          return {
-            ...user,
-            recent_activities: filteredActivities,
-            activities_count: filteredActivities.length
-          };
-        }).filter(user => user.activities_count > 0);
-      }
     }
 
     // Applica l'ordinamento
@@ -185,7 +168,7 @@ function ActivityLogPage() {
     const filteredUsers = filteredAndSearchedUsers.length;
     const totalActivities = usersActivity.reduce((sum, user) => sum + user.activities_count, 0);
     const filteredActivities = filteredAndSearchedUsers.reduce((sum, user) => sum + user.activities_count, 0);
-    
+
     return {
       totalUsers,
       filteredUsers,
@@ -321,10 +304,10 @@ function ActivityLogPage() {
           </Grid>
 
           {/* Indicatori filtri attivi e statistiche */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
             mt: 2,
             flexWrap: 'wrap',
             gap: 1
@@ -340,7 +323,7 @@ function ActivityLogPage() {
                   onDelete={handleClearSearch}
                 />
               )}
-              
+
               {/* Filtro periodo */}
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <InputLabel>Periodo</InputLabel>
@@ -378,7 +361,7 @@ function ActivityLogPage() {
               <Grid item xs={12} key={userData.professor_id}>
                 <ActivitySummaryCard
                   activityData={userData}
-                  maxItems={3}
+                  maxItems={5}
                   showViewAll={true}
                   isSearchActive={isSearchActive}
                   searchFilters={{
@@ -395,8 +378,8 @@ function ActivityLogPage() {
             <Grid item xs={12}>
               <Box py={4} textAlign="center">
                 <Typography variant="h6" color="text.secondary" gutterBottom>
-                  {searchTerm.trim() !== '' || activeFiltersCount > 0 
-                    ? 'Nessun risultato trovato' 
+                  {searchTerm.trim() !== '' || activeFiltersCount > 0
+                    ? 'Nessun risultato trovato'
                     : 'Nessuna attività registrata nel periodo selezionato'
                   }
                 </Typography>
