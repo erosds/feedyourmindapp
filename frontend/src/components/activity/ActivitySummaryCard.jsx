@@ -7,15 +7,13 @@ import {
   Box,
   List,
   ListItem,
-  ListItemText,
   Divider,
   Chip,
   Button,
   Avatar,
-  Link
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { format, formatDistance } from 'date-fns';
+import { formatDistance } from 'date-fns';
 import { it } from 'date-fns/locale';
 import {
   Add as CreateIcon,
@@ -55,55 +53,12 @@ function getEntityIcon(entityType) {
   }
 }
 
-function getActionLabel(actionType) {
-  switch (actionType) {
-    case 'create':
-      return 'ha creato';
-    case 'update':
-      return 'ha modificato';
-    case 'delete':
-      return 'ha cancellato';
-    default:
-      return 'ha interagito con';
-  }
-}
-
-function getEntityLabel(entityType) {
-  switch (entityType) {
-    case 'professor':
-      return 'il professore';
-    case 'student':
-      return 'lo studente';
-    case 'lesson':
-      return 'la lezione';
-    case 'package':
-      return 'il pacchetto';
-    default:
-      return "l'elemento";
-  }
-}
-
-function getActionColor(actionType) {
-  switch (actionType) {
-    case 'create':
-      return 'success';
-    case 'update':
-      return 'primary';
-    case 'delete':
-      return 'error';
-    default:
-      return 'default';
-  }
-}
-
 function ActivityItem({ activity }) {
   const entityUrl = `/${activity.entity_type}s/${activity.entity_id}`;
-  const actionColor = getActionColor(activity.action_type);
   const formattedTime = formatDistance(new Date(activity.timestamp), new Date(), {
     addSuffix: true,
     locale: it
   });
-  const navigate = useNavigate();
 
   const handleClick = (e) => {
     e.preventDefault();
@@ -147,7 +102,14 @@ function ActivityItem({ activity }) {
   );
 }
 
-function ActivitySummaryCard({ activityData, title, showViewAll = true, maxItems = 3 }) {
+function ActivitySummaryCard({ 
+  activityData, 
+  title, 
+  showViewAll = true, 
+  maxItems = 3, 
+  isSearchActive = false,
+  searchFilters = {}
+}) {
   const navigate = useNavigate();
 
   if (!activityData) return null;
@@ -156,15 +118,41 @@ function ActivitySummaryCard({ activityData, title, showViewAll = true, maxItems
     professor_id,
     professor_name,
     last_activity_time,
-    activities_count,
-    recent_activities
+    activities_count, // Questo è già il conteggio filtrato
+    recent_activities // Queste sono già le attività filtrate
   } = activityData;
 
   const displayActivities = recent_activities.slice(0, maxItems);
-  const hasMoreActivities = activities_count > maxItems;
+  const hasMoreActivities = recent_activities.length > maxItems;
 
   const handleViewAll = () => {
-    navigate(`/activities/user/${professor_id}`);
+    if (isSearchActive) {
+      // Se siamo in modalità ricerca, costruisci l'URL con i filtri
+      const queryParams = new URLSearchParams();
+      
+      if (searchFilters.searchTerm) {
+        queryParams.append('search', searchFilters.searchTerm);
+      }
+      if (searchFilters.actionTypeFilter && searchFilters.actionTypeFilter !== 'all') {
+        queryParams.append('action', searchFilters.actionTypeFilter);
+      }
+      if (searchFilters.entityTypeFilter && searchFilters.entityTypeFilter !== 'all') {
+        queryParams.append('entity', searchFilters.entityTypeFilter);
+      }
+      if (searchFilters.timeRange) {
+        queryParams.append('days', searchFilters.timeRange);
+      }
+      
+      const queryString = queryParams.toString();
+      const url = queryString 
+        ? `/activities/user/${professor_id}?${queryString}`
+        : `/activities/user/${professor_id}`;
+      
+      navigate(url);
+    } else {
+      // Modalità normale, vai alla pagina senza filtri
+      navigate(`/activities/user/${professor_id}`);
+    }
   };
 
   return (
@@ -211,6 +199,7 @@ function ActivitySummaryCard({ activityData, title, showViewAll = true, maxItems
           </Box>
         )}
 
+        {/* Pulsante "Visualizza tutte" - mostra sempre quando ci sono più attività */}
         {hasMoreActivities && showViewAll && (
           <Box mt={1} display="flex" justifyContent="center">
             <Button
@@ -218,7 +207,10 @@ function ActivitySummaryCard({ activityData, title, showViewAll = true, maxItems
               size="small"
               onClick={handleViewAll}
             >
-              Visualizza tutte ({activities_count})
+              {isSearchActive 
+                ? `Visualizza tutte le ${activities_count} attività che corrispondono ai filtri`
+                : `Visualizza tutte (${activities_count})`
+              }
             </Button>
           </Box>
         )}

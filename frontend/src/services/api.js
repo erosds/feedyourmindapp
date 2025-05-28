@@ -1,5 +1,6 @@
 // src/services/api.js
 import axios from 'axios';
+import { format } from 'date-fns'; // IMPORT AGGIUNTO per la formattazione delle date
 
 // Configurazione base di axios
 const API_URL = '/api/';  // Sostituisci con l'IP del tuo computer
@@ -90,42 +91,66 @@ export const professorService = {
   },
 };
 
+// CORREZIONE COMPLETA per professorWeeklyPaymentService
 export const professorWeeklyPaymentService = {
   getWeeklyPaymentsStatus: async (weekStartDate) => {
     const formattedDate = weekStartDate instanceof Date 
-      ? weekStartDate.toISOString().split('T')[0] 
+      ? format(weekStartDate, 'yyyy-MM-dd')
       : weekStartDate;
     return api.get(`/professor-weekly-payments/week/${formattedDate}`);
   },
   
   getProfessorWeeklyPayment: async (professorId, weekStartDate) => {
     const formattedDate = weekStartDate instanceof Date 
-      ? weekStartDate.toISOString().split('T')[0] 
+      ? format(weekStartDate, 'yyyy-MM-dd')
       : weekStartDate;
     return api.get(`/professor-weekly-payments/professor/${professorId}/week/${formattedDate}`);
   },
   
   togglePaymentStatus: async (professorId, weekStartDate, customPaymentDate = null) => {
-    const formattedDate = weekStartDate instanceof Date 
-      ? weekStartDate.toISOString().split('T')[0] 
-      : weekStartDate;
-
-    // Prepara il body della richiesta
-    const requestBody = {
-      professor_id: professorId,
-      week_start_date: formattedDate
+    // CORREZIONE: Formattazione più robusta delle date
+    const formatDateSafely = (date) => {
+      if (!date) return null;
+      
+      if (date instanceof Date) {
+        // Verifica che la data sia valida
+        if (isNaN(date.getTime())) {
+          throw new Error('Data non valida fornita');
+        }
+        return format(date, 'yyyy-MM-dd');
+      }
+      
+      if (typeof date === 'string') {
+        // Se è già una stringa, assumiamo sia nel formato corretto
+        return date;
+      }
+      
+      throw new Error('Formato data non supportato');
     };
 
-    // Se è fornita una data personalizzata, aggiungila al body
-    if (customPaymentDate) {
-      const formattedPaymentDate = customPaymentDate instanceof Date 
-        ? customPaymentDate.toISOString().split('T')[0] 
-        : customPaymentDate;
-      requestBody.payment_date = formattedPaymentDate;
+    try {
+      const formattedWeekStart = formatDateSafely(weekStartDate);
+      
+      // Prepara il body della richiesta
+      const requestBody = {
+        professor_id: professorId,
+        week_start_date: formattedWeekStart
+      };
+
+      // CORREZIONE: Se è fornita una data personalizzata, formattala in modo sicuro
+      if (customPaymentDate) {
+        const formattedPaymentDate = formatDateSafely(customPaymentDate);
+        requestBody.payment_date = formattedPaymentDate;
+      }
+      
+      console.log('API Request body:', requestBody);
+      
+      // Invia i dati nel body della richiesta POST
+      return api.post('/professor-weekly-payments/toggle', requestBody);
+    } catch (error) {
+      console.error('Error in togglePaymentStatus:', error);
+      throw new Error(`Errore nella formattazione delle date: ${error.message}`);
     }
-    
-    // Invia i dati nel body della richiesta POST
-    return api.post('/professor-weekly-payments/toggle', requestBody);
   },
   
   deletePaymentRecord: async (paymentId) => {

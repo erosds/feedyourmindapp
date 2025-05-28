@@ -13,18 +13,21 @@ import {
   Paper,
   Select,
   Typography,
+  Chip,
 } from '@mui/material';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { activityService, professorService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import ActivitySummaryCard from '../../components/activity/ActivitySummaryCard';
 
 function UserActivityPage() {
   const { professorId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAdmin } = useAuth();
   
   // Stati
@@ -32,11 +35,28 @@ function UserActivityPage() {
   const [error, setError] = useState(null);
   const [activities, setActivities] = useState([]);
   const [professor, setProfessor] = useState(null);
-  const [timeRange, setTimeRange] = useState(30); // Default: 30 giorni
+  const [timeRange, setTimeRange] = useState(30);
   const [loadingMore, setLoadingMore] = useState(false);
   const [canLoadMore, setCanLoadMore] = useState(true);
   const [page, setPage] = useState(0);
-  const limit = 10; // Numero di attività per pagina
+  const limit = 50; // Aumentato per gestire meglio i filtri
+  
+  // Estrai i parametri di ricerca dall'URL
+  const searchParams = new URLSearchParams(location.search);
+  const searchTerm = searchParams.get('search') || '';
+  const actionFilter = searchParams.get('action') || 'all';
+  const entityFilter = searchParams.get('entity') || 'all';
+  const urlTimeRange = searchParams.get('days');
+  
+  // Se c'è un timeRange nell'URL, usalo
+  useEffect(() => {
+    if (urlTimeRange) {
+      setTimeRange(parseInt(urlTimeRange));
+    }
+  }, [urlTimeRange]);
+  
+  // Determina se ci sono filtri attivi
+  const hasActiveFilters = searchTerm || actionFilter !== 'all' || entityFilter !== 'all';
   
   // Check admin access
   useEffect(() => {
@@ -60,6 +80,35 @@ function UserActivityPage() {
     fetchProfessorData();
   }, [professorId]);
   
+  // Funzione per filtrare le attività in base ai parametri URL
+  const filterActivities = (activities) => {
+    if (!hasActiveFilters) return activities;
+    
+    return activities.filter(activity => {
+      // Filtro per tipo di azione
+      if (actionFilter !== 'all' && activity.action_type !== actionFilter) {
+        return false;
+      }
+      
+      // Filtro per tipo di entità
+      if (entityFilter !== 'all' && activity.entity_type !== entityFilter) {
+        return false;
+      }
+      
+      // Filtro per termine di ricerca
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          activity.description.toLowerCase().includes(searchLower) ||
+          activity.entity_type.toLowerCase().includes(searchLower) ||
+          activity.action_type.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      return true;
+    });
+  };
+  
   // Carica le attività dell'utente
   useEffect(() => {
     const fetchUserActivities = async () => {
@@ -70,15 +119,20 @@ function UserActivityPage() {
         
         const response = await activityService.getUserActivity(professorId, {
           skip: 0,
-          limit: limit,
+          limit: 200, // Carica più attività per gestire meglio i filtri
           days: timeRange,
         });
         
-        setActivities(response.data || []);
+        const allActivities = response.data || [];
+        const filteredActivities = filterActivities(allActivities);
         
-        // Controlla se ci sono altre attività da caricare
-        if (!response.data || response.data.length < limit) {
+        setActivities(filteredActivities);
+        
+        // Per ora disabiliamo il caricamento progressivo quando ci sono filtri
+        if (hasActiveFilters) {
           setCanLoadMore(false);
+        } else {
+          setCanLoadMore(allActivities.length >= limit);
         }
       } catch (err) {
         console.error('Errore nel caricamento delle attività dell\'utente:', err);
@@ -91,10 +145,12 @@ function UserActivityPage() {
     if (professorId) {
       fetchUserActivities();
     }
-  }, [professorId, timeRange]);
+  }, [professorId, timeRange, searchTerm, actionFilter, entityFilter]);
   
-  // Funzione per caricare più attività
+  // Funzione per caricare più attività (solo quando non ci sono filtri)
   const loadMoreActivities = async () => {
+    if (hasActiveFilters) return; // Non caricare più attività se ci sono filtri
+    
     try {
       setLoadingMore(true);
       const nextPage = page + 1;
@@ -110,7 +166,6 @@ function UserActivityPage() {
         setPage(nextPage);
       }
       
-      // Controlla se ci sono altre attività da caricare
       if (!response.data || response.data.length < limit) {
         setCanLoadMore(false);
       }
@@ -129,6 +184,11 @@ function UserActivityPage() {
   // Handler per tornare indietro
   const handleBack = () => {
     navigate('/activities');
+  };
+  
+  // Handler per pulire i filtri
+  const handleClearFilters = () => {
+    navigate(`/activities/user/${professorId}`);
   };
   
   // Raggruppa attività per giorno
@@ -168,17 +228,6 @@ function UserActivityPage() {
     );
   }
 
-  // Crea un oggetto activityData singolo per il professore
-  const createProfessorActivityData = () => {
-    return {
-      professor_id: parseInt(professorId),
-      professor_name: professor ? `${professor.first_name} ${professor.last_name}` : `Utente #${professorId}`,
-      last_activity_time: activities.length > 0 ? activities[0].timestamp : null,
-      activities_count: activities.length,
-      recent_activities: activities
-    };
-  };
-
   return (
     <Box>
       <Box display="flex" flexDirection="row" alignItems="center" mb={3}>
@@ -204,6 +253,11 @@ function UserActivityPage() {
           >
             <Typography variant="h6">
               Cronologia Attività
+              {hasActiveFilters && (
+                <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                  (filtrata)
+                </Typography>
+              )}
             </Typography>
             
             <FormControl sx={{ minWidth: 200, mt: { xs: 2, sm: 0 } }}>
@@ -222,6 +276,53 @@ function UserActivityPage() {
               </Select>
             </FormControl>
           </Box>
+          
+          {/* Mostra i filtri attivi */}
+          {hasActiveFilters && (
+            <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                Filtri attivi:
+              </Typography>
+              
+              {searchTerm && (
+                <Chip
+                  icon={<FilterListIcon />}
+                  label={`Ricerca: "${searchTerm}"`}
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                />
+              )}
+              
+              {actionFilter !== 'all' && (
+                <Chip
+                  icon={<FilterListIcon />}
+                  label={`Azione: ${actionFilter}`}
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                />
+              )}
+              
+              {entityFilter !== 'all' && (
+                <Chip
+                  icon={<FilterListIcon />}
+                  label={`Entità: ${entityFilter}`}
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                />
+              )}
+              
+              <Button
+                size="small"
+                onClick={handleClearFilters}
+                sx={{ ml: 1 }}
+              >
+                Rimuovi filtri
+              </Button>
+            </Box>
+          )}
           
           <Divider sx={{ mb: 2 }} />
           
@@ -254,20 +355,20 @@ function UserActivityPage() {
                         fontWeight: 'medium'
                       }}
                     >
-                      {format(dayDate, 'EEEE d MMMM yyyy', { locale: it })}
+                      {format(dayDate, 'EEEE d MMMM yyyy', { locale: it })} ({dayActivities.length} attività)
                     </Typography>
                     
                     <ActivitySummaryCard 
                       activityData={dayActivityData}
                       showViewAll={false}
                       maxItems={100} // Mostra tutte le attività del giorno
-                      title="" // Nessun titolo necessario poiché abbiamo già l'intestazione del giorno
+                      title="" // Nessun titolo necessario
                     />
                   </Box>
                 );
               })}
               
-              {canLoadMore && (
+              {canLoadMore && !hasActiveFilters && (
                 <Box display="flex" justifyContent="center" mt={2}>
                   <Button 
                     variant="outlined" 
@@ -282,8 +383,20 @@ function UserActivityPage() {
           ) : (
             <Box py={4} textAlign="center">
               <Typography variant="body1" color="text.secondary">
-                Nessuna attività trovata nel periodo selezionato
+                {hasActiveFilters 
+                  ? 'Nessuna attività trovata che corrisponde ai filtri selezionati'
+                  : 'Nessuna attività trovata nel periodo selezionato'
+                }
               </Typography>
+              {hasActiveFilters && (
+                <Button
+                  variant="outlined"
+                  onClick={handleClearFilters}
+                  sx={{ mt: 2 }}
+                >
+                  Rimuovi filtri
+                </Button>
+              )}
             </Box>
           )}
         </Paper>

@@ -1,4 +1,4 @@
-// Modifiche a ProfessorWeeklyTable.jsx
+// ProfessorWeeklyTable.jsx corretto
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -70,39 +70,38 @@ function ProfessorWeeklyTable({
     loadWeeklyPayments();
   }, [currentWeekStart, isMonthView]);
 
-  // Gestisce il click sulla checkbox
+  // CORREZIONE: Gestisce il click sulla checkbox
   const handlePaymentCheckboxClick = (professor, currentlyPaid, event) => {
-    event.stopPropagation(); // Previene il click sulla riga
-    event.preventDefault(); // Previene comportamenti di default
+    event.stopPropagation();
+    event.preventDefault();
 
     if (currentlyPaid) {
       // Se già pagato, togli il pagamento direttamente
-      handlePaymentToggle(professor.id);
+      handlePaymentToggle(professor.id, null);
     } else {
       // Se non pagato, apri il dialog per selezionare la data
       setSelectedProfessor(professor);
-      setSelectedPaymentDate(new Date()); // Data odierna come default
+      setSelectedPaymentDate(new Date()); // Assicurati che sia un oggetto Date valido
       setPaymentDialogOpen(true);
     }
   };
 
-  // Gestisce il toggle del pagamento (chiamata API)
+  // CORREZIONE: Gestisce il toggle del pagamento (chiamata API)
   const handlePaymentToggle = async (professorId, customDate = null) => {
     try {
       console.log('Toggling payment for professor:', professorId, 'week:', currentWeekStart, 'date:', customDate);
 
-      // Se è fornita una data personalizzata, passa quella nel body della richiesta
-      const requestBody = {
-        professor_id: professorId,
-        week_start_date: format(currentWeekStart, 'yyyy-MM-dd')
-      };
-
-      // Se abbiamo una data personalizzata, aggiungiamo il campo payment_date
-      if (customDate) {
-        requestBody.payment_date = format(customDate, 'yyyy-MM-dd');
+      // CORREZIONE: Verifica che currentWeekStart sia valido
+      if (!currentWeekStart || !(currentWeekStart instanceof Date) || isNaN(currentWeekStart.getTime())) {
+        throw new Error('Data della settimana non valida');
       }
 
-      const response = await professorWeeklyPaymentService.togglePaymentStatus(professorId, currentWeekStart, customDate);
+      const response = await professorWeeklyPaymentService.togglePaymentStatus(
+        professorId, 
+        currentWeekStart, 
+        customDate
+      );
+      
       console.log('Toggle response:', response.data);
 
       // Aggiorna lo stato locale
@@ -112,13 +111,29 @@ function ProfessorWeeklyTable({
       }));
     } catch (err) {
       console.error('Error toggling payment status:', err);
-      alert('Errore nel salvataggio dello stato di pagamento: ' + (err.response?.data?.detail || err.message));
+      
+      // CORREZIONE: Migliore gestione degli errori
+      let errorMessage = 'Errore nel salvataggio dello stato di pagamento';
+      
+      if (err.response?.data?.detail) {
+        errorMessage += ': ' + err.response.data.detail;
+      } else if (err.message) {
+        errorMessage += ': ' + err.message;
+      }
+      
+      alert(errorMessage);
     }
   };
 
-  // Conferma la selezione della data di pagamento
+  // CORREZIONE: Conferma la selezione della data di pagamento
   const handleConfirmPaymentDate = () => {
     if (selectedProfessor && selectedPaymentDate) {
+      // CORREZIONE: Verifica che selectedPaymentDate sia una data valida
+      if (!(selectedPaymentDate instanceof Date) || isNaN(selectedPaymentDate.getTime())) {
+        alert('Data di pagamento non valida');
+        return;
+      }
+      
       handlePaymentToggle(selectedProfessor.id, selectedPaymentDate);
     }
     setPaymentDialogOpen(false);
@@ -163,10 +178,6 @@ function ProfessorWeeklyTable({
             Nessun professore attivo in {isMonthView ? "questo mese" : "questa settimana"}
           </Typography>
         ) : (
-          // Sostituisci la sezione TableContainer in ProfessorWeeklyTable.jsx con questo:
-
-          // Sostituisci la sezione TableContainer in ProfessorWeeklyTable.jsx con questo:
-
           <TableContainer sx={{
             mb: 2,
             // Stili per colonna fissa sempre attivi quando serve scroll orizzontale
@@ -264,13 +275,13 @@ function ProfessorWeeklyTable({
                           €{prof.totalPayment.toFixed(2)}
                         </Typography>
                       </TableCell>
-                      {/* Checkbox solo per vista settimanale */}
+                      {/* CORREZIONE: Checkbox solo per vista settimanale con gestione corretta degli eventi */}
                       {!isMonthView && (
                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                           <Tooltip title={isPaid ? "Segna come non pagato" : "Segna come pagato"}>
                             <Checkbox
                               checked={isPaid}
-                              onChange={(e) => handlePaymentToggle(prof.id, e)}
+                              onChange={(e) => handlePaymentCheckboxClick(prof, isPaid, e)}
                               disabled={loading}
                               size="small"
                               color="success"

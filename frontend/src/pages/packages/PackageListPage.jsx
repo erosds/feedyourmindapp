@@ -332,20 +332,18 @@ function PackageListPage() {
 
   // Helper function for sorting
   const descendingComparator = (a, b, orderBy) => {
-    // Special cases for date formats
-    if (orderBy === 'start_date' || orderBy === 'expiry_date' || orderBy === 'payment_date') {
-      // Handle null dates for payment_date
-      if (orderBy === 'payment_date') {
-        if (!a[orderBy] && !b[orderBy]) return 0;
-        if (!a[orderBy]) return 1;
-        if (!b[orderBy]) return -1;
-      }
-      return new Date(b[orderBy]) - new Date(a[orderBy]);
+    // For student_id, use the mapped name
+    if (orderBy === 'student_id' || orderBy === 'student_ids') {
+      const studentNameA = a.student_ids.length > 0 ? (students[a.student_ids[0]] || '') : '';
+      const studentNameB = b.student_ids.length > 0 ? (students[b.student_ids[0]] || '') : '';
+      return studentNameB.localeCompare(studentNameA);
     }
 
     // For numeric fields
-    if (['total_hours', 'remaining_hours', 'package_cost'].includes(orderBy)) {
-      return parseFloat(b[orderBy]) - parseFloat(a[orderBy]);
+    if (['total_hours', 'remaining_hours', 'package_cost', 'total_paid'].includes(orderBy)) {
+      const valueA = parseFloat(a[orderBy]) || 0;
+      const valueB = parseFloat(b[orderBy]) || 0;
+      return valueB - valueA;
     }
 
     // For student_id, use the mapped name
@@ -575,23 +573,9 @@ function PackageListPage() {
       });
     }
 
-    // Make sure sorting works with multi-student packages
-    if (orderBy === 'student_id' || orderBy === 'student_ids') {
-      filtered.sort((a, b) => {
-        // Get the first student name for each package (or empty string if none)
-        const studentNameA = a.student_ids.length > 0 ? (students[a.student_ids[0]] || '') : '';
-        const studentNameB = b.student_ids.length > 0 ? (students[b.student_ids[0]] || '') : '';
-
-        // Compare based on the direction
-        return order === 'asc'
-          ? studentNameA.localeCompare(studentNameB)
-          : studentNameB.localeCompare(studentNameA);
-      });
-    } else {
-      // Apply normal sorting for other fields
-      const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
-      filtered = sortedFiltered;
-    }
+    // Apply sorting for all fields consistently
+    const sortedFiltered = stableSort(filtered, getComparator(order, orderBy));
+    filtered = sortedFiltered;
 
     // Prima di impostare i dati filtrati, preserva la paginazione corrente
     // se il numero di elementi filtrati è sufficiente a mantenere la pagina attuale
@@ -1010,7 +994,7 @@ function PackageListPage() {
               <SortableTableCell id="student_ids" label="Studente/i" />
               <SortableTableCell id="start_date" label="Inizio" />
               <SortableTableCell id="expiry_date" label="Scadenza" />
-              <SortableTableCell id="remaining_hours" label="Ore Tot." />
+              <SortableTableCell id="total_hours" label="Ore Tot." />
               <SortableTableCell id="remaining_hours" label="Ore Rim." />
               <SortableTableCell id="status" label="Stato" />
               <SortableTableCell id="is_paid" label="Pagamento" />

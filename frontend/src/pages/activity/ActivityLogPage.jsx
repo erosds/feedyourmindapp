@@ -41,9 +41,9 @@ function ActivityLogPage() {
   
   // Stati per la ricerca
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchType, setSearchType] = useState('all'); // 'all', 'professor', 'description', 'entity'
-  const [actionTypeFilter, setActionTypeFilter] = useState('all'); // 'all', 'create', 'update', 'delete'
-  const [entityTypeFilter, setEntityTypeFilter] = useState('all'); // 'all', 'lesson', 'package', 'student', 'professor'
+  const [searchType, setSearchType] = useState('all');
+  const [actionTypeFilter, setActionTypeFilter] = useState('all');
+  const [entityTypeFilter, setEntityTypeFilter] = useState('all');
 
   // Check admin access
   useEffect(() => {
@@ -60,7 +60,7 @@ function ActivityLogPage() {
 
         // Carica i dati aggregati per utente
         const response = await activityService.getUsersActivity({
-          limit_per_user: 10, // Aumentiamo per permettere ricerche più ampie
+          limit_per_user: 50, // Aumentato per avere più dati disponibili
           days: timeRange,
         });
 
@@ -122,7 +122,7 @@ function ActivityLogPage() {
           recent_activities: filteredActivities,
           activities_count: filteredActivities.length
         };
-      }).filter(user => user.activities_count > 0); // Rimuovi utenti senza attività matchanti
+      }).filter(user => user.activities_count > 0);
     } else {
       // Se non c'è ricerca testuale, applica solo i filtri per tipo
       if (entityTypeFilter !== 'all' || actionTypeFilter !== 'all') {
@@ -175,6 +175,9 @@ function ActivityLogPage() {
     if (entityTypeFilter !== 'all') count++;
     return count;
   }, [searchTerm, searchType, actionTypeFilter, entityTypeFilter]);
+
+  // Determina se ci sono filtri attivi
+  const isSearchActive = searchTerm.trim() !== '' || actionTypeFilter !== 'all' || entityTypeFilter !== 'all';
 
   // Calcola statistiche di ricerca
   const searchStats = useMemo(() => {
@@ -375,8 +378,16 @@ function ActivityLogPage() {
               <Grid item xs={12} key={userData.professor_id}>
                 <ActivitySummaryCard
                   activityData={userData}
-                  maxItems={searchTerm.trim() !== '' ? 10 : 3} // Mostra più attività durante la ricerca
+                  maxItems={3}
                   showViewAll={true}
+                  isSearchActive={isSearchActive}
+                  searchFilters={{
+                    searchTerm,
+                    searchType,
+                    actionTypeFilter,
+                    entityTypeFilter,
+                    timeRange
+                  }}
                 />
               </Grid>
             ))
