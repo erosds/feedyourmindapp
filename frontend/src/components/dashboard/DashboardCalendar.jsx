@@ -79,6 +79,7 @@ function DashboardCalendar({
   const weekdays = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"];
 
   // Componente per visualizzare un singolo giorno - riutilizzabile sia per mobile che desktop
+  // Componente per visualizzare un singolo giorno - riutilizzabile sia per mobile che desktop
   const DayComponent = ({ day, index, isMobile }) => {
     const dayLessons = getLessonsForDay(day);
     const hasLessons = dayLessons.length > 0;
@@ -88,43 +89,37 @@ function DashboardCalendar({
 
     return (
       <Paper
-        elevation={isCurrentDay ? 3 : 1}
         sx={{
           p: 1,
-          height: isMobile ? 'auto' : '100%',  // Altezza flessibile su mobile
-          minHeight: isMobile ? 120 : (isMonthView ? 150 : 'auto'), // Altezza minima per garantire consistenza
+          height: isMobile ? 'auto' : '100%',
+          minHeight: isMobile ? 120 : isMonthView ? 150 : 'auto',
           border: '1px solid',
           borderColor: isCurrentDay ? 'primary.main' : 'divider',
           borderRadius: 1,
+          overflow: 'hidden',
           position: 'relative',
+          boxShadow: 0,
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',
-          boxShadow: 0,
-          mb: isMobile ? 2 : 0, // Aggiungi un margine bottom su mobile
+          mb: isMobile ? 2 : 0,
         }}
       >
-        {/* Intestazione del giorno su mobile */}
-        {isMobile && (
+        {/* Intestazione del giorno - IDENTICA ad AdminDashboardCalendar */}
+        {isMobile ? (
+          // Mobile: sempre mostra intestazione con formato "lun 15"
           <Box
             sx={{
-              mb: 1,
-              pb: 1,
-              borderBottom: '1px solid',
-              borderColor: 'divider',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              mb: 1,
+              pb: 1,
+              borderBottom: '1px solid',
+              borderColor: 'divider'
             }}
           >
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: isCurrentDay ? 'bold' : 'normal',
-                color: isCurrentDay ? 'primary.main' : 'inherit'
-              }}
-            >
-              {weekdays[index]} {format(day, 'd')}
+            <Typography variant="subtitle1" sx={{ fontWeight: isCurrentDay ? 'bold' : 'normal', color: isCurrentDay ? 'primary.main' : 'inherit' }}>
+              {["lun", "mar", "mer", "gio", "ven", "sab", "dom"][(day.getDay() === 0 ? 6 : day.getDay() - 1)]} {format(day, 'd')}
             </Typography>
             {isCurrentDay && (
               <Chip
@@ -136,17 +131,44 @@ function DashboardCalendar({
               />
             )}
           </Box>
-        )}
+        ) : isMonthView ? (
+          // Desktop Vista Mensile: solo numero in alto a destra
+          <Box sx={{
+            fontWeight: isCurrentDay ? 'bold' : 'normal',
+            textAlign: 'right',
+            color: isCurrentDay ? 'primary.main' : 'text.primary',
+            position: 'absolute',
+            top: 2,
+            right: 4,
+            fontSize: '0.9rem'
+          }}>
+            {format(day, 'd')}
+          </Box>
+        ) : null}
 
+        {/* Contenuto del giorno */}
+        {/* Contenuto del giorno */}
         <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
           <Box sx={{ overflowY: 'auto', height: '100%' }}>
+            {/* Titolo numero lezioni solo per desktop settimanale */}
+            {!isMobile && !isMonthView && (
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                sx={{ fontSize: '0.75rem', mb: 0.5 }}
+              >
+                {hasLessons ? `${dayLessons.length} lezion${dayLessons.length === 1 ? 'e' : 'i'}` : 'Nessuna lezione'}
+              </Typography>
+            )}
+
+            {/* Lezioni esistenti */}
             {sortedLessons.map((lesson, idx) => (
               <Box
                 key={`lesson-${lesson.id}-${idx}`}
                 sx={{
                   mb: 0.5,
                   py: 0.5,
-                  minHeight: isMonthView ? '28px' : '28px', // Stessa altezza del pulsante "Nuova lezione"
+                  minHeight: isMonthView ? '28px' : '28px',
                   bgcolor: 'action.hover',
                   borderRadius: 1,
                   color: 'text.primary',
@@ -156,9 +178,9 @@ function DashboardCalendar({
                   cursor: 'pointer',
                   mx: 'auto',
                   display: 'flex',
-                  alignItems: isMonthView ? 'center' : 'flex-start', // Vista mensile: centrato, settimanale: inizio
-                  justifyContent: 'flex-start', // Sempre allineato a sinistra
-                  flexDirection: isMonthView ? 'row' : 'column', // Riga per mensile, colonna per settimanale
+                  alignItems: isMonthView ? 'center' : 'flex-start',
+                  justifyContent: 'flex-start',
+                  flexDirection: isMonthView ? 'row' : 'column',
                   '&:hover': {
                     opacity: 1,
                     boxShadow: 1
@@ -205,7 +227,7 @@ function DashboardCalendar({
                   </>
                 )}
 
-                {/* Chip per lezione in pacchetto - posizionamento diverso per vista mensile */}
+                {/* Chip per lezione in pacchetto */}
                 {lesson.is_package && (
                   <Chip
                     label="P"
@@ -217,17 +239,17 @@ function DashboardCalendar({
                       right: isMonthView ? 2 : 3,
                       borderRadius: 1,
                       width: 'auto',
-                      minWidth: '22px', // Aggiungi larghezza minima
+                      minWidth: '22px',
                       height: isMonthView ? 14 : 16,
                       fontSize: isMonthView ? '0.6rem' : '0.650rem',
                     }}
                   />
                 )}
 
-                {/* Chip per lezione online - posizionamento diverso per vista mensile */}
+                {/* Chip per lezione online */}
                 {lesson.is_online && (
                   <Chip
-                    label="" // Rimuovi il testo, usa solo l'icona
+                    label=""
                     icon={<WifiIcon style={{ fontSize: isMonthView ? '0.6rem' : '0.7rem' }} />}
                     size="small"
                     color="secondary"
@@ -237,14 +259,14 @@ function DashboardCalendar({
                       right: isMonthView ? 2 : 3,
                       borderRadius: 1,
                       width: 'auto',
-                      minWidth: '22px', // Stessa larghezza minima della chip pacchetto
+                      minWidth: '22px',
                       height: isMonthView ? 14 : 16,
                       fontSize: isMonthView ? '0.6rem' : '0.650rem',
                       '& .MuiChip-icon': {
-                        margin: 0, // Rimuovi margini per centrare l'icona
+                        margin: 0,
                       },
                       '& .MuiChip-label': {
-                        display: 'none', // Nascondi completamente il label
+                        display: 'none',
                       }
                     }}
                   />
@@ -252,7 +274,7 @@ function DashboardCalendar({
               </Box>
             ))}
 
-            {/* Pulsante "Nuova lezione" all'interno del contenitore delle lezioni - solo per vista settimanale */}
+            {/* Pulsante "Nuova lezione" - SEMPRE presente nella vista settimanale, subito dopo le lezioni */}
             {!isMonthView && (
               <Box
                 sx={{
@@ -288,9 +310,9 @@ function DashboardCalendar({
           </Box>
         </Box>
 
-        {/* Solo il pulsante Dettaglio giorno rimane in fondo */}
+        {/* Pulsanti in fondo */}
         <Box sx={{ mt: 'auto' }}>
-          {/* Pulsante Aggiungi Lezione per vista mensile */}
+          {/* Pulsante Aggiungi Lezione - solo vista mensile */}
           {isMonthView && (
             <Button
               fullWidth
