@@ -1,5 +1,5 @@
 // src/pages/activity/ActivityLogPage.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -28,6 +28,23 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ActivitySummaryCard from '../../components/activity/ActivitySummaryCard';
 
+// Custom hook per il debounce
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 function ActivityLogPage() {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -39,11 +56,20 @@ function ActivityLogPage() {
   const [timeRange, setTimeRange] = useState(30);
   const [sortOrder, setSortOrder] = useState('recent');
 
-  // Stati per la ricerca
-  const [searchTerm, setSearchTerm] = useState('');
+  // Stati per la ricerca - separati per input locale e valore effettivo
+  const [searchInputValue, setSearchInputValue] = useState(''); // Valore locale dell'input
+  const [searchTerm, setSearchTerm] = useState(''); // Valore effettivo per la ricerca
   const [searchType, setSearchType] = useState('all');
   const [actionTypeFilter, setActionTypeFilter] = useState('all');
   const [entityTypeFilter, setEntityTypeFilter] = useState('all');
+
+  // Debounce del valore di ricerca (500ms di ritardo)
+  const debouncedSearchTerm = useDebounce(searchInputValue, 500);
+
+  // Aggiorna il searchTerm effettivo quando il valore debounced cambia
+  useEffect(() => {
+    setSearchTerm(debouncedSearchTerm);
+  }, [debouncedSearchTerm]);
 
   // Check admin access
   useEffect(() => {
@@ -52,7 +78,7 @@ function ActivityLogPage() {
     }
   }, [isAdmin, navigate]);
 
-  // Carica dati attività
+  // Carica dati attività - ora usa searchTerm (non searchInputValue)
   useEffect(() => {
     const fetchActivityData = async () => {
       try {
@@ -89,7 +115,7 @@ function ActivityLogPage() {
     };
 
     fetchActivityData();
-  }, [timeRange, searchTerm, searchType, actionTypeFilter, entityTypeFilter]);
+  }, [timeRange, searchTerm, searchType, actionTypeFilter, entityTypeFilter]); // Usa searchTerm, non searchInputValue
 
   // Funzione per filtrare e cercare nelle attività
   const filteredAndSearchedUsers = useMemo(() => {
@@ -108,12 +134,36 @@ function ActivityLogPage() {
   }, [usersActivity, sortOrder]);
 
   // Handler per pulire la ricerca
-  const handleClearSearch = () => {
+  const handleClearSearch = useCallback(() => {
+    setSearchInputValue('');
     setSearchTerm('');
     setSearchType('all');
     setActionTypeFilter('all');
     setEntityTypeFilter('all');
-  };
+  }, []);
+
+  // Handler per il cambio del valore di input (immediato, solo locale)
+  const handleSearchInputChange = useCallback((event) => {
+    setSearchInputValue(event.target.value);
+  }, []);
+
+  // Handler per submit della ricerca (Enter o blur)
+  const handleSearchSubmit = useCallback(() => {
+    setSearchTerm(searchInputValue.trim());
+  }, [searchInputValue]);
+
+  // Handler per keydown (Enter)
+  const handleSearchKeyDown = useCallback((event) => {
+    if (event.key === 'Enter') {
+      handleSearchSubmit();
+      event.target.blur(); // Rimuovi focus dopo Enter
+    }
+  }, [handleSearchSubmit]);
+
+  // Handler per blur (quando perde focus)
+  const handleSearchBlur = useCallback(() => {
+    handleSearchSubmit();
+  }, [handleSearchSubmit]);
 
   // Contatori per i filtri attivi
   const activeFiltersCount = useMemo(() => {
@@ -174,8 +224,10 @@ function ActivityLogPage() {
                 fullWidth
                 variant="outlined"
                 label="Cerca nelle attività"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchInputValue} // Usa searchInputValue per l'input
+                onChange={handleSearchInputChange}
+                onKeyDown={handleSearchKeyDown}
+                onBlur={handleSearchBlur}
                 placeholder="Inserisci termine di ricerca..."
                 InputProps={{
                   startAdornment: (
@@ -183,7 +235,7 @@ function ActivityLogPage() {
                       <SearchIcon color="action" />
                     </InputAdornment>
                   ),
-                  endAdornment: searchTerm && (
+                  endAdornment: searchInputValue && (
                     <InputAdornment position="end">
                       <Tooltip title="Pulisci ricerca">
                         <IconButton size="small" onClick={handleClearSearch}>
