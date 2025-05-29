@@ -38,6 +38,12 @@ import AddLessonDialog from '../../components/dashboard/AddLessonDialog';
 import LessonDetailsDialog from '../../components/dashboard/LessonDetailsDialog';
 import DayDetailsDialog from '../../components/dashboard/DayDetailsDialog';
 
+import {
+  addMonths,
+  subMonths,
+} from 'date-fns';
+import ViewToggleComponent from '../../components/dashboard/ViewToggleComponent';
+
 function DashboardPage() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
@@ -49,7 +55,7 @@ function DashboardPage() {
   const [selectedProfessor, setSelectedProfessor] = useState(currentUser?.id || '');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [studentPackages, setStudentPackages] = useState([]);
-  const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [currentTab, setCurrentTab] = useState(0);
   const [periodFilter, setPeriodFilter] = useState('week');
   const [selectedLesson, setSelectedLesson] = useState(null);
@@ -68,31 +74,41 @@ function DashboardPage() {
   const [periodStartDate, setPeriodStartDate] = useState(null);
   const [periodEndDate, setPeriodEndDate] = useState(null);
 
+  // Aggiungi questi stati dopo gli stati esistenti
+  const [viewMode, setViewMode] = useState('week');
+  const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
+
   // Effetto per calcolare le date del periodo quando cambia il periodFilter
+  // Effetto per calcolare le date del periodo quando cambia il periodFilter o viewMode
   useEffect(() => {
     let startDate, endDate;
 
-    switch (periodFilter) {
-      case 'week':
-        startDate = currentWeekStart;
-        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
-        break;
-      case 'month':
-        startDate = startOfMonth(new Date());
-        endDate = endOfMonth(new Date());
-        break;
-      case 'year':
-        startDate = startOfYear(new Date());
-        endDate = endOfYear(new Date());
-        break;
-      default:
-        startDate = currentWeekStart;
-        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+    if (viewMode === 'week') {
+      startDate = currentWeekStart;
+      endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+    } else if (viewMode === 'month') {
+      startDate = currentMonth;
+      endDate = endOfMonth(currentMonth);
+    } else {
+      // Fallback per altri filtri esistenti
+      switch (periodFilter) {
+        case 'month':
+          startDate = startOfMonth(new Date());
+          endDate = endOfMonth(new Date());
+          break;
+        case 'year':
+          startDate = startOfYear(new Date());
+          endDate = endOfYear(new Date());
+          break;
+        default:
+          startDate = currentWeekStart;
+          endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+      }
     }
 
     setPeriodStartDate(startDate);
     setPeriodEndDate(endDate);
-  }, [periodFilter, currentWeekStart]);
+  }, [viewMode, currentWeekStart, currentMonth, periodFilter]);
 
   // Stato per il form di aggiunta lezione
   const [lessonForm, setLessonForm] = useState({
@@ -171,10 +187,59 @@ function DashboardPage() {
     setSelectedProfessor(event.target.value);
   };
 
-  // Funzione per cambiare la settimana
-  const handleChangeWeek = (newWeekStart) => {
-    // Riceviamo direttamente la nuova data di inizio settimana dal calendario
-    setCurrentWeekStart(newWeekStart);
+  const handleChangeWeek = (direction) => {
+    setCurrentWeekStart(prev => {
+      const currentDate = prev instanceof Date && !isNaN(prev.getTime()) ? prev : new Date();
+
+      if (direction === 'next') {
+        return addWeeks(currentDate, 1);
+      } else if (direction === 'prev') {
+        return subWeeks(currentDate, 1);
+      } else if (direction === 'reset') {
+        return startOfWeek(new Date(), { weekStartsOn: 1 });
+      }
+      return currentDate;
+    });
+  };
+
+  const handleChangeMonth = (direction) => {
+    setCurrentMonth(prev => {
+      const currentDate = prev instanceof Date && !isNaN(prev.getTime()) ? prev : new Date();
+
+      if (direction === 'next') {
+        return addMonths(currentDate, 1);
+      } else if (direction === 'prev') {
+        return subMonths(currentDate, 1);
+      } else if (direction === 'reset') {
+        return startOfMonth(new Date());
+      }
+      return currentDate;
+    });
+  };
+
+  const handlePeriodChange = (direction) => {
+    if (viewMode === 'week') {
+      handleChangeWeek(direction);
+    } else {
+      handleChangeMonth(direction);
+    }
+  };
+
+  const formatPeriodHeader = () => {
+    if (viewMode === 'week') {
+      // Assicurati che currentWeekStart sia una data valida
+      if (!currentWeekStart || !(currentWeekStart instanceof Date) || isNaN(currentWeekStart.getTime())) {
+        return 'Data non valida';
+      }
+      const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+      return `${format(currentWeekStart, "d MMMM yyyy", { locale: it })} - ${format(weekEnd, "d MMMM yyyy", { locale: it })}`;
+    } else {
+      // Assicurati che currentMonth sia una data valida
+      if (!currentMonth || !(currentMonth instanceof Date) || isNaN(currentMonth.getTime())) {
+        return 'Data non valida';
+      }
+      return format(currentMonth, "MMMM yyyy", { locale: it });
+    }
   };
 
   // Funzione per ottenere le lezioni di un giorno specifico
@@ -304,27 +369,10 @@ function DashboardPage() {
   };
 
   // Funzione per ottenere le lezioni nel periodo selezionato
+  // Funzione per ottenere le lezioni nel periodo selezionato
   const getLessonsForPeriod = () => {
-    if (!Array.isArray(lessons)) return [];
-
-    let startDate, endDate;
-
-    switch (periodFilter) {
-      case 'week':
-        startDate = currentWeekStart;
-        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
-        break;
-      case 'month':
-        startDate = startOfMonth(new Date());
-        endDate = endOfMonth(new Date());
-        break;
-      case 'year':
-        startDate = startOfYear(new Date());
-        endDate = endOfYear(new Date());
-        break;
-      default:
-        startDate = currentWeekStart;
-        endDate = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+    if (!periodStartDate || !periodEndDate || !Array.isArray(lessons)) {
+      return [];
     }
 
     return lessons.filter(lesson => {
@@ -332,7 +380,10 @@ function DashboardPage() {
 
       try {
         const lessonDate = parseISO(lesson.lesson_date);
-        return isWithinInterval(lessonDate, { start: startDate, end: endDate });
+        return isWithinInterval(lessonDate, {
+          start: periodStartDate,
+          end: periodEndDate
+        });
       } catch (err) {
         console.error('Error filtering lessons by date:', err);
         return false;
@@ -400,50 +451,73 @@ function DashboardPage() {
         MyDashboard
       </Typography>
 
-      {/* Week selector header */}
+      {/* Week/Month selector header */}
       <Card sx={{ mb: 1, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
         <Box
           sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
+            flexDirection: { xs: 'column', sm: 'column', md: 'row' },
             alignItems: 'center',
             justifyContent: 'space-between',
-            p: 2
+            p: 2,
+            gap: { xs: 2, sm: 2, md: 0 }
           }}
         >
-          <Typography
-            variant="subtitle1"
-            sx={{
-              fontWeight: 'bold',
-              color: 'primary.contrastText',
-              fontSize: '1.2rem',
-              mb: { xs: 2, sm: 0 }
-            }}
-          >
-            {format(currentWeekStart, "d MMMM yyyy", { locale: it })} -
-            {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), " d MMMM yyyy", { locale: it })}
-          </Typography>
+          {/* Prima riga: Toggle View */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            width: { xs: '100%', md: 'auto' },
+            justifyContent: { xs: 'center', md: 'flex-start' }
+          }}>
+            <ViewToggleComponent viewMode={viewMode} setViewMode={setViewMode} />
+          </Box>
 
-          <ButtonGroup size="small" sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}>
-            <Button
-              onClick={() => handleChangeWeek(subWeeks(currentWeekStart, 1))}
-              sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+          {/* Seconda riga: Periodo selezionato */}
+          <Box sx={{
+            width: { xs: '100%', md: 'auto' },
+            textAlign: 'center'
+          }}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 'bold',
+                color: 'primary.contrastText',
+                fontSize: '1.2rem'
+              }}
             >
-              Precedente
-            </Button>
-            <Button
-              onClick={() => handleChangeWeek(startOfWeek(new Date(), { weekStartsOn: 1 }))}
-              sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
-            >
-              Corrente
-            </Button>
-            <Button
-              onClick={() => handleChangeWeek(addWeeks(currentWeekStart, 1))}
-              sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
-            >
-              Successiva
-            </Button>
-          </ButtonGroup>
+              {formatPeriodHeader()}
+            </Typography>
+          </Box>
+
+          {/* Terza riga: Navigazione */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            width: { xs: '100%', md: 'auto' },
+            justifyContent: { xs: 'center', md: 'flex-end' }
+          }}>
+            <ButtonGroup size="small">
+              <Button
+                onClick={() => handlePeriodChange('prev')}
+                sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+              >
+                Precedente
+              </Button>
+              <Button
+                onClick={() => handlePeriodChange('reset')}
+                sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+              >
+                Corrente
+              </Button>
+              <Button
+                onClick={() => handlePeriodChange('next')}
+                sx={{ color: 'primary.contrastText', borderColor: 'primary.contrastText' }}
+              >
+                Successiva
+              </Button>
+            </ButtonGroup>
+          </Box>
         </Box>
       </Card>
 
@@ -564,7 +638,8 @@ function DashboardPage() {
       <Grid container spacing={1}>
         <Grid item xs={12}>
           <DashboardCalendar
-            currentWeekStart={currentWeekStart}
+            currentWeekStart={viewMode === 'week' ? currentWeekStart : currentMonth}
+            viewMode={viewMode} // Aggiungi questa prop
             handleChangeWeek={handleChangeWeek}
             getLessonsForDay={getLessonsForDay}
             studentsMap={studentsMap}

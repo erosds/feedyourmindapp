@@ -21,22 +21,45 @@ import AddIcon from '@mui/icons-material/Add';
 import WifiIcon from '@mui/icons-material/Wifi';
 import ViewTimelineIcon from '@mui/icons-material/ViewTimeline';
 
+import {
+  startOfMonth,
+  endOfMonth,
+  getDay,
+} from 'date-fns';
+
 function DashboardCalendar({
   currentWeekStart,
   getLessonsForDay,
   studentsMap,
   handleLessonClick,
   handleDayClick,
-  handleAddLessonClick
+  handleAddLessonClick,
+  viewMode = 'week', // Aggiungi questa prop con default
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+
   // Genera i giorni della settimana corrente (da lunedì a domenica)
-  const daysOfWeek = eachDayOfInterval({
-    start: currentWeekStart,
-    end: endOfWeek(currentWeekStart, { weekStartsOn: 1 })
-  });
+  // Determina se visualizzare la vista mensile o settimanale
+  const isMonthView = viewMode === 'month';
+
+  // Genera i giorni appropriati in base alla vista corrente
+  const getDaysToDisplay = () => {
+    if (isMonthView) {
+      // Vista mensile: tutti i giorni del mese
+      const monthStart = currentWeekStart;
+      const monthEnd = endOfMonth(monthStart);
+      return eachDayOfInterval({ start: monthStart, end: monthEnd });
+    } else {
+      // Vista settimanale: lunedì a domenica
+      return eachDayOfInterval({
+        start: currentWeekStart,
+        end: endOfWeek(currentWeekStart, { weekStartsOn: 1 })
+      });
+    }
+  };
+
+  const daysOfWeek = getDaysToDisplay();
 
   // Funzione per ordinare le lezioni per orario di inizio
   const sortLessonsByTime = (lessons) => {
@@ -69,7 +92,7 @@ function DashboardCalendar({
         sx={{
           p: 1,
           height: isMobile ? 'auto' : '100%',  // Altezza flessibile su mobile
-          minHeight: isMobile ? 120 : 'auto', // Altezza minima per garantire consistenza
+          minHeight: isMobile ? 120 : (isMonthView ? 150 : 'auto'), // Altezza minima per garantire consistenza
           border: '1px solid',
           borderColor: isCurrentDay ? 'primary.main' : 'divider',
           borderRadius: 1,
@@ -94,9 +117,9 @@ function DashboardCalendar({
               alignItems: 'center',
             }}
           >
-            <Typography 
-              variant="subtitle1" 
-              sx={{ 
+            <Typography
+              variant="subtitle1"
+              sx={{
                 fontWeight: isCurrentDay ? 'bold' : 'normal',
                 color: isCurrentDay ? 'primary.main' : 'inherit'
               }}
@@ -104,10 +127,10 @@ function DashboardCalendar({
               {weekdays[index]} {format(day, 'd')}
             </Typography>
             {isCurrentDay && (
-              <Chip 
-                label="Oggi" 
-                size="small" 
-                color="primary" 
+              <Chip
+                label="Oggi"
+                size="small"
+                color="primary"
                 variant="outlined"
                 sx={{ height: 20 }}
               />
@@ -116,22 +139,26 @@ function DashboardCalendar({
         )}
 
         <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-          <Box sx={{ overflowY: 'auto', height: '100%'}}>
+          <Box sx={{ overflowY: 'auto', height: '100%' }}>
             {sortedLessons.map((lesson, idx) => (
               <Box
                 key={`lesson-${lesson.id}-${idx}`}
                 sx={{
                   mb: 0.5,
                   py: 0.5,
-                  minHeight: '28px',
+                  minHeight: isMonthView ? '28px' : '28px', // Stessa altezza del pulsante "Nuova lezione"
                   bgcolor: 'action.hover',
                   borderRadius: 1,
                   color: 'text.primary',
                   opacity: 0.85,
                   position: 'relative',
-                  px: 1, // Padding uniforme
+                  px: 1,
                   cursor: 'pointer',
-                  mx: 'auto', // Centra orizzontalmente
+                  mx: 'auto',
+                  display: 'flex',
+                  alignItems: isMonthView ? 'center' : 'flex-start', // Vista mensile: centrato, settimanale: inizio
+                  justifyContent: 'flex-start', // Sempre allineato a sinistra
+                  flexDirection: isMonthView ? 'row' : 'column', // Riga per mensile, colonna per settimanale
                   '&:hover': {
                     opacity: 1,
                     boxShadow: 1
@@ -141,17 +168,44 @@ function DashboardCalendar({
                   handleLessonClick(lesson);
                 }}
               >
-                <Typography variant="body2" noWrap sx={{ color: 'text.primary', fontSize: '0.8rem', fontWeight: 'medium' }}>
-                  {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
-                </Typography>
-                <Typography variant="body2" noWrap sx={{ color: 'text.primary', fontSize: '0.75rem' }}>
-                  {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
-                </Typography>
-                <Typography variant="body2" noWrap sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                  {lesson.duration} {lesson.duration === 1 || lesson.duration === 1.00 ? 'ora' : 'ore'}
-                </Typography>
+                {isMonthView ? (
+                  // Vista mensile: formato compatto "orario - nome"
+                  <>
+                    <Typography variant="body2" sx={{
+                      color: 'text.primary',
+                      fontSize: '0.75rem',
+                      fontWeight: 'medium',
+                      mr: 1
+                    }}>
+                      {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
+                    </Typography>
+                    <Typography variant="body2" sx={{
+                      color: 'text.primary',
+                      fontSize: '0.75rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1
+                    }}>
+                      - {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
+                    </Typography>
+                  </>
+                ) : (
+                  // Vista settimanale: formato originale su più righe
+                  <>
+                    <Typography variant="body2" noWrap sx={{ color: 'text.primary', fontSize: '0.8rem', fontWeight: 'medium' }}>
+                      {lesson.start_time ? lesson.start_time.substring(0, 5) : '00:00'}
+                    </Typography>
+                    <Typography variant="body2" noWrap sx={{ color: 'text.primary', fontSize: '0.75rem' }}>
+                      {studentsMap[lesson.student_id] || `Studente #${lesson.student_id}`}
+                    </Typography>
+                    <Typography variant="body2" noWrap sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                      {parseFloat(lesson.duration) === 1 ? '1 ora' : `${lesson.duration} ore`}
+                    </Typography>
+                  </>
+                )}
 
-                {/* Chip per lezione in pacchetto */}
+                {/* Chip per lezione in pacchetto - posizionamento diverso per vista mensile */}
                 {lesson.is_package && (
                   <Chip
                     label="P"
@@ -159,76 +213,113 @@ function DashboardCalendar({
                     color="primary"
                     sx={{
                       position: 'absolute',
-                      top: 3,
-                      right: 3,
+                      top: isMonthView ? 2 : 3,
+                      right: isMonthView ? 2 : 3,
                       borderRadius: 1,
                       width: 'auto',
-                      height: 16,
-                      fontSize: '0.650rem',
+                      minWidth: '22px', // Aggiungi larghezza minima
+                      height: isMonthView ? 14 : 16,
+                      fontSize: isMonthView ? '0.6rem' : '0.650rem',
                     }}
                   />
                 )}
 
-                {/* Chip per lezione online */}
+                {/* Chip per lezione online - posizionamento diverso per vista mensile */}
                 {lesson.is_online && (
                   <Chip
-                    icon={<WifiIcon style={{ fontSize: '0.7rem' }} />}
+                    label="" // Rimuovi il testo, usa solo l'icona
+                    icon={<WifiIcon style={{ fontSize: isMonthView ? '0.6rem' : '0.7rem' }} />}
                     size="small"
                     color="secondary"
                     sx={{
                       position: 'absolute',
-                      bottom: 3,
-                      right: 3,
+                      bottom: isMonthView ? 2 : 3,
+                      right: isMonthView ? 2 : 3,
                       borderRadius: 1,
                       width: 'auto',
-                      height: 16,
-                      fontSize: '0.650rem',
+                      minWidth: '22px', // Stessa larghezza minima della chip pacchetto
+                      height: isMonthView ? 14 : 16,
+                      fontSize: isMonthView ? '0.6rem' : '0.650rem',
                       '& .MuiChip-icon': {
-                        marginLeft: '5px',
-                        marginRight: '-10px'
+                        margin: 0, // Rimuovi margini per centrare l'icona
+                      },
+                      '& .MuiChip-label': {
+                        display: 'none', // Nascondi completamente il label
                       }
                     }}
                   />
                 )}
               </Box>
             ))}
-            
-            {/* Pulsante "Nuova lezione" all'interno del contenitore delle lezioni */}
-            <Box
-              sx={{
-                mb: 0.5,
-                py: 0.5,
-                minHeight: '56px',
-                bgcolor: 'action.hover',
-                borderRadius: 1,
-                color: 'text.primary',
-                opacity: 0.85,
-                position: 'relative',
-                px: 1,
-                cursor: 'pointer',
-                mx: 'auto',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                '&:hover': {
-                  opacity: 1,
-                  boxShadow: 1
-                }
-              }}
-              onClick={(e) => {
-                handleAddLessonClick(day);
-              }}
-            >
-              <AddIcon fontSize="small" sx={{ mr: 0.5, fontSize: '0.9rem' }}/>
-              <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.75rem', fontWeight: 'medium' }}>
-                Nuova lezione
-              </Typography>
-            </Box>
+
+            {/* Pulsante "Nuova lezione" all'interno del contenitore delle lezioni - solo per vista settimanale */}
+            {!isMonthView && (
+              <Box
+                sx={{
+                  mb: 0.5,
+                  py: 0.5,
+                  minHeight: '56px',
+                  bgcolor: 'action.hover',
+                  borderRadius: 1,
+                  color: 'text.primary',
+                  opacity: 0.85,
+                  position: 'relative',
+                  px: 1,
+                  cursor: 'pointer',
+                  mx: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  '&:hover': {
+                    opacity: 1,
+                    boxShadow: 1
+                  }
+                }}
+                onClick={(e) => {
+                  handleAddLessonClick(day);
+                }}
+              >
+                <AddIcon fontSize="small" sx={{ mr: 0.5, fontSize: '0.9rem' }} />
+                <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.75rem', fontWeight: 'medium' }}>
+                  Nuova lezione
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Box>
 
         {/* Solo il pulsante Dettaglio giorno rimane in fondo */}
         <Box sx={{ mt: 'auto' }}>
+          {/* Pulsante Aggiungi Lezione per vista mensile */}
+          {isMonthView && (
+            <Button
+              fullWidth
+              startIcon={<AddIcon fontSize="small" />}
+              variant="text"
+              size="small"
+              onClick={(e) => {
+                handleAddLessonClick(day);
+              }}
+              sx={{
+                mb: 0.5,
+                py: 0.3,
+                minHeight: '28px',
+                fontSize: '0.7rem',
+                bgcolor: 'action.hover',
+                justifyContent: 'center',
+                color: 'text.primary',
+                opacity: 0.85,
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                  boxShadow: 1,
+                  opacity: 1,
+                }
+              }}
+            >
+              Nuova lezione
+            </Button>
+          )}
+
           <Button
             fullWidth
             startIcon={<ViewTimelineIcon fontSize="small" />}
@@ -260,42 +351,106 @@ function DashboardCalendar({
     );
   };
 
+  // Griglia di giorni per layout desktop nella vista mensile
+  const renderMonthGrid = () => {
+    // Determina il giorno della settimana del primo giorno del mese (0 = domenica, 1 = lunedì, ..., 6 = sabato)
+    const firstDayOfMonth = getDay(currentWeekStart);
+
+    // Adatta il valore per iniziare dal lunedì (0 = lunedì, ..., 6 = domenica)
+    const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+
+    // Crea la griglia con celle vuote all'inizio per allineare i giorni correttamente
+    const emptyDays = Array(adjustedFirstDay).fill(null);
+    const allDaysWithEmpty = [...emptyDays, ...daysOfWeek];
+
+    return (
+      <Grid container spacing={1}>
+        {/* Intestazione con i giorni della settimana */}
+        {weekdays.map((day, index) => (
+          <Grid item xs={12 / 7} key={`weekday-${index}`}>
+            <Paper
+              elevation={0}
+              sx={{
+                bgcolor: 'primary.light',
+                color: 'primary.contrastText',
+                fontWeight: 'bold',
+                textAlign: 'center',
+                borderRadius: 1,
+              }}
+            >
+              {day}
+            </Paper>
+          </Grid>
+        ))}
+
+        {/* Celle dei giorni */}
+        {allDaysWithEmpty.map((day, index) => (
+          <Grid item xs={12 / 7} key={`day-${index}`}>
+            {day ? (
+              <DayComponent day={day} index={index - adjustedFirstDay} isMobile={false} />
+            ) : (
+              <Paper
+                sx={{
+                  height: '100%',
+                  minHeight: isMonthView ? 150 : 'auto',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  boxShadow: 0,
+                  backgroundColor: 'inherit'
+                }}
+              />
+            )}
+          </Grid>
+        ))}
+      </Grid>
+    );
+  };
+
   return (
     <Card sx={{ p: 2, mb: 3 }}>
       {/* Layout Desktop */}
       {!isMobile && (
         <>
-          {/* Calendar header with weekdays */}
-          <Grid container spacing={1} sx={{ mb: 1 }}>
-            {weekdays.map((day, index) => (
-              <Grid item xs={12 / 7} key={`weekday-${index}`}>
-                <Box
-                  sx={{
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    backgroundColor: 'primary.light',
-                    color: 'primary.contrastText',
-                    borderRadius: 1,
-                  }}
-                >
-                  {day} {daysOfWeek[index] && format(daysOfWeek[index], 'd')}
-                </Box>
+          {isMonthView ? (
+            // Vista mensile desktop
+            renderMonthGrid()
+          ) : (
+            // Vista settimanale desktop (mantieni il codice esistente)
+            <>
+              {/* Calendar header with weekdays */}
+              <Grid container spacing={1} sx={{ mb: 1 }}>
+                {weekdays.map((day, index) => (
+                  <Grid item xs={12 / 7} key={`weekday-${index}`}>
+                    <Box
+                      sx={{
+                        textAlign: 'center',
+                        fontWeight: 'bold',
+                        backgroundColor: 'primary.light',
+                        color: 'primary.contrastText',
+                        borderRadius: 1,
+                      }}
+                    >
+                      {day} {daysOfWeek[index] && format(daysOfWeek[index], 'd')}
+                    </Box>
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
 
-          {/* Days of the week - Layout desktop */}
-          <Grid container spacing={1}>
-            {daysOfWeek.map((day, index) => (
-              <Grid item xs={12 / 7} key={`day-${index}`}>
-                <DayComponent day={day} index={index} isMobile={false} />
+              {/* Days of the week - Layout desktop */}
+              <Grid container spacing={1}>
+                {daysOfWeek.map((day, index) => (
+                  <Grid item xs={12 / 7} key={`day-${index}`}>
+                    <DayComponent day={day} index={index} isMobile={false} />
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
+            </>
+          )}
         </>
       )}
 
-      {/* Layout Mobile - giorni in verticale */}
+      {/* Layout Mobile - giorni in verticale (mantieni il codice esistente) */}
       {isMobile && (
         <Box>
           {daysOfWeek.map((day, index) => (
