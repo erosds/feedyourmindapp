@@ -661,8 +661,17 @@ def add_package_payment(
     db.commit()
     db.refresh(db_payment)
     
-    # Log dell'attività
-    description = f"Aggiunto pagamento di €{payment.amount} al pacchetto #{package_id}"
+    # Ottieni i nomi degli studenti per il log più descrittivo
+    student_names = []
+    for student in package.students:
+        student_names.append(f"{student.first_name} {student.last_name}")
+    
+    students_str = ", ".join(student_names) if student_names else "nessuno studente"
+    
+    # Log dell'attività con i nomi degli studenti
+    # MODIFICA IMPORTANTE: Usa package_id come entity_id invece di payment_id
+    # In questo modo il clic porterà alla pagina del pacchetto
+    description = f"Aggiunto pagamento di €{payment.amount} al pacchetto per {students_str}"
     if package.package_cost == Decimal('0'):
         description += " (pacchetto aperto)"
     
@@ -671,27 +680,11 @@ def add_package_payment(
         professor_id=current_user.id,
         action_type="create",
         entity_type="package_payment",
-        entity_id=db_payment.id,
+        entity_id=package_id,  # Usa package_id invece di db_payment.id
         description=description
     )
     
     return db_payment
-
-@router.get("/{package_id}/payments", response_model=List[models.PackagePaymentResponse])
-def get_package_payments(
-    package_id: int,
-    db: Session = Depends(get_db)
-):
-    """Ottiene tutti i pagamenti di un pacchetto."""
-    package = db.query(models.Package).filter(models.Package.id == package_id).first()
-    if not package:
-        raise HTTPException(status_code=404, detail="Package not found")
-    
-    payments = db.query(models.PackagePayment).filter(
-        models.PackagePayment.package_id == package_id
-    ).order_by(models.PackagePayment.payment_date).all()
-    
-    return payments
 
 @router.delete("/payments/{payment_id}", status_code=http_status.HTTP_204_NO_CONTENT)
 def delete_package_payment(
@@ -714,6 +707,16 @@ def delete_package_payment(
     # Ottieni il pacchetto associato
     package = db.query(models.Package).filter(models.Package.id == payment.package_id).first()
     
+    # Ottieni i nomi degli studenti prima di eliminare
+    student_names = []
+    for student in package.students:
+        student_names.append(f"{student.first_name} {student.last_name}")
+    
+    students_str = ", ".join(student_names) if student_names else "nessuno studente"
+    
+    # Salva l'ID del pacchetto per il log
+    package_id = payment.package_id
+    
     # Sottrai l'importo del pagamento dal totale pagato
     package.total_paid = max(Decimal('0'), package.total_paid - payment.amount)
     
@@ -726,17 +729,35 @@ def delete_package_payment(
     db.delete(payment)
     db.commit()
     
-    # Log dell'attività
+    # Log dell'attività con i nomi degli studenti
+    # MODIFICA IMPORTANTE: Usa package_id come entity_id invece di payment_id
     log_activity(
         db=db,
         professor_id=current_user.id,
         action_type="delete",
         entity_type="package_payment",
-        entity_id=payment_id,
-        description=f"Eliminato pagamento di €{payment.amount} dal pacchetto #{payment.package_id}"
+        entity_id=package_id,  # Usa package_id invece di payment_id
+        description=f"Eliminato pagamento di €{payment.amount} dal pacchetto per {students_str}"
     )
     
     return None
+
+@router.get("/{package_id}/payments", response_model=List[models.PackagePaymentResponse])
+def get_package_payments(
+    package_id: int,
+    db: Session = Depends(get_db)
+):
+    """Ottiene tutti i pagamenti di un pacchetto."""
+    package = db.query(models.Package).filter(models.Package.id == package_id).first()
+    if not package:
+        raise HTTPException(status_code=404, detail="Package not found")
+    
+    payments = db.query(models.PackagePayment).filter(
+        models.PackagePayment.package_id == package_id
+    ).order_by(models.PackagePayment.payment_date).all()
+    
+    return payments
+
 
 # Add this to backend/app/routes/packages.py
 @router.put("/{package_id}/cancel-extension", response_model=models.PackageResponse)

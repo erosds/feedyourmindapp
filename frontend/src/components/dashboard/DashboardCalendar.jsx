@@ -132,7 +132,7 @@ function DashboardCalendar({
             )}
           </Box>
         ) : isMonthView ? (
-          // Desktop Vista Mensile: solo numero in alto a destra
+          // Desktop Vista Mensile: solo numero in alto a destra con margine
           <Box sx={{
             fontWeight: isCurrentDay ? 'bold' : 'normal',
             textAlign: 'right',
@@ -140,18 +140,24 @@ function DashboardCalendar({
             position: 'absolute',
             top: 2,
             right: 4,
-            fontSize: '0.9rem'
+            fontSize: '0.9rem',
+            mb: 1, // Aggiungi margine inferiore
+            zIndex: 1, // Assicura che stia sopra le lezioni
           }}>
             {format(day, 'd')}
           </Box>
         ) : null}
 
         {/* Contenuto del giorno */}
-        {/* Contenuto del giorno */}
-        <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+        <Box sx={{ 
+          flexGrow: 1, 
+          overflow: 'hidden',
+          // Aggiungi margine superiore per vista mensile desktop per evitare sovrapposizione con il numero
+          mt: isMonthView && !isMobile ? 1 : 0
+        }}>
           <Box sx={{ overflowY: 'auto', height: '100%' }}>
             {/* Titolo numero lezioni solo per desktop settimanale */}
-            {!isMobile && !isMonthView && (
+            {!isMobile && (
               <Typography
                 variant="subtitle2"
                 color="text.secondary"
@@ -274,6 +280,40 @@ function DashboardCalendar({
               </Box>
             ))}
 
+            {/* Pulsante "Nuova lezione" - posizionato dopo le lezioni nella vista mensile */}
+            {isMonthView && (
+              <Box
+                sx={{
+                  mb: 0.5,
+                  py: 0.5,
+                  minHeight: '28px',
+                  bgcolor: 'action.hover',
+                  borderRadius: 1,
+                  color: 'text.primary',
+                  opacity: 0.85,
+                  position: 'relative',
+                  px: 1,
+                  cursor: 'pointer',
+                  mx: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  '&:hover': {
+                    opacity: 1,
+                    boxShadow: 1
+                  }
+                }}
+                onClick={(e) => {
+                  handleAddLessonClick(day);
+                }}
+              >
+                <AddIcon fontSize="small" sx={{ mr: 0.5, fontSize: '0.7rem' }} />
+                <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.7rem', fontWeight: 'medium' }}>
+                  Nuova lezione
+                </Typography>
+              </Box>
+            )}
+
             {/* Pulsante "Nuova lezione" - SEMPRE presente nella vista settimanale, subito dopo le lezioni */}
             {!isMonthView && (
               <Box
@@ -312,36 +352,6 @@ function DashboardCalendar({
 
         {/* Pulsanti in fondo */}
         <Box sx={{ mt: 'auto' }}>
-          {/* Pulsante Aggiungi Lezione - solo vista mensile */}
-          {isMonthView && (
-            <Button
-              fullWidth
-              startIcon={<AddIcon fontSize="small" />}
-              variant="text"
-              size="small"
-              onClick={(e) => {
-                handleAddLessonClick(day);
-              }}
-              sx={{
-                mb: 0.5,
-                py: 0.3,
-                minHeight: '28px',
-                fontSize: '0.7rem',
-                bgcolor: 'action.hover',
-                justifyContent: 'center',
-                color: 'text.primary',
-                opacity: 0.85,
-                '&:hover': {
-                  backgroundColor: 'action.hover',
-                  boxShadow: 1,
-                  opacity: 1,
-                }
-              }}
-            >
-              Nuova lezione
-            </Button>
-          )}
-
           <Button
             fullWidth
             startIcon={<ViewTimelineIcon fontSize="small" />}

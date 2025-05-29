@@ -1,5 +1,5 @@
 // src/components/activity/ActivitySummaryCard.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -24,6 +24,7 @@ import {
   MenuBook as LessonIcon,
   Book as PackageIcon
 } from '@mui/icons-material';
+import { packageService } from '../../services/api';
 
 function getActionIcon(actionType) {
   switch (actionType) {
@@ -47,6 +48,7 @@ function getEntityIcon(entityType) {
     case 'lesson':
       return <LessonIcon fontSize="small" />;
     case 'package':
+    case 'package_payment':
       return <PackageIcon fontSize="small" />;
     default:
       return null;
@@ -54,7 +56,71 @@ function getEntityIcon(entityType) {
 }
 
 function ActivityItem({ activity }) {
-  const entityUrl = `/${activity.entity_type}s/${activity.entity_id}`;
+  const navigate = useNavigate();
+  const [enhancedDescription, setEnhancedDescription] = useState(activity.description);
+  const [navigationUrl, setNavigationUrl] = useState(null);
+
+  useEffect(() => {
+    const enhancePackagePaymentActivity = async () => {
+      if (activity.entity_type === 'package_payment') {
+        // Controlla se la descrizione contiene già i nomi degli studenti
+        // (i log nuovi li hanno già, quelli vecchi hanno solo l'ID del pacchetto)
+        const hasStudentNames = !activity.description.includes('al pacchetto #');
+        
+        if (!hasStudentNames) {
+          // È un log vecchio, prova a estrarre l'ID del pacchetto e migliorare la descrizione
+          const packageIdMatch = activity.description.match(/al pacchetto #(\d+)/);
+          
+          if (packageIdMatch) {
+            const packageId = parseInt(packageIdMatch[1]);
+            setNavigationUrl(`/packages/${packageId}`);
+            
+            try {
+              // Carica i dettagli del pacchetto per ottenere i nomi degli studenti
+              const packageResponse = await packageService.getById(packageId);
+              const packageData = packageResponse.data;
+              
+              if (packageData && packageData.student_ids && packageData.student_ids.length > 0) {
+                // Carica i dati degli studenti (assumiamo di avere accesso ai dati degli studenti)
+                // Per ora, miglioriamo almeno il link anche se non abbiamo i nomi
+                const improvedDescription = activity.description.replace(
+                  `al pacchetto #${packageId}`,
+                  `al pacchetto #${packageId}`
+                );
+                setEnhancedDescription(improvedDescription);
+              }
+            } catch (error) {
+              console.warn('Could not enhance package payment activity:', error);
+              // Fallback: almeno assicuriamoci che il link funzioni
+              setNavigationUrl(`/packages/${packageId}`);
+            }
+          } else {
+            // Se non riusciamo a estrarre l'ID, naviga alla lista pacchetti
+            setNavigationUrl('/packages');
+          }
+        } else {
+          // È un log nuovo, usa l'entity_id come ID del pacchetto
+          setNavigationUrl(`/packages/${activity.entity_id}`);
+        }
+      } else {
+        // Per tutti gli altri tipi di attività, usa la logica standard
+        const url = getStandardNavigationUrl(activity);
+        setNavigationUrl(url);
+      }
+    };
+
+    enhancePackagePaymentActivity();
+  }, [activity]);
+
+  const getStandardNavigationUrl = (activity) => {
+    switch (activity.entity_type) {
+      case 'professor_weekly_payment':
+        return '/dashboard';
+      default:
+        return `/${activity.entity_type}s/${activity.entity_id}`;
+    }
+  };
+
   const formattedTime = formatDistance(new Date(activity.timestamp), new Date(), {
     addSuffix: true,
     locale: it
@@ -62,7 +128,9 @@ function ActivityItem({ activity }) {
 
   const handleClick = (e) => {
     e.preventDefault();
-    window.location.href = entityUrl;
+    if (navigationUrl) {
+      navigate(navigationUrl);
+    }
   };
 
   return (
@@ -91,7 +159,7 @@ function ActivityItem({ activity }) {
               textOverflow: 'ellipsis'
             }}
           >
-            {activity.description}
+            {enhancedDescription}
           </Typography>
         </Box>
         <Typography variant="caption" color="text.secondary" ml={1}>
@@ -118,8 +186,8 @@ function ActivitySummaryCard({
     professor_id,
     professor_name,
     last_activity_time,
-    activities_count, // Questo è già il conteggio filtrato
-    recent_activities // Queste sono già le attività filtrate
+    activities_count,
+    recent_activities
   } = activityData;
 
   const displayActivities = recent_activities.slice(0, maxItems);
@@ -127,7 +195,6 @@ function ActivitySummaryCard({
 
   const handleViewAll = () => {
     if (isSearchActive) {
-      // Se siamo in modalità ricerca, costruisci l'URL con i filtri
       const queryParams = new URLSearchParams();
 
       if (searchFilters.searchTerm) {
@@ -150,7 +217,6 @@ function ActivitySummaryCard({
 
       navigate(url);
     } else {
-      // Modalità normale, vai alla pagina senza filtri
       navigate(`/activities/user/${professor_id}`);
     }
   };
@@ -199,7 +265,6 @@ function ActivitySummaryCard({
           </Box>
         )}
 
-        {/* CORREZIONE: Mostra il pulsante solo se ci sono effettivamente più attività da visualizzare */}
         {showViewAll && (hasMoreActivities || isSearchActive) && (
           <Box mt={1} display="flex" justifyContent="center">
             <Button

@@ -286,6 +286,7 @@ function AdminDashboardCalendar({
                   color: isCurrentDay ? 'primary.main' : 'text.primary',
                   position: 'absolute',
                   top: 2,
+                  mb: -2,
                   right: 4,
                   fontSize: '0.9rem'
                 }}>
